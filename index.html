@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐻 BearCalculator — Kingshot Bear Trap Squad Calculator</title>
+  <style>
+    :root {
+      --bg: #0e1218;
+      --bg-2: #121925;
+      --panel: #1a2330;
+      --panel2: #212d3d;
+      --border: #2f3d50;
+      --border-soft: #26313f;
+      --honey: #f2b53c;
+      --honey-soft: #f8cf7e;
+      --text: #e9eef5;
+      --muted: #a2b3c6;
+      --inf: #6fb6f1;
+      --cav: #f0a564;
+      --arch: #82da91;
+      --bad: #ef7a74;
+      --good: #82da91;
+      --shadow: 0 6px 22px rgba(0, 0, 0, .45);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(180deg, var(--bg-2), var(--bg)) fixed;
+      color: var(--text);
+      font: 15.5px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      padding: 22px 24px;
+      background: linear-gradient(180deg, #1f2a3a, #141b27);
+      border-bottom: 2px solid var(--honey);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 23px;
+      letter-spacing: .3px;
+    }
+
+    header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 384px 1fr;
+      gap: 22px;
+    }
+
+    @media (max-width: 820px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--honey-soft);
+      padding-bottom: 11px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    label {
+      display: block;
+      font-size: 12.5px;
+      color: var(--muted);
+      margin: 14px 0 6px;
+      font-weight: 500;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 11px 13px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      font-size: 15px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input:hover,
+    select:hover {
+      border-color: var(--honey-soft);
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--honey);
+      box-shadow: 0 0 0 3px rgba(242, 181, 60, .20);
+    }
+
+    input:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .chk {
+      width: auto;
+      margin-right: 7px;
+      vertical-align: middle;
+      accent-color: var(--honey);
+    }
+
+    .tag {
+      font-size: 10.5px;
+      color: var(--honey-soft);
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-left: 5px;
+      font-weight: 500;
+    }
+
+    .hero {
+      margin-top: 16px;
+      padding-top: 13px;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .hero-head {
+      display: flex;
+      align-items: center;
+      font-size: 14.5px;
+    }
+
+    .hero-head strong {
+      color: var(--honey-soft);
+      font-weight: 600;
+    }
+
+    .row3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* keep paired controls bottom-aligned even when one label wraps */
+    .row2>div,
+    .row3>div {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .row2>div>label,
+    .row3>div>label {
+      white-space: nowrap;
+    }
+
+    .row2>div>input,
+    .row2>div>select,
+    .row3>div>input,
+    .row3>div>select {
+      margin-top: auto;
+    }
+
+    .hint {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    details {
+      margin-top: 14px;
+      border-top: 1px dashed var(--border);
+      padding-top: 10px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: var(--honey-soft);
+      font-size: 13px;
+    }
+
+    .big {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .squadsize {
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--honey);
+      line-height: 1.1;
+      letter-spacing: .5px;
+    }
+
+    .squadsize small {
+      font-size: 15px;
+      color: var(--muted);
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 520px) {
+      .stat-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--honey-soft);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    thead th {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .t-inf {
+      color: var(--inf);
+    }
+
+    .t-cav {
+      color: var(--cav);
+    }
+
+    .t-arch {
+      color: var(--arch);
+    }
+
+    .total td {
+      font-weight: 700;
+      color: var(--honey-soft);
+      border-top: 2px solid var(--border);
+    }
+
+    .num {
+      font-variant-numeric: tabular-nums;
+      font-size: 15.5px;
+    }
+
+    .grid9 td,
+    .grid9 th {
+      text-align: center;
+      font-size: 13px;
+      padding: 8px 6px;
+    }
+
+    .grid9 th:first-child,
+    .grid9 td:first-child {
+      text-align: left;
+      color: var(--muted);
+    }
+
+    .grid9 .active {
+      background: var(--honey);
+      color: #10161f;
+      font-weight: 700;
+      border-radius: 7px;
+    }
+
+    .diag {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .diag .box {
+      background: var(--panel2);
+      border: 1px solid var(--border-soft);
+      border-radius: 13px;
+      padding: 13px 15px;
+    }
+
+    .diag .box .k {
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .diag .box .v {
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    .v.ok {
+      color: var(--good);
+    }
+
+    .v.short {
+      color: var(--bad);
+    }
+
+    .warn {
+      background: #2c1a1a;
+      border: 1px solid var(--bad);
+      color: #ffd9d3;
+      border-radius: 12px;
+      padding: 11px 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      color: var(--honey-soft);
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 16px 0 36px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🐻 BearCalculator</h1>
+    <p>Kingshot · Bear Trap event · squad composition calculator</p>
+  </header>
+
+  <main>
+    <!-- ============ INPUTS ============ -->
+    <section>
+      <div class="card">
+        <h2>Troop Pool</h2>
+        <div class="row3">
+          <div><label class="t-inf">Infantry</label><input id="tInf" type="number" min="0" value="391047"></div>
+          <div><label class="t-cav">Cavalry</label><input id="tCav" type="number" min="0" value="215928"></div>
+          <div><label class="t-arch">Archers</label><input id="tArch" type="number" min="0" value="429106"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Squad, Rally &amp; Buffs</h2>
+        <div class="row2">
+          <div><label>Squad base cap</label><input id="squadBase" type="number" min="0" value="130710"></div>
+          <div><label>Rally size</label><input id="rallySize" type="number" min="0" value="1022710"></div>
+        </div>
+        <div class="row2">
+          <div>
+            <label>Marshal buff <span class="tag">temporary</span></label>
+            <select id="marshalTier">
+              <option value="0">None</option>
+              <option value="marshal">+2,500</option>
+              <option value="big">+5,000</option>
+            </select>
+          </div>
+          <div>
+            <label>Deployment buff <span class="tag">temporary</span></label>
+            <select id="deploy">
+              <option value="0">0%</option>
+              <option value="0.1">10%</option>
+              <option value="0.2">20%</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-head"><input type="checkbox" id="valoraOn" checked class="chk"><strong>Valora</strong> <span
+              class="tag">bear only</span></div>
+          <div class="row2">
+            <div><label>Squad bonus</label><input id="valoraSquad" type="number" min="0" value="1500"></div>
+            <div><label>Rally bonus</label><input id="valoraRally" type="number" min="0" value="300000"></div>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-head"><strong>Cassia</strong> <span class="tag">always</span></div>
+          <div class="row2">
+            <div><label>Squad bonus</label><input id="cassiaSquad" type="number" min="0" value="0"></div>
+            <div><label>Rally bonus</label><input id="cassiaRally" type="number" min="0" value="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Distribution</h2>
+        <label>Join cap (per joiner) <span class="tag">× 6 joiner rallies</span></label>
+        <input id="joinCap" type="number" min="0" value="80000">
+
+        <label>Joiner split mode</label>
+        <select id="splitMode">
+          <option value="uniform">Uniform — all 6 joiners same ratio</option>
+          <option value="half">Half &amp; half — 3 + 3</option>
+          <option value="thirds">Thirds — 2 + 2 + 2</option>
+        </select>
+
+        <div id="ratioA">
+          <label>Ratio A <span class="tag" id="ratioAtag">own + 6 joiners</span> — Inf / Cav / Arch (%)</label>
+          <div class="row3">
+            <input id="rInfA" type="number" min="0" value="10" class="t-inf">
+            <input id="rCavA" type="number" min="0" value="10" class="t-cav">
+            <input id="rArchA" type="number" min="0" value="80" class="t-arch">
+          </div>
+        </div>
+        <div id="ratioB">
+          <label>Ratio B <span class="tag" id="ratioBtag">3 joiners</span> — Inf / Cav / Arch (%)</label>
+          <div class="row3">
+            <input id="rInfB" type="number" min="0" value="5" class="t-inf">
+            <input id="rCavB" type="number" min="0" value="5" class="t-cav">
+            <input id="rArchB" type="number" min="0" value="90" class="t-arch">
+          </div>
+        </div>
+        <div id="ratioC">
+          <label>Ratio C <span class="tag" id="ratioCtag">2 joiners</span> — Inf / Cav / Arch (%)</label>
+          <div class="row3">
+            <input id="rInfC" type="number" min="0" value="0" class="t-inf">
+            <input id="rCavC" type="number" min="0" value="20" class="t-cav">
+            <input id="rArchC" type="number" min="0" value="80" class="t-arch">
+          </div>
+        </div>
+
+        <div class="hint">Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally always uses Ratio A.</div>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section>
+      <div id="warnings"></div>
+
+      <div class="card">
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-label">Active squad size</div>
+            <div class="big" id="squadFormula"></div>
+            <div class="squadsize"><span id="squadSize"></span> <small>troops</small></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Total rally size</div>
+            <div class="big" id="rallyFormula"></div>
+            <div class="squadsize"><span id="rallySizeTotal"></span> <small>troops</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>What to send where</h2>
+        <table id="sendTable"></table>
+      </div>
+
+      <div class="card">
+        <h2>Diagnostics</h2>
+        <div class="diag">
+          <div class="box">
+            <div class="k">Missing for perfect ratio (Inf)</div>
+            <div class="v" id="mInf"></div>
+          </div>
+          <div class="box">
+            <div class="k">Missing (Cav)</div>
+            <div class="v" id="mCav"></div>
+          </div>
+          <div class="box">
+            <div class="k">Missing (Arch)</div>
+            <div class="v" id="mArch"></div>
+          </div>
+          <div class="box">
+            <div class="k">Leftover after deploy (Inf)</div>
+            <div class="v" id="lInf"></div>
+          </div>
+          <div class="box">
+            <div class="k">Leftover (Cav)</div>
+            <div class="v" id="lCav"></div>
+          </div>
+          <div class="box">
+            <div class="k">Leftover (Arch)</div>
+            <div class="v" id="lArch"></div>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:12px"><strong>Personal Joiner Size</strong> (info): <span class="pill"
+            id="pjs"></span> — max one joiner can send into a full 15-member rally (host + 14) = (Rally size + active
+          rally bonuses − active squad size) ÷ 14.</div>
+      </div>
+
+      <div class="card">
+        <h2>All 9 squad sizes</h2>
+        <table class="grid9">
+          <thead>
+            <tr>
+              <th></th>
+              <th>0%</th>
+              <th>10%</th>
+              <th>20%</th>
+            </tr>
+          </thead>
+          <tbody id="grid9body"></tbody>
+        </table>
+        <div class="hint">Highlighted = currently selected Marshal / Deploy combination.</div>
+      </div>
+    </section>
+  </main>
+
+  <footer>🐻 BearCalculator · runs fully offline · just share the file</footer>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
+    const fmt = n => Math.round(n).toLocaleString('en-US');
+
+    const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'valoraOn', 'valoraSquad', 'cassiaSquad', 'marshalTier',
+      'deploy', 'joinCap', 'splitMode',
+      'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
+      'rallySize', 'valoraRally', 'cassiaRally'];
+
+    // fixed game constants
+    const JOINERS = 6;   // joiner rallies you join (your 6 marches)
+    const SLOTS = 14;    // joiner slots in a full 15-member rally (host + 14)
+
+    const MARSHAL = { '0': 0, 'marshal': 2500, 'big': 5000 };
+    function marshalFlat() { return MARSHAL[$('marshalTier').value] || 0; }
+
+    // read & normalise a ratio (suffix 'A' | 'B' | 'C')
+    function readRatio(s) {
+      const i = num('rInf' + s), c = num('rCav' + s), a = num('rArch' + s), sum = i + c + a;
+      return sum > 0 ? { inf: i / sum, cav: c / sum, arch: a / sum } : { inf: 0, cav: 0, arch: 0 };
+    }
+
+    // one joiner: fill to cap, backfill Arch -> Cav -> Inf, within a per-type budget
+    function fillJoiner(budget, ratio, cap) {
+      const capArch = Math.floor(cap * ratio.arch), capCav = Math.floor(cap * ratio.cav);
+      const arch = Math.min(budget.arch, capArch);
+      const cav = Math.min(budget.cav, capCav + (capArch - arch));
+      const inf = Math.min(budget.inf, Math.max(0, cap - cav - arch));
+      return { inf, cav, arch };
+    }
+
+    // split mode -> joiner groups (counts sum to JOINERS); own rally always uses ratio A
+    function groupsFor(mode) {
+      if (mode === 'half') return [{ key: 'A', count: 3 }, { key: 'B', count: 3 }];
+      if (mode === 'thirds') return [{ key: 'A', count: 2 }, { key: 'B', count: 2 }, { key: 'C', count: 2 }];
+      return [{ key: 'A', count: 6 }];
+    }
+
+    function compute() {
+      const troops = { inf: num('tInf'), cav: num('tCav'), arch: num('tArch') };
+      const valoraOn = $('valoraOn').checked;
+      const squadCore = num('squadBase') + (valoraOn ? num('valoraSquad') : 0) + num('cassiaSquad');
+      const deploy = num('deploy');
+      const activeSquad = Math.round((squadCore + marshalFlat()) * (1 + deploy));
+
+      const mode = $('splitMode').value;
+      const ratios = { A: readRatio('A'), B: readRatio('B'), C: readRatio('C') };
+      const rA = ratios.A;
+
+      // own rally = full active squad by ratio A (remainder -> arch)
+      const own = {};
+      own.inf = Math.round(activeSquad * rA.inf);
+      own.cav = Math.round(activeSquad * rA.cav);
+      own.arch = activeSquad - own.inf - own.cav;
+
+      const joinCap = num('joinCap');
+
+      // leftover pool after own rally; every joiner gets an equal 1/6 budget
+      const left = {
+        inf: troops.inf - own.inf,
+        cav: troops.cav - own.cav,
+        arch: troops.arch - own.arch
+      };
+      const per = {
+        inf: Math.max(0, Math.floor(left.inf / JOINERS)),
+        cav: Math.max(0, Math.floor(left.cav / JOINERS)),
+        arch: Math.max(0, Math.floor(left.arch / JOINERS))
+      };
+
+      // joiner groups: each group's joiners are identical, filled by its own ratio
+      const groups = groupsFor(mode).map(g => ({
+        ...g, ratio: ratios[g.key], joiner: fillJoiner(per, ratios[g.key], joinCap)
+      }));
+
+      const sumSel = sel => own[sel] + groups.reduce((t, g) => t + g.count * g.joiner[sel], 0);
+      const used = { inf: sumSel('inf'), cav: sumSel('cav'), arch: sumSel('arch') };
+      const unused = {
+        inf: troops.inf - used.inf,
+        cav: troops.cav - used.cav,
+        arch: troops.arch - used.arch
+      };
+
+      // missing for "perfect ratio": own + every joiner at full cap by its group ratio
+      const need = sel => own[sel] + groups.reduce((t, g) => t + g.count * Math.round(joinCap * g.ratio[sel]), 0);
+      const missing = {
+        inf: Math.max(0, need('inf') - troops.inf),
+        cav: Math.max(0, need('cav') - troops.cav),
+        arch: Math.max(0, need('arch') - troops.arch)
+      };
+
+      const rallyBonuses = (valoraOn ? num('valoraRally') : 0) + num('cassiaRally');
+      const rallyTotal = num('rallySize') + rallyBonuses;
+      const pjs = Math.floor((rallyTotal - activeSquad) / SLOTS);
+
+      return { troops, squadCore, activeSquad, deploy, mode, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses };
+    }
+
+    function render() {
+      // Valora is bear-only & toggleable; grey out its fields when off
+      const vOn = $('valoraOn').checked;
+      $('valoraSquad').disabled = !vOn;
+      $('valoraRally').disabled = !vOn;
+
+      const m = compute();
+
+      // active squad
+      const tierLbl = { '0': 'no Marshal', 'marshal': '+' + fmt(2500), 'big': '+' + fmt(5000) }[$('marshalTier').value];
+      $('squadFormula').textContent =
+        `(${fmt(m.squadCore)} core, ${tierLbl}) × ${(1 + m.deploy).toFixed(2)}`;
+      $('squadSize').textContent = fmt(m.activeSquad);
+      $('rallyFormula').textContent = `${fmt(m.rallyTotal - m.rallyBonuses)} base + ${fmt(m.rallyBonuses)} bonuses`;
+      $('rallySizeTotal').textContent = fmt(m.rallyTotal);
+
+      // split-mode UI: show/hide ratio B & C, update their joiner-count tags
+      const mode = m.mode;
+      $('ratioB').style.display = (mode === 'half' || mode === 'thirds') ? '' : 'none';
+      $('ratioC').style.display = (mode === 'thirds') ? '' : 'none';
+      $('ratioAtag').textContent = mode === 'uniform' ? 'own + 6 joiners' : 'own + ' + m.groups[0].count + ' joiners';
+      if (m.groups[1]) $('ratioBtag').textContent = m.groups[1].count + ' joiners';
+      if (m.groups[2]) $('ratioCtag').textContent = m.groups[2].count + ' joiners';
+
+      // distribution table (dynamic columns: own rally + one per group)
+      const trows = [
+        { key: 'inf', label: 'Infantry', cls: 't-inf' },
+        { key: 'cav', label: 'Cavalry', cls: 't-cav' },
+        { key: 'arch', label: 'Archers', cls: 't-arch' }
+      ];
+      const colHead = g => m.groups.length === 1 ? `Per joiner (×${g.count})` : `Ratio ${g.key} (×${g.count})`;
+      const tot = o => o.inf + o.cav + o.arch;
+      let html = '<thead><tr><th>Troop</th><th>Own rally</th>'
+        + m.groups.map(g => `<th>${colHead(g)}</th>`).join('') + '<th>Total used</th></tr></thead><tbody>';
+      trows.forEach(t => {
+        html += `<tr><td class="${t.cls}">${t.label}</td><td class="num">${fmt(m.own[t.key])}</td>`
+          + m.groups.map(g => `<td class="num">${fmt(g.joiner[t.key])}</td>`).join('')
+          + `<td class="num">${fmt(m.used[t.key])}</td></tr>`;
+      });
+      html += `<tr class="total"><td>Total</td><td class="num">${fmt(tot(m.own))}</td>`
+        + m.groups.map(g => `<td class="num">${fmt(tot(g.joiner))}</td>`).join('')
+        + `<td class="num">${fmt(tot(m.used))}</td></tr></tbody>`;
+      $('sendTable').innerHTML = html;
+
+      // diagnostics
+      const setMiss = (id, v) => { const e = $(id); e.textContent = v > 0 ? '−' + fmt(v) : '✓ 0'; e.className = 'v ' + (v > 0 ? 'short' : 'ok'); };
+      setMiss('mInf', m.missing.inf); setMiss('mCav', m.missing.cav); setMiss('mArch', m.missing.arch);
+      const setLeft = (id, v) => { const e = $(id); e.textContent = fmt(v); e.className = 'v ' + (v < 0 ? 'short' : ''); };
+      setLeft('lInf', m.unused.inf); setLeft('lCav', m.unused.cav); setLeft('lArch', m.unused.arch);
+      $('pjs').textContent = fmt(m.pjs);
+
+      // 9-grid
+      const deploys = [0, 0.1, 0.2];
+      const tiers = [
+        { key: '0', label: 'None', flat: 0 },
+        { key: 'marshal', label: 'Marshal', flat: 2500 },
+        { key: 'big', label: 'Big Marshal', flat: 5000 }
+      ];
+      const selTier = $('marshalTier').value;
+      const selDeploy = m.deploy;
+      $('grid9body').innerHTML = tiers.map(t => {
+        const cells = deploys.map(d => {
+          const val = Math.round((m.squadCore + t.flat) * (1 + d));
+          const active = (t.key === selTier && Math.abs(d - selDeploy) < 1e-9);
+          return `<td class="${active ? 'active' : ''}">${fmt(val)}</td>`;
+        }).join('');
+        return `<tr><td>${t.label}</td>${cells}</tr>`;
+      }).join('');
+
+      // warnings
+      const w = [];
+      m.groups.forEach(g => {
+        const s = num('rInf' + g.key) + num('rCav' + g.key) + num('rArch' + g.key);
+        if (Math.abs(s - 100) > 0.001) w.push(`Ratio ${g.key} sums to ${fmt(s)}% instead of 100% — normalized automatically.`);
+      });
+      if (m.own.inf > m.troops.inf || m.own.cav > m.troops.cav || m.own.arch > m.troops.arch)
+        w.push('Not enough troops for a full own squad — joiners get correspondingly less.');
+      $('warnings').innerHTML = w.map(x => `<div class="warn">⚠️ ${x}</div>`).join('');
+    }
+
+    INPUTS.forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
+    render();
+  </script>
+</body>
+
+</html>

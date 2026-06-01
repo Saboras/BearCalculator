@@ -1,0 +1,7 @@
+# BMAD method tooling & planning artifacts — local only, not part of the app
+_bmad/
+.agent/
+_bmad-output/
+
+# Local Claude Code / agent config
+.claude/
