@@ -107,7 +107,8 @@
       border: 1px solid var(--border);
       background: var(--panel2);
       color: var(--text);
-      font-size: 15px;
+      font-size: 16px;
+      /* 16px keeps iOS Safari from auto-zooming on focus */
       transition: border-color .15s, box-shadow .15s;
     }
 
@@ -385,6 +386,51 @@
       font-size: 12px;
       padding: 16px 0 36px;
     }
+
+    /* wide tables scroll sideways instead of breaking the layout on small screens */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 600px) {
+      header {
+        padding: 18px 16px;
+      }
+
+      header h1 {
+        font-size: 20px;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 13px;
+      }
+
+      .diag {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .squadsize {
+        font-size: 32px;
+      }
+
+      /* let paired-control labels wrap instead of overflowing their half column */
+      .row2>div>label,
+      .row3>div>label {
+        white-space: normal;
+      }
+
+      /* keep columns legible; the wrapper scrolls if they don't fit */
+      .table-wrap table {
+        min-width: 460px;
+      }
+
+      th,
+      td {
+        padding: 9px 10px;
+      }
+    }
   </style>
 </head>
 
@@ -511,7 +557,9 @@
 
       <div class="card">
         <h2>What to send where</h2>
-        <table id="sendTable"></table>
+        <div class="table-wrap">
+          <table id="sendTable"></table>
+        </div>
       </div>
 
       <div class="card">
@@ -549,17 +597,19 @@
 
       <div class="card">
         <h2>All 9 squad sizes</h2>
-        <table class="grid9">
-          <thead>
-            <tr>
-              <th></th>
-              <th>0%</th>
-              <th>10%</th>
-              <th>20%</th>
-            </tr>
-          </thead>
-          <tbody id="grid9body"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table class="grid9">
+            <thead>
+              <tr>
+                <th></th>
+                <th>0%</th>
+                <th>10%</th>
+                <th>20%</th>
+              </tr>
+            </thead>
+            <tbody id="grid9body"></tbody>
+          </table>
+        </div>
         <div class="hint">Highlighted = currently selected Marshal / Deploy combination.</div>
       </div>
     </section>
