@@ -498,14 +498,17 @@
         <label>Join cap (per joiner) <span class="tag">× 6 joiner rallies</span></label>
         <input id="joinCap" type="number" min="0" value="80000">
 
-        <label>Joiner split mode</label>
-        <select id="splitMode">
-          <option value="uniform">Uniform — all 6 joiners same ratio</option>
-          <option value="half">Half &amp; half — 3 + 3</option>
-          <option value="thirds">Thirds — 2 + 2 + 2</option>
-        </select>
+        <label><input type="checkbox" id="maxArcher" class="chk">Max Archer mode <span class="tag">Inf 5k / Cav 5k / rest Arch</span></label>
 
-        <div id="ratioA">
+        <div id="ratioControls">
+          <label>Joiner split mode</label>
+          <select id="splitMode">
+            <option value="uniform">Uniform — all 6 joiners same ratio</option>
+            <option value="half">Half &amp; half — 3 + 3</option>
+            <option value="thirds">Thirds — 2 + 2 + 2</option>
+          </select>
+
+          <div id="ratioA">
           <label>Ratio A <span class="tag" id="ratioAtag">own + 6 joiners</span> — Inf / Cav / Arch (%)</label>
           <div class="row3">
             <input id="rInfA" type="number" min="0" value="10" class="t-inf">
@@ -521,16 +524,17 @@
             <input id="rArchB" type="number" min="0" value="90" class="t-arch">
           </div>
         </div>
-        <div id="ratioC">
-          <label>Ratio C <span class="tag" id="ratioCtag">2 joiners</span> — Inf / Cav / Arch (%)</label>
-          <div class="row3">
-            <input id="rInfC" type="number" min="0" value="0" class="t-inf">
-            <input id="rCavC" type="number" min="0" value="20" class="t-cav">
-            <input id="rArchC" type="number" min="0" value="80" class="t-arch">
+          <div id="ratioC">
+            <label>Ratio C <span class="tag" id="ratioCtag">2 joiners</span> — Inf / Cav / Arch (%)</label>
+            <div class="row3">
+              <input id="rInfC" type="number" min="0" value="0" class="t-inf">
+              <input id="rCavC" type="number" min="0" value="20" class="t-cav">
+              <input id="rArchC" type="number" min="0" value="80" class="t-arch">
+            </div>
           </div>
         </div>
 
-        <div class="hint">Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally always uses Ratio A.</div>
+        <div class="hint" id="distHint">Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally uses Ratio A. Inf &amp; Cav are clamped to a 5,000 floor.</div>
       </div>
     </section>
 
@@ -558,6 +562,7 @@
         <div class="table-wrap">
           <table id="sendTable"></table>
         </div>
+        <div class="hint" id="ownPct"></div>
       </div>
 
       <div class="card">
@@ -621,7 +626,7 @@
     const fmt = n => Math.round(n).toLocaleString('en-US');
 
     const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'valoraOn', 'valoraSquad', 'marshalTier',
-      'deploy', 'joinCap', 'splitMode',
+      'deploy', 'joinCap', 'maxArcher', 'splitMode',
       'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
       'rallySize', 'valoraRally'];
 
@@ -647,6 +652,30 @@
       return { inf, cav, arch };
     }
 
+    // Bear has ~5000 troops: below that a type scales linearly, above it only by sqrt.
+    // Practical rule: never let Inf or Cav drop below 5000 in any single deployment.
+    const FLOOR = 5000;
+
+    // raise Inf & Cav up to the floor by converting archers, bounded by budget & available archers
+    function applyFloor(d, budget) {
+      let { inf, cav, arch } = d;
+      const addCav = Math.min(Math.max(0, FLOOR - cav), Math.max(0, budget.cav - cav), arch);
+      cav += addCav; arch -= addCav;
+      const addInf = Math.min(Math.max(0, FLOOR - inf), Math.max(0, budget.inf - inf), arch);
+      inf += addInf; arch -= addInf;
+      return { inf, cav, arch };
+    }
+
+    // Max Archer: Inf=Cav=FLOOR (budget-capped), archers fill the rest, shortfall backfills Cav then Inf
+    function fillMaxArcher(budget, cap) {
+      const inf0 = Math.min(FLOOR, budget.inf), cav0 = Math.min(FLOOR, budget.cav);
+      const arch = Math.min(budget.arch, Math.max(0, cap - inf0 - cav0));
+      let cav = cav0, inf = inf0, room = cap - inf - cav - arch;
+      const addCav = Math.min(Math.max(0, budget.cav - cav), room); cav += addCav; room -= addCav;
+      const addInf = Math.min(Math.max(0, budget.inf - inf), room); inf += addInf;
+      return { inf, cav, arch };
+    }
+
     // split mode -> joiner groups (counts sum to JOINERS); own rally always uses ratio A
     function groupsFor(mode) {
       if (mode === 'half') return [{ key: 'A', count: 3 }, { key: 'B', count: 3 }];
@@ -661,17 +690,23 @@
       const deploy = num('deploy');
       const activeSquad = Math.round((squadCore + marshalFlat()) * (1 + deploy));
 
-      const mode = $('splitMode').value;
+      const maxArcher = $('maxArcher').checked;
+      const mode = maxArcher ? 'uniform' : $('splitMode').value;
       const ratios = { A: readRatio('A'), B: readRatio('B'), C: readRatio('C') };
       const rA = ratios.A;
-
-      // own rally = full active squad by ratio A (remainder -> arch)
-      const own = {};
-      own.inf = Math.round(activeSquad * rA.inf);
-      own.cav = Math.round(activeSquad * rA.cav);
-      own.arch = activeSquad - own.inf - own.cav;
-
       const joinCap = num('joinCap');
+
+      // own rally = full active squad (floor-respecting); maxArcher or ratio A
+      let own, ownTarget;
+      if (maxArcher) {
+        own = fillMaxArcher(troops, activeSquad);
+        ownTarget = { inf: FLOOR, cav: FLOOR, arch: Math.max(0, activeSquad - 2 * FLOOR) };
+      } else {
+        const base = { inf: Math.round(activeSquad * rA.inf), cav: Math.round(activeSquad * rA.cav) };
+        base.arch = activeSquad - base.inf - base.cav;
+        ownTarget = { ...base };
+        own = applyFloor(base, troops);
+      }
 
       // leftover pool after own rally; every joiner gets an equal 1/6 budget
       const left = {
@@ -685,10 +720,26 @@
         arch: Math.max(0, Math.floor(left.arch / JOINERS))
       };
 
-      // joiner groups: each group's joiners are identical, filled by its own ratio
-      const groups = groupsFor(mode).map(g => ({
-        ...g, ratio: ratios[g.key], joiner: fillJoiner(per, ratios[g.key], joinCap)
-      }));
+      // joiner groups: identical within a group; floor-respecting
+      let groups;
+      if (maxArcher) {
+        groups = [{
+          key: 'A', count: JOINERS, ratio: null, joiner: fillMaxArcher(per, joinCap),
+          target: { inf: FLOOR, cav: FLOOR, arch: Math.max(0, joinCap - 2 * FLOOR) }
+        }];
+      } else {
+        groups = groupsFor(mode).map(g => {
+          const ratio = ratios[g.key];
+          const raw = fillJoiner(per, ratio, joinCap);
+          const joiner = applyFloor(raw, per);
+          const target = { inf: Math.round(joinCap * ratio.inf), cav: Math.round(joinCap * ratio.cav), arch: Math.round(joinCap * ratio.arch) };
+          return { ...g, ratio, raw, joiner, target };
+        });
+      }
+
+      // floor diagnostics
+      const floorUnmet = [own, ...groups.map(g => g.joiner)].some(d => d.inf < FLOOR || d.cav < FLOOR);
+      const floorApplied = !maxArcher && groups.some(g => g.joiner.inf > g.raw.inf || g.joiner.cav > g.raw.cav);
 
       const sumSel = sel => own[sel] + groups.reduce((t, g) => t + g.count * g.joiner[sel], 0);
       const used = { inf: sumSel('inf'), cav: sumSel('cav'), arch: sumSel('arch') };
@@ -698,8 +749,8 @@
         arch: troops.arch - used.arch
       };
 
-      // missing for "perfect ratio": own + every joiner at full cap by its group ratio
-      const need = sel => own[sel] + groups.reduce((t, g) => t + g.count * Math.round(joinCap * g.ratio[sel]), 0);
+      // missing to send the full ideal target to own rally + all joiners
+      const need = sel => ownTarget[sel] + groups.reduce((t, g) => t + g.count * g.target[sel], 0);
       const missing = {
         inf: Math.max(0, need('inf') - troops.inf),
         cav: Math.max(0, need('cav') - troops.cav),
@@ -710,7 +761,7 @@
       const rallyTotal = num('rallySize') + rallyBonuses;
       const pjs = Math.floor((rallyTotal - activeSquad) / SLOTS);
 
-      return { troops, squadCore, activeSquad, deploy, mode, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses };
+      return { troops, squadCore, activeSquad, deploy, mode, maxArcher, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses, floorUnmet, floorApplied };
     }
 
     function render() {
@@ -728,6 +779,12 @@
       $('squadSize').textContent = fmt(m.activeSquad);
       $('rallyFormula').textContent = `${fmt(m.rallyTotal - m.rallyBonuses)} base + ${fmt(m.rallyBonuses)} bonuses`;
       $('rallySizeTotal').textContent = fmt(m.rallyTotal);
+
+      // distribution mode UI (Max Archer hides split + ratios)
+      $('ratioControls').style.display = m.maxArcher ? 'none' : '';
+      $('distHint').textContent = m.maxArcher
+        ? 'Max Archer: Inf 5,000 / Cav 5,000 / rest Archers per deployment; shortfall backfills Cav then Inf. Split & ratios disabled.'
+        : 'Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally uses Ratio A. Inf & Cav are clamped to a 5,000 floor.';
 
       // split-mode UI: show/hide ratio B & C, update their joiner-count tags
       const mode = m.mode;
@@ -756,6 +813,17 @@
         + m.groups.map(g => `<td class="num">${fmt(tot(g.joiner))}</td>`).join('')
         + `<td class="num">${fmt(tot(m.used))}</td></tr></tbody>`;
       $('sendTable').innerHTML = html;
+
+      // own-rally % formation (Max Archer only): you can't pre-build exact counts because Valora is bear-only,
+      // so show the percentages to enter in-game; round Inf/Cav UP so they stay at/above the 5,000 floor.
+      const ownTot = m.own.inf + m.own.cav + m.own.arch;
+      const oInfP = ownTot ? Math.ceil(100 * m.own.inf / ownTot) : 0;
+      const oCavP = ownTot ? Math.ceil(100 * m.own.cav / ownTot) : 0;
+      const oArchP = Math.max(0, 100 - oInfP - oCavP);
+      $('ownPct').style.display = m.maxArcher ? '' : 'none';
+      $('ownPct').innerHTML = m.maxArcher
+        ? `<strong>Own rally — set this formation in-game</strong> (rounded up so Inf/Cav stay ≥ 5,000): <strong>${oInfP}% Inf / ${oCavP}% Cav / ${oArchP}% Arch</strong>`
+        : '';
 
       // diagnostics
       const setMiss = (id, v) => { const e = $(id); e.textContent = v > 0 ? '−' + fmt(v) : '✓ 0'; e.className = 'v ' + (v > 0 ? 'short' : 'ok'); };
@@ -790,6 +858,10 @@
       });
       if (m.own.inf > m.troops.inf || m.own.cav > m.troops.cav || m.own.arch > m.troops.arch)
         w.push('Not enough troops for a full own squad — joiners get correspondingly less.');
+      if (!m.maxArcher && m.floorApplied)
+        w.push('Inf/Cav were below 5,000 and clamped up to the floor (archers reduced) — expected.');
+      if (m.floorUnmet)
+        w.push('Not enough Inf/Cav to keep every deployment at the 5,000 floor.');
       $('warnings').innerHTML = w.map(x => `<div class="warn">⚠️ ${x}</div>`).join('');
     }
 
