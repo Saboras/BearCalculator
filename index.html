@@ -512,8 +512,6 @@
             <div><label>Rally bonus</label><input id="valoraRally" type="number" min="0" value="300000"></div>
           </div>
         </div>
-
-        <div class="hint">Cassia is always deployed at the Bear Trap, so her buffs are already baked into the squad base cap and rally size above — no separate entry needed.</div>
       </div>
 
       <div class="card">
@@ -957,10 +955,14 @@
     $('copyBtn').addEventListener('click', () => copyText(formationText(), $('copyBtn')));
     $('shareBtn').addEventListener('click', () => copyText(shareURL(), $('shareBtn')));
 
-    // ---- init: a shared-link #hash wins over saved local state ----
-    if (!applyHash()) loadLocal();
+    // ---- init ----
+    // A shared #hash pre-fills the app once; otherwise restore the last saved state.
+    const fromHash = applyHash();
+    if (!fromHash) loadLocal();
     INPUTS.forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     render();
+    // Consume the shared link: drop the #hash so live edits & refreshes use localStorage, not the stale snapshot.
+    if (fromHash) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { } }
   </script>
 </body>
 
