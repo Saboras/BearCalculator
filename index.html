@@ -485,18 +485,12 @@
           <div class="hero-head"><input type="checkbox" id="valoraOn" checked class="chk"><strong>Valora</strong> <span
               class="tag">bear only</span></div>
           <div class="row2">
-            <div><label>Squad bonus</label><input id="valoraSquad" type="number" min="0" value="1500"></div>
+            <div><label>Squad bonus</label><input id="valoraSquad" type="number" min="0" value="15000"></div>
             <div><label>Rally bonus</label><input id="valoraRally" type="number" min="0" value="300000"></div>
           </div>
         </div>
 
-        <div class="hero">
-          <div class="hero-head"><strong>Cassia</strong> <span class="tag">always</span></div>
-          <div class="row2">
-            <div><label>Squad bonus</label><input id="cassiaSquad" type="number" min="0" value="0"></div>
-            <div><label>Rally bonus</label><input id="cassiaRally" type="number" min="0" value="0"></div>
-          </div>
-        </div>
+        <div class="hint">Cassia is always deployed at the Bear Trap, so her buffs are already baked into the squad base cap and rally size above — no separate entry needed.</div>
       </div>
 
       <div class="card">
@@ -626,10 +620,10 @@
     const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
     const fmt = n => Math.round(n).toLocaleString('en-US');
 
-    const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'valoraOn', 'valoraSquad', 'cassiaSquad', 'marshalTier',
+    const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'valoraOn', 'valoraSquad', 'marshalTier',
       'deploy', 'joinCap', 'splitMode',
       'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
-      'rallySize', 'valoraRally', 'cassiaRally'];
+      'rallySize', 'valoraRally'];
 
     // fixed game constants
     const JOINERS = 6;   // joiner rallies you join (your 6 marches)
@@ -663,7 +657,7 @@
     function compute() {
       const troops = { inf: num('tInf'), cav: num('tCav'), arch: num('tArch') };
       const valoraOn = $('valoraOn').checked;
-      const squadCore = num('squadBase') + (valoraOn ? num('valoraSquad') : 0) + num('cassiaSquad');
+      const squadCore = num('squadBase') + (valoraOn ? num('valoraSquad') : 0);
       const deploy = num('deploy');
       const activeSquad = Math.round((squadCore + marshalFlat()) * (1 + deploy));
 
@@ -712,7 +706,7 @@
         arch: Math.max(0, need('arch') - troops.arch)
       };
 
-      const rallyBonuses = (valoraOn ? num('valoraRally') : 0) + num('cassiaRally');
+      const rallyBonuses = (valoraOn ? num('valoraRally') : 0);
       const rallyTotal = num('rallySize') + rallyBonuses;
       const pjs = Math.floor((rallyTotal - activeSquad) / SLOTS);
 
