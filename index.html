@@ -384,6 +384,29 @@
       color: var(--honey-soft);
     }
 
+    .btnrow {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font: inherit;
+      cursor: pointer;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      transition: border-color .15s, color .15s;
+    }
+
+    .btn:hover {
+      border-color: var(--honey-soft);
+      color: var(--honey-soft);
+    }
+
     footer {
       text-align: center;
       color: var(--muted);
@@ -563,6 +586,10 @@
           <table id="sendTable"></table>
         </div>
         <div class="hint" id="ownPct"></div>
+        <div class="btnrow">
+          <button type="button" class="btn" id="copyBtn">📋 Copy formation</button>
+          <button type="button" class="btn" id="shareBtn">🔗 Copy share link</button>
+        </div>
       </div>
 
       <div class="card">
@@ -761,7 +788,15 @@
       const rallyTotal = num('rallySize') + rallyBonuses;
       const pjs = Math.floor((rallyTotal - activeSquad) / SLOTS);
 
-      return { troops, squadCore, activeSquad, deploy, mode, maxArcher, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses, floorUnmet, floorApplied };
+      // own-rally composition as % (round Inf/Cav up to hold the 5,000 floor)
+      const ownTotal = own.inf + own.cav + own.arch;
+      const ownPct = {
+        inf: ownTotal ? Math.ceil(100 * own.inf / ownTotal) : 0,
+        cav: ownTotal ? Math.ceil(100 * own.cav / ownTotal) : 0
+      };
+      ownPct.arch = Math.max(0, 100 - ownPct.inf - ownPct.cav);
+
+      return { troops, squadCore, activeSquad, deploy, mode, maxArcher, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses, floorUnmet, floorApplied, ownPct };
     }
 
     function render() {
@@ -814,15 +849,10 @@
         + `<td class="num">${fmt(tot(m.used))}</td></tr></tbody>`;
       $('sendTable').innerHTML = html;
 
-      // own-rally % formation (Max Archer only): you can't pre-build exact counts because Valora is bear-only,
-      // so show the percentages to enter in-game; round Inf/Cav UP so they stay at/above the 5,000 floor.
-      const ownTot = m.own.inf + m.own.cav + m.own.arch;
-      const oInfP = ownTot ? Math.ceil(100 * m.own.inf / ownTot) : 0;
-      const oCavP = ownTot ? Math.ceil(100 * m.own.cav / ownTot) : 0;
-      const oArchP = Math.max(0, 100 - oInfP - oCavP);
+      // own-rally % formation (Max Archer only): can't pre-build exact counts because Valora is bear-only
       $('ownPct').style.display = m.maxArcher ? '' : 'none';
       $('ownPct').innerHTML = m.maxArcher
-        ? `<strong>Own rally — set this formation in-game</strong> (rounded up so Inf/Cav stay ≥ 5,000): <strong>${oInfP}% Inf / ${oCavP}% Cav / ${oArchP}% Arch</strong>`
+        ? `<strong>Own rally — set this formation in-game</strong> (rounded up so Inf/Cav stay ≥ 5,000): <strong>${m.ownPct.inf}% Inf / ${m.ownPct.cav}% Cav / ${m.ownPct.arch}% Arch</strong>`
         : '';
 
       // diagnostics
@@ -852,7 +882,7 @@
 
       // warnings
       const w = [];
-      m.groups.forEach(g => {
+      if (!m.maxArcher) m.groups.forEach(g => {
         const s = num('rInf' + g.key) + num('rCav' + g.key) + num('rArch' + g.key);
         if (Math.abs(s - 100) > 0.001) w.push(`Ratio ${g.key} sums to ${fmt(s)}% instead of 100% — normalized automatically.`);
       });
@@ -863,8 +893,72 @@
       if (m.floorUnmet)
         w.push('Not enough Inf/Cav to keep every deployment at the 5,000 floor.');
       $('warnings').innerHTML = w.map(x => `<div class="warn">⚠️ ${x}</div>`).join('');
+
+      lastModel = m;
+      saveState();
     }
 
+    // ---- persistence (localStorage) + share link + copy-to-clipboard ----
+    const STORAGE_KEY = 'bearcalc.state';
+    let lastModel = null;
+
+    const readEl = id => { const el = $(id); return el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value; };
+    const writeEl = (id, v) => { const el = $(id); if (el.type === 'checkbox') el.checked = (v === '1' || v === true); else el.value = v; };
+
+    function saveState() {
+      const s = {}; INPUTS.forEach(id => s[id] = readEl(id));
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { }
+    }
+    function loadLocal() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (s) { INPUTS.forEach(id => { if (id in s) writeEl(id, s[id]); }); return true; }
+      } catch (e) { }
+      return false;
+    }
+    function applyHash() {
+      const h = location.hash.replace(/^#/, ''); if (!h) return false;
+      const p = new URLSearchParams(h); let any = false;
+      INPUTS.forEach(id => { if (p.has(id)) { writeEl(id, p.get(id)); any = true; } });
+      return any;
+    }
+    function shareURL() {
+      const p = new URLSearchParams(); INPUTS.forEach(id => p.set(id, readEl(id)));
+      return location.origin + location.pathname + '#' + p.toString();
+    }
+
+    function formationText() {
+      const m = lastModel; if (!m) return '';
+      const tri = d => `${fmt(d.inf)} / ${fmt(d.cav)} / ${fmt(d.arch)}`;
+      const out = ['🐻 Bear Trap formation — Inf / Cav / Arch'];
+      out.push(m.maxArcher
+        ? `Own rally (set in-game): ${m.ownPct.inf}% / ${m.ownPct.cav}% / ${m.ownPct.arch}%`
+        : `Own rally: ${tri(m.own)}`);
+      m.groups.forEach(g => {
+        const lbl = m.groups.length === 1 ? `Joiners (×${g.count})` : `Joiners ${g.key} (×${g.count})`;
+        out.push(`${lbl}: ${tri(g.joiner)}`);
+      });
+      return out.join('\n');
+    }
+
+    function copyText(text, btn) {
+      const flash = () => { const o = btn.textContent; btn.textContent = '✓ Copied'; setTimeout(() => { btn.textContent = o; }, 1500); };
+      const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); flash(); } catch (e) { }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash).catch(fallback);
+      else fallback();
+    }
+
+    $('copyBtn').addEventListener('click', () => copyText(formationText(), $('copyBtn')));
+    $('shareBtn').addEventListener('click', () => copyText(shareURL(), $('shareBtn')));
+
+    // ---- init: a shared-link #hash wins over saved local state ----
+    if (!applyHash()) loadLocal();
     INPUTS.forEach(id => { $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
     render();
   </script>
