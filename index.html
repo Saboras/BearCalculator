@@ -520,6 +520,7 @@
         <input id="joinCap" type="number" min="0" value="80000">
 
         <label><input type="checkbox" id="maxArcher" class="chk">Max Archer mode <span class="tag">Inf 5k / Cav 5k / rest Arch</span></label>
+        <label><input type="checkbox" id="usePct" class="chk">Own rally as % <span class="tag">pre-built, rounded</span></label>
 
         <div id="ratioControls">
           <label>Joiner split mode</label>
@@ -651,7 +652,7 @@
     const fmt = n => Math.round(n).toLocaleString('en-US');
 
     const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'valoraOn', 'valoraSquad', 'marshalTier',
-      'deploy', 'joinCap', 'maxArcher', 'splitMode',
+      'deploy', 'joinCap', 'maxArcher', 'usePct', 'splitMode',
       'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
       'rallySize', 'valoraRally'];
 
@@ -733,6 +734,23 @@
         own = applyFloor(base, troops);
       }
 
+      // own-rally composition as whole % (Inf/Cav rounded up so they hold the 5,000 floor)
+      const ownSum = own.inf + own.cav + own.arch;
+      const ownPct = {
+        inf: ownSum ? Math.ceil(100 * own.inf / ownSum) : 0,
+        cav: ownSum ? Math.ceil(100 * own.cav / ownSum) : 0
+      };
+      ownPct.arch = Math.max(0, 100 - ownPct.inf - ownPct.cav);
+
+      // "Own rally as %": the rally is pre-built as percentages (Valora enlarges the squad only at the bear,
+      // so exact counts can't be pre-set). Recompute its counts from the rounded % so the leftover pool &
+      // joiners stay consistent with what is actually deployed (no phantom leftover troops).
+      const usePct = $('usePct').checked;
+      if (usePct) {
+        own = { inf: Math.round(ownPct.inf / 100 * activeSquad), cav: Math.round(ownPct.cav / 100 * activeSquad) };
+        own.arch = activeSquad - own.inf - own.cav;
+      }
+
       // leftover pool after own rally; every joiner gets an equal 1/6 budget
       const left = {
         inf: troops.inf - own.inf,
@@ -786,15 +804,7 @@
       const rallyTotal = num('rallySize') + rallyBonuses;
       const pjs = Math.floor((rallyTotal - activeSquad) / SLOTS);
 
-      // own-rally composition as % (round Inf/Cav up to hold the 5,000 floor)
-      const ownTotal = own.inf + own.cav + own.arch;
-      const ownPct = {
-        inf: ownTotal ? Math.ceil(100 * own.inf / ownTotal) : 0,
-        cav: ownTotal ? Math.ceil(100 * own.cav / ownTotal) : 0
-      };
-      ownPct.arch = Math.max(0, 100 - ownPct.inf - ownPct.cav);
-
-      return { troops, squadCore, activeSquad, deploy, mode, maxArcher, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses, floorUnmet, floorApplied, ownPct };
+      return { troops, squadCore, activeSquad, deploy, mode, maxArcher, usePct, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses, floorUnmet, floorApplied, ownPct };
     }
 
     function render() {
@@ -847,10 +857,10 @@
         + `<td class="num">${fmt(tot(m.used))}</td></tr></tbody>`;
       $('sendTable').innerHTML = html;
 
-      // own-rally % formation (Max Archer only): can't pre-build exact counts because Valora is bear-only
-      $('ownPct').style.display = m.maxArcher ? '' : 'none';
-      $('ownPct').innerHTML = m.maxArcher
-        ? `<strong>Own rally — set this formation in-game</strong> (rounded up so Inf/Cav stay ≥ 5,000): <strong>${m.ownPct.inf}% Inf / ${m.ownPct.cav}% Cav / ${m.ownPct.arch}% Arch</strong>`
+      // own-rally % readout: shown when "Own rally as %" is on (counts are then derived from these %)
+      $('ownPct').style.display = m.usePct ? '' : 'none';
+      $('ownPct').innerHTML = m.usePct
+        ? `<strong>Own rally — set this formation in-game</strong> (rounded so Inf/Cav stay ≥ 5,000): <strong>${m.ownPct.inf}% Inf / ${m.ownPct.cav}% Cav / ${m.ownPct.arch}% Arch</strong>`
         : '';
 
       // diagnostics
@@ -929,7 +939,7 @@
       const m = lastModel; if (!m) return '';
       const tri = d => `${fmt(d.inf)} / ${fmt(d.cav)} / ${fmt(d.arch)}`;
       const out = ['🐻 Bear Trap formation — Inf / Cav / Arch'];
-      out.push(m.maxArcher
+      out.push(m.usePct
         ? `Own rally (set in-game): ${m.ownPct.inf}% / ${m.ownPct.cav}% / ${m.ownPct.arch}%`
         : `Own rally: ${tri(m.own)}`);
       m.groups.forEach(g => {
