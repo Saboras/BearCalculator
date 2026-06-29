@@ -1,0 +1,43 @@
+name: Build site
+
+# Off-box build for the Astro project in site/. Runs entirely on GitHub Actions
+# and uploads the static dist/ as an artifact — no build tools touch any server box.
+#
+# No host deploy yet: the Vultr VPS + domain are provisioned in Story 3.1, which
+# adds the SSH/rsync deploy step (and the Directus repository_dispatch rebuild
+# trigger — AR-20). Do NOT publish to GitHub Pages here: the Pages root is reserved
+# for the existing single-file calculator (index.html) until cutover (AR-1).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: site/.nvmrc
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: site
+
+      - name: Build static site
+        run: npm run build
+        working-directory: site
+
+      - name: Upload static artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: site-dist
+          path: site/dist/
+
+      # Host deploy (SSH/rsync to the Caddy host) lands in Story 3.1, once the
+      # Vultr VPS + domain + deploy secrets exist (AR-20 / AD-16). None here.
