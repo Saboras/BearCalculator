@@ -1,0 +1,258 @@
+---
+/*
+  App shell navigation (Story 1.3). One component, three surfaces driven by a
+  single `tabs` array: a sticky desktop top bar, a compact mobile header strip,
+  and an always-visible mobile bottom tab bar. CSS shows the right surfaces per
+  breakpoint (single breakpoint at 768px, mobile-first). Active state is computed
+  server-side from Astro.url.pathname — no client JS (multi-page static site).
+*/
+import ThemeToggle from './ThemeToggle.astro';
+
+const tabs = [
+  { label: 'Home', short: 'Home', href: '/', icon: '🏠' },
+  { label: 'Tools', short: 'Tools', href: '/tools', icon: '🧰' },
+  { label: 'Alliance Finder', short: 'Finder', href: '/finder', icon: '🧭' },
+  { label: 'Guides', short: 'Guides', href: '/guides', icon: '📖' },
+];
+const joinHref = '/join';
+const loginHref = '/leader';
+
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const isActive = (href: string) =>
+  href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
+---
+
+{/* Desktop sticky top bar */}
+<header class="topbar">
+  <a href="/" class="brand">Kingdom <span class="brand-num">1516</span></a>
+  <nav class="nav" aria-label="Primary">
+    {tabs.map((t) => (
+      <a
+        href={t.href}
+        class:list={['nav-link', { active: isActive(t.href) }]}
+        aria-current={isActive(t.href) ? 'page' : undefined}
+      >{t.label}</a>
+    ))}
+    <a
+      href={joinHref}
+      class:list={['nav-link', 'nav-join', { active: isActive(joinHref) }]}
+      aria-current={isActive(joinHref) ? 'page' : undefined}
+    >Join 1516</a>
+  </nav>
+  <div class="topbar-right">
+    <a href={loginHref} class="login-link"><span aria-hidden="true">🛡️</span> Leader login</a>
+    <ThemeToggle />
+  </div>
+</header>
+
+{/* Mobile header strip — wordmark + leader-login + theme toggle (the bottom bar has no room) */}
+<header class="m-header">
+  <a href="/" class="brand">Kingdom <span class="brand-num">1516</span></a>
+  <div class="m-header-right">
+    <a href={loginHref} class="icon-btn" aria-label="Leader login"><span aria-hidden="true">🛡️</span></a>
+    <ThemeToggle />
+  </div>
+</header>
+
+{/* Mobile bottom tab bar — four tabs only; Join is an in-page button, not a tab (AC2) */}
+<nav class="nav-mobile-tabbar" aria-label="Mobile">
+  {tabs.map((t) => (
+    <a
+      href={t.href}
+      class:list={['tab', { active: isActive(t.href) }]}
+      aria-current={isActive(t.href) ? 'page' : undefined}
+    >
+      <span class="tab-icon" aria-hidden="true">{t.icon}</span>
+      <span class="tab-label">{t.short}</span>
+    </a>
+  ))}
+</nav>
+
+<style>
+  /* ===== Shared brand wordmark ===== */
+  .brand {
+    font-family: var(--font-display);
+    color: var(--color-primary);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .5);
+    text-decoration: none;
+    white-space: nowrap;
+    letter-spacing: .3px;
+  }
+  .brand:hover {
+    text-decoration: none;
+  }
+  .brand-num {
+    color: var(--color-ink);
+  }
+
+  /* ===== Shared icon button (mobile header leader-login shield) ===== */
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    text-decoration: none;
+  }
+  .icon-btn:hover {
+    border-color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  /* ===== Desktop top bar: hidden by default (mobile-first) ===== */
+  .topbar {
+    display: none;
+  }
+
+  /* ===== Mobile header strip (default) ===== */
+  .m-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: linear-gradient(#FDF9EF, #F6EDD7);
+    border-bottom: 2px solid var(--color-primary);
+  }
+  .m-header .brand {
+    font-size: 18px;
+  }
+  .m-header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* ===== Mobile bottom tab bar (default) — always visible, fixed ===== */
+  .nav-mobile-tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: flex;
+    background: linear-gradient(#FDF9EF, #F4E8CD);
+    border-top: 2px solid var(--color-primary);
+    box-shadow: 0 -3px 10px rgba(44, 38, 34, .1);
+    /* clear the iOS home indicator so tabs aren't under the home bar */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: var(--space-2) 0 var(--space-3);
+    text-decoration: none;
+    color: var(--color-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .tab:hover {
+    text-decoration: none;
+  }
+  .tab-icon {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+  .tab.active {
+    color: var(--color-primary-hover);
+  }
+  .tab.active .tab-icon {
+    filter: drop-shadow(0 1px 1px rgba(224, 138, 43, .4));
+  }
+
+  /* ===== Desktop enhancement (single breakpoint) ===== */
+  @media (min-width: 768px) {
+    .m-header,
+    .nav-mobile-tabbar {
+      display: none;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+      padding: var(--space-4) var(--space-6);
+      background: linear-gradient(#FDF9EF, #F6EDD7);
+      border-bottom: 2px solid var(--color-primary);
+      box-shadow: 0 2px 0 rgba(224, 138, 43, .18) inset;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar .brand {
+      font-size: 23px;
+    }
+
+    .nav {
+      display: flex;
+      gap: var(--space-5);
+      align-items: center;
+      margin-left: var(--space-3);
+    }
+    .nav-link {
+      color: var(--color-ink);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 2px;
+      border-bottom: 2px solid transparent;
+    }
+    .nav-link:hover {
+      color: var(--color-primary-hover);
+      border-bottom-color: var(--color-primary);
+      text-decoration: none;
+    }
+    .nav-link.active {
+      border-bottom-color: var(--color-primary);
+    }
+    .nav-join {
+      color: var(--color-primary-hover);
+      font-weight: 700;
+    }
+
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .login-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--color-muted);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .login-link:hover {
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+  }
+
+  /* ===== Dark "Royal Court" chrome =====
+     The chrome gradients are light-parchment literals (verbatim from the DESIGN
+     recipes) with no dark variant, but the text tokens (--color-ink/--color-muted)
+     flip to light in dark mode — without these overrides the shell is light-on-light
+     and unreadable. Remap each surface to the dark panel/canvas tokens. */
+  :global(:root[data-theme="dark"]) .topbar,
+  :global(:root[data-theme="dark"]) .m-header {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+  }
+  :global(:root[data-theme="dark"]) .nav-mobile-tabbar {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow: 0 -3px 10px rgba(0, 0, 0, .35);
+  }
+  :global(:root[data-theme="dark"]) .brand {
+    /* the white emboss reads as a light artifact on the dark bar */
+    text-shadow: none;
+  }
+</style>
