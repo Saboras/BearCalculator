@@ -1,0 +1,80 @@
+---
+/*
+  Reusable theme toggle. Built in Story 1.2; mounted into the nav in Story 1.3.
+  Flips :root[data-theme] between light (absent) and "dark", and persists the
+  choice to localStorage under key "theme". The Layout's inline init re-applies
+  it on every page load (multi-page static site = persistence across navigation).
+*/
+---
+
+<button type="button" class="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">
+  <span class="theme-toggle__icon" aria-hidden="true"></span>
+</button>
+
+<style>
+  .theme-toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--color-primary);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Icon is CSS-driven from :root[data-theme] so it is correct at FIRST PAINT
+     with zero JS — a returning dark-mode visitor never sees a stale moon flash
+     (the no-FOUC init set data-theme before paint). Light = offer dark (🌙);
+     dark = offer light (☀️). */
+  .theme-toggle__icon::after {
+    content: "🌙";
+  }
+  :global(:root[data-theme="dark"]) .theme-toggle__icon::after {
+    content: "☀️";
+  }
+</style>
+
+<script>
+  const STORAGE_KEY = 'theme';
+
+  function currentTheme() {
+    return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function syncButton(btn: Element) {
+    // Visible icon is CSS-driven (see <style>); JS only maintains aria-pressed.
+    btn.setAttribute('aria-pressed', String(currentTheme() === 'dark'));
+  }
+
+  const toggles = document.querySelectorAll('.theme-toggle');
+
+  toggles.forEach((btn) => {
+    syncButton(btn);
+    btn.addEventListener('click', () => {
+      const next = currentTheme() === 'dark' ? 'light' : 'dark';
+      if (next === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {}
+      toggles.forEach(syncButton);
+    });
+  });
+</script>

@@ -1,43 +1,23 @@
-# Astro Starter Kit: Minimal
+# Kingdom 1516 — site
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Astro static site for the Kingdom 1516 Kingshot companion (MVP-1: public, no backend).
+The legacy single-file Bear Trap calculator stays live at the repo root (GitHub Pages) until cutover.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Commands
 
-## 🚀 Project Structure
+All commands run from `site/`:
 
-Inside of your Astro project, you'll see the following folders and files:
+| Command           | Action                                       |
+| :---------------- | :------------------------------------------- |
+| `npm ci`          | Install pinned dependencies                  |
+| `npm run dev`     | Start the local dev server (`localhost:4321`) |
+| `npm run build`   | Build the static site to `./dist/`           |
+| `npm run preview` | Preview the production build locally          |
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+## Stack
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+- Astro 6 (`output: 'static'`), Node 22 LTS (≥ 22.12, see `.nvmrc`).
+- Fonts (Inter, Lilita One) are self-hosted via the Astro Fonts API — no runtime CDN call.
+- Design tokens + themes (Banner Gold light / Royal Court dark) live in `src/styles/global.css`.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Docs: https://docs.astro.build

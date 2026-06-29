@@ -1,0 +1,49 @@
+---
+import { Font } from 'astro:assets';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Kingdom 1516' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="generator" content={Astro.generator} />
+
+    {/*
+      No-FOUC theme init. Must be render-blocking and run before first paint, so a
+      returning dark-mode visitor never sees a flash of light. `is:inline` keeps it
+      verbatim (not bundled/deferred). Re-runs on every page load — that is how the
+      choice persists across navigation in this multi-page static site.
+    */}
+    <script is:inline>
+      (function () {
+        try {
+          if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.dataset.theme = 'dark';
+          }
+        } catch {}
+      })();
+    </script>
+
+    <Font cssVariable="--font-lilita-one" preload />
+    <Font cssVariable="--font-inter" preload />
+
+    <title>{title}</title>
+  </head>
+  <body>
+    <Nav />
+    <slot />
+    <Footer />
+  </body>
+</html>
