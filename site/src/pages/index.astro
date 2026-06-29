@@ -1,26 +1,27 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
 
-// Whole-card-tappable entry points (AC2). Icons are emoji = text characters
-// (translation-safe, no image assets). Forward links point at their intended
+// Whole-card-tappable entry points (AC2). Icons are inline Lucide SVGs
+// (currentColor, no image assets). Forward links point at their intended
 // final kebab-case routes; they light up as later stories land.
 const entryCards = [
   {
-    icon: '🧰',
+    icon: 'wrench',
     title: 'Tools',
     copy: 'Our Bear Trap squad calculator + curated external calculators.',
     cta: 'Open tools →',
     href: '/tools',
   },
   {
-    icon: '🧭',
+    icon: 'compass',
     title: 'Alliance Finder',
     copy: 'Match by your timezone.',
     cta: 'Find your alliance →',
     href: '/finder',
   },
   {
-    icon: '📖',
+    icon: 'book-open',
     title: 'Guides',
     copy: 'How events work — Events · Troops & Heroes · Alliance & Transfer.',
     cta: 'Browse guides →',
@@ -44,7 +45,7 @@ const entryCards = [
       <div class="cards">
         {entryCards.map((c) => (
           <a class="card" href={c.href}>
-            <span class="card-icon" aria-hidden="true">{c.icon}</span>
+            <span class="card-icon" aria-hidden="true"><Icon name={c.icon} /></span>
             <h3 class="card-title">{c.title}</h3>
             <p class="card-copy">{c.copy}</p>
             <span class="card-cta">{c.cta}</span>

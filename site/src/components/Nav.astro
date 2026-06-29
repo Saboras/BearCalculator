@@ -7,12 +7,13 @@
   server-side from Astro.url.pathname — no client JS (multi-page static site).
 */
 import ThemeToggle from './ThemeToggle.astro';
+import Icon from './Icon.astro';
 
 const tabs = [
-  { label: 'Home', short: 'Home', href: '/', icon: '🏠' },
-  { label: 'Tools', short: 'Tools', href: '/tools', icon: '🧰' },
-  { label: 'Alliance Finder', short: 'Finder', href: '/finder', icon: '🧭' },
-  { label: 'Guides', short: 'Guides', href: '/guides', icon: '📖' },
+  { label: 'Home', short: 'Home', href: '/', icon: 'house' },
+  { label: 'Tools', short: 'Tools', href: '/tools', icon: 'wrench' },
+  { label: 'Alliance Finder', short: 'Finder', href: '/finder', icon: 'compass' },
+  { label: 'Guides', short: 'Guides', href: '/guides', icon: 'book-open' },
 ];
 const joinHref = '/join';
 const loginHref = '/leader';
@@ -40,7 +41,7 @@ const isActive = (href: string) =>
     >Join 1516</a>
   </nav>
   <div class="topbar-right">
-    <a href={loginHref} class="login-link"><span aria-hidden="true">🛡️</span> Leader login</a>
+    <a href={loginHref} class="login-link"><Icon name="shield" /> Leader login</a>
     <ThemeToggle />
   </div>
 </header>
@@ -49,7 +50,7 @@ const isActive = (href: string) =>
 <header class="m-header">
   <a href="/" class="brand">Kingdom <span class="brand-num">1516</span></a>
   <div class="m-header-right">
-    <a href={loginHref} class="icon-btn" aria-label="Leader login"><span aria-hidden="true">🛡️</span></a>
+    <a href={loginHref} class="icon-btn" aria-label="Leader login"><Icon name="shield" /></a>
     <ThemeToggle />
   </div>
 </header>
@@ -62,7 +63,7 @@ const isActive = (href: string) =>
       class:list={['tab', { active: isActive(t.href) }]}
       aria-current={isActive(t.href) ? 'page' : undefined}
     >
-      <span class="tab-icon" aria-hidden="true">{t.icon}</span>
+      <span class="tab-icon" aria-hidden="true"><Icon name={t.icon} /></span>
       <span class="tab-label">{t.short}</span>
     </a>
   ))}
@@ -235,6 +236,11 @@ const isActive = (href: string) =>
     .login-link:hover {
       color: var(--color-ink);
       text-decoration: none;
+    }
+    /* Bump the shield above the 13px label cap-height so it reads as an icon, not a glyph */
+    .login-link :global(.icon) {
+      width: 16px;
+      height: 16px;
     }
   }
 
