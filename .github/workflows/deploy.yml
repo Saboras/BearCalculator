@@ -13,6 +13,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Build-only job: pin least privilege explicitly instead of inheriting the repo default token scope.
+permissions:
+  contents: read
+
+# A newer push to main supersedes an in-flight build (matters more once Story 3.1 attaches the deploy).
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,6 +47,8 @@ jobs:
         with:
           name: site-dist
           path: site/dist/
+          if-no-files-found: error
+          retention-days: 7
 
       # Host deploy (SSH/rsync to the Caddy host) lands in Story 3.1, once the
       # Vultr VPS + domain + deploy secrets exist (AR-20 / AD-16). None here.
