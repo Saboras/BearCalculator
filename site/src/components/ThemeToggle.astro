@@ -5,10 +5,12 @@
   choice to localStorage under key "theme". The Layout's inline init re-applies
   it on every page load (multi-page static site = persistence across navigation).
 */
+import Icon from './Icon.astro';
 ---
 
 <button type="button" class="theme-toggle" aria-label="Toggle dark mode" aria-pressed="false">
-  <span class="theme-toggle__icon" aria-hidden="true"></span>
+  <Icon name="moon" class="tt-moon" />
+  <Icon name="sun" class="tt-sun" />
 </button>
 
 <style>
@@ -36,15 +38,20 @@
     outline-offset: 2px;
   }
 
-  /* Icon is CSS-driven from :root[data-theme] so it is correct at FIRST PAINT
-     with zero JS — a returning dark-mode visitor never sees a stale moon flash
-     (the no-FOUC init set data-theme before paint). Light = offer dark (🌙);
-     dark = offer light (☀️). */
-  .theme-toggle__icon::after {
-    content: "🌙";
+  /* Visible icon is CSS-driven from :root[data-theme] so it is correct at FIRST
+     PAINT with zero JS — a returning dark-mode visitor never sees a stale moon
+     flash (the no-FOUC init set data-theme before paint). Light = offer dark
+     (moon); dark = offer light (sun). The glyphs come from the shared <Icon>
+     component, so reach them with :global() — their classes are hashed otherwise
+     (same reason Nav.astro uses :global(.icon)). */
+  .theme-toggle :global(.tt-sun) {
+    display: none;
   }
-  :global(:root[data-theme="dark"]) .theme-toggle__icon::after {
-    content: "☀️";
+  :global(:root[data-theme="dark"]) .theme-toggle :global(.tt-moon) {
+    display: none;
+  }
+  :global(:root[data-theme="dark"]) .theme-toggle :global(.tt-sun) {
+    display: inline-block;
   }
 </style>
 
