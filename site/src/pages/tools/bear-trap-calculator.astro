@@ -1,0 +1,1168 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+---
+
+<Layout title="Bear Trap Squad Calculator — Kingdom 1516">
+  <main class="calculator">
+    <header class="calc-header">
+      <h1 class="calc-title">Bear Trap Squad Calculator</h1>
+      <p class="calc-sub">Plan your own rally + 6 joiner rallies.</p>
+    </header>
+
+    <div class="disclaimer" role="note">
+      <strong>Honest disclaimer:</strong> This is a planning aid,
+      <strong>not an official combat simulator</strong> — validate against real Bear
+      Hunt results before relying on it for a serious run.
+    </div>
+
+    <div class="calc-grid">
+      <!-- ============ INPUTS ============ -->
+      <section class="inputs" aria-label="Inputs">
+        <div class="calc-card">
+          <h2 class="card-title">Troop Pool</h2>
+          <div class="row3">
+            <div class="field"><label class="field-label t-inf" for="tInf">Infantry</label><input id="tInf" type="number" min="0" value="391047"></div>
+            <div class="field"><label class="field-label t-cav" for="tCav">Cavalry</label><input id="tCav" type="number" min="0" value="215928"></div>
+            <div class="field"><label class="field-label t-arch" for="tArch">Archers</label><input id="tArch" type="number" min="0" value="429106"></div>
+          </div>
+        </div>
+
+        <div class="calc-card">
+          <h2 class="card-title">Squad, Rally &amp; Buffs</h2>
+          <div class="row2">
+            <div class="field"><label class="field-label" for="squadBase">Squad base cap</label><input id="squadBase" type="number" min="0" value="130710"></div>
+            <div class="field"><label class="field-label" for="rallySize">Rally size</label><input id="rallySize" type="number" min="0" value="1022710"></div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label class="field-label" for="marshalTier">Marshal buff <span class="tag">temporary</span></label>
+              <select id="marshalTier">
+                <option value="0">None</option>
+                <option value="marshal">+2,500</option>
+                <option value="big">+5,000</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="deploy">Deployment buff <span class="tag">temporary</span></label>
+              <select id="deploy">
+                <option value="0">0%</option>
+                <option value="0.1">10%</option>
+                <option value="0.2">20%</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="valora">
+            <label class="check"><input type="checkbox" id="valoraOn" checked> <strong>Valora</strong> <span class="tag">bear only</span></label>
+            <div class="row2">
+              <div class="field"><label class="field-label" for="valoraSquad">Squad bonus</label><input id="valoraSquad" type="number" min="0" value="15000"></div>
+              <div class="field"><label class="field-label" for="valoraRally">Rally bonus</label><input id="valoraRally" type="number" min="0" value="300000"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-card">
+          <h2 class="card-title">Distribution</h2>
+          <div class="field">
+            <label class="field-label" for="joinCap">Join cap (per joiner) <span class="tag">× 6 joiner rallies</span></label>
+            <input id="joinCap" type="number" min="0" value="80000">
+          </div>
+
+          <label class="check"><input type="checkbox" id="maxArcher"> Max Archer mode <span class="tag">Inf 5k / Cav 5k / rest Arch</span></label>
+          <label class="check"><input type="checkbox" id="usePct"> Own rally as % <span class="tag">pre-built, rounded</span></label>
+
+          <div id="ratioControls">
+            <fieldset class="segmented-field">
+              <legend class="field-label">Joiner split mode</legend>
+              <div class="segmented" id="splitMode">
+                <label class="seg" title="Uniform — all 6 joiners same ratio"><input type="radio" name="splitMode" value="uniform" checked> Uniform</label>
+                <label class="seg" title="Half &amp; half — 3 + 3"><input type="radio" name="splitMode" value="half"> Half &amp; half</label>
+                <label class="seg" title="Thirds — 2 + 2 + 2"><input type="radio" name="splitMode" value="thirds"> Thirds</label>
+              </div>
+            </fieldset>
+
+            <div id="ratioA" class="ratio">
+              <span class="field-label">Ratio A <span class="tag" id="ratioAtag">own + 6 joiners</span> — Inf / Cav / Arch (%)</span>
+              <div class="row3">
+                <span class="num-suffix" data-suffix="%"><input id="rInfA" type="number" min="0" value="10" aria-label="Ratio A Infantry percent"></span>
+                <span class="num-suffix" data-suffix="%"><input id="rCavA" type="number" min="0" value="10" aria-label="Ratio A Cavalry percent"></span>
+                <span class="num-suffix" data-suffix="%"><input id="rArchA" type="number" min="0" value="80" aria-label="Ratio A Archer percent"></span>
+              </div>
+            </div>
+            <div id="ratioB" class="ratio">
+              <span class="field-label">Ratio B <span class="tag" id="ratioBtag">3 joiners</span> — Inf / Cav / Arch (%)</span>
+              <div class="row3">
+                <span class="num-suffix" data-suffix="%"><input id="rInfB" type="number" min="0" value="5" aria-label="Ratio B Infantry percent"></span>
+                <span class="num-suffix" data-suffix="%"><input id="rCavB" type="number" min="0" value="5" aria-label="Ratio B Cavalry percent"></span>
+                <span class="num-suffix" data-suffix="%"><input id="rArchB" type="number" min="0" value="90" aria-label="Ratio B Archer percent"></span>
+              </div>
+            </div>
+            <div id="ratioC" class="ratio">
+              <span class="field-label">Ratio C <span class="tag" id="ratioCtag">2 joiners</span> — Inf / Cav / Arch (%)</span>
+              <div class="row3">
+                <span class="num-suffix" data-suffix="%"><input id="rInfC" type="number" min="0" value="0" aria-label="Ratio C Infantry percent"></span>
+                <span class="num-suffix" data-suffix="%"><input id="rCavC" type="number" min="0" value="20" aria-label="Ratio C Cavalry percent"></span>
+                <span class="num-suffix" data-suffix="%"><input id="rArchC" type="number" min="0" value="80" aria-label="Ratio C Archer percent"></span>
+              </div>
+            </div>
+          </div>
+
+          <p class="hint" id="distHint">Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally uses Ratio A. Inf &amp; Cav are clamped to a 5,000 floor.</p>
+        </div>
+      </section>
+
+      <!-- ============ RESULTS ============ -->
+      <section class="results" aria-label="Results">
+        <div id="warnings"></div>
+
+        <div class="calc-card stats">
+          <div class="stat">
+            <span class="stat-label">Active squad size</span>
+            <span class="stat-formula" id="squadFormula"></span>
+            <span class="stat-value"><span id="squadSize"></span> <small>troops</small></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Total rally size</span>
+            <span class="stat-formula" id="rallyFormula"></span>
+            <span class="stat-value"><span id="rallySizeTotal"></span> <small>troops</small></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Personal Joiner Size</span>
+            <span class="stat-formula">(rally + bonuses − active squad) ÷ 14</span>
+            <span class="stat-value" id="pjs"></span>
+          </div>
+        </div>
+
+        <div class="calc-card">
+          <h2 class="card-title">What to send where</h2>
+          <div class="table-wrap">
+            <table class="result-table" id="sendTable"></table>
+          </div>
+          <p class="own-pct" id="ownPct"></p>
+          <div class="btnrow">
+            <button type="button" class="btn" id="copyBtn"><Icon name="clipboard" /> <span class="btn-label">Copy formation</span></button>
+            <button type="button" class="btn" id="shareBtn"><Icon name="link" /> <span class="btn-label">Copy share link</span></button>
+          </div>
+        </div>
+
+        <div class="calc-card">
+          <h2 class="card-title">Diagnostics</h2>
+          <div class="diag">
+            <div class="diag-box"><span class="diag-k">Missing for perfect ratio (Inf)</span><span class="v" id="mInf"></span></div>
+            <div class="diag-box"><span class="diag-k">Missing (Cav)</span><span class="v" id="mCav"></span></div>
+            <div class="diag-box"><span class="diag-k">Missing (Arch)</span><span class="v" id="mArch"></span></div>
+            <div class="diag-box"><span class="diag-k">Leftover after deploy (Inf)</span><span class="v" id="lInf"></span></div>
+            <div class="diag-box"><span class="diag-k">Leftover (Cav)</span><span class="v" id="lCav"></span></div>
+            <div class="diag-box"><span class="diag-k">Leftover (Arch)</span><span class="v" id="lArch"></span></div>
+          </div>
+        </div>
+
+        <div class="calc-card">
+          <h2 class="card-title">All 9 squad sizes</h2>
+          <div class="table-wrap">
+            <table class="grid9">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="num">0%</th>
+                  <th class="num">10%</th>
+                  <th class="num">20%</th>
+                </tr>
+              </thead>
+              <tbody id="grid9body"></tbody>
+            </table>
+          </div>
+          <p class="hint">Highlighted = your current Marshal / Deployment combination.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ EXPLAINER + FAQ ============ -->
+    <div class="explainer-grid">
+      <div class="calc-card">
+        <h2 class="card-title">How this calculator works</h2>
+        <ol class="how">
+          <li>Start from your <strong>squad base cap</strong>, then apply Valora, Marshal and Deployment buffs to find your true per-squad capacity.</li>
+          <li>Reserve your <strong>own rally</strong> at full squad cap — that's the rally you lead.</li>
+          <li>Fill <strong>6 joiner rallies</strong> using your join cap, applying the chosen split mode (Uniform, Half &amp; half, or Thirds).</li>
+          <li>Distribute each squad by your <strong>Inf / Cav / Arch ratio</strong>, then report leftover troops and any shortfall against a perfect ratio.</li>
+        </ol>
+      </div>
+
+      <div class="calc-card">
+        <h2 class="card-title">FAQ</h2>
+        <div class="faq">
+          <h3 class="faq-q">Why is my own rally bigger than the joiners?</h3>
+          <p class="faq-a">The rally leader fields a full squad at base cap, while joiners are limited by the lower join cap set on the rally.</p>
+          <h3 class="faq-q">Does the ratio have to add up to 100?</h3>
+          <p class="faq-a">It doesn't have to — the calculator normalizes your Inf / Cav / Arch values, so 50 / 30 / 20 and 5 / 3 / 2 give the same split.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  /* Troop-type tints are decorative (Task 7): readable on the LIGHT parchment by
+     default, swapped to the brighter legacy hues on the DARK canvas. Numbers
+     themselves stay --color-ink — readability wins over the tint. */
+  .calculator {
+    --inf: #2563a8;
+    --cav: #a4621d;
+    --arch: #2f8f4e;
+
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) var(--space-9);
+  }
+
+  .calc-header {
+    margin-bottom: var(--space-4);
+  }
+  .calc-title {
+    font-size: clamp(26px, 5vw, 34px);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+  .calc-sub {
+    color: var(--color-muted);
+    font-size: 15px;
+    margin: var(--space-2) 0 0;
+  }
+
+  /* ===== Honest disclaimer (danger-red block, UX-DR-21) ===== */
+  .disclaimer {
+    background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+    border-left: 4px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4) var(--space-5);
+    margin: var(--space-5) 0 var(--space-6);
+    color: var(--color-ink);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .disclaimer strong {
+    color: var(--color-danger);
+  }
+
+  /* ===== Layout: single-column mobile, Inputs/Results split on desktop ===== */
+  .calc-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+  .explainer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    margin-top: var(--space-6);
+  }
+
+  /* ===== Card frame (flat: hairline border + token surface, calm) ===== */
+  .calc-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-5);
+    margin-bottom: var(--space-4);
+  }
+  .results .calc-card:last-child,
+  .inputs .calc-card:last-child {
+    margin-bottom: 0;
+  }
+  .card-title {
+    font-size: 17px;
+    color: var(--color-ink);
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* ===== Inputs ===== */
+  /* minmax(0,1fr) lets fields shrink below intrinsic width instead of overflowing. */
+  .row2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .row3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .row2 + .row2 {
+    margin-top: var(--space-3);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  .field-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-muted);
+    margin: var(--space-3) 0 var(--space-2);
+    line-height: 1.3;
+  }
+  /* push paired controls to a shared baseline when one label wraps */
+  .field .field-label {
+    white-space: nowrap;
+  }
+  .field input,
+  .field select {
+    margin-top: auto;
+  }
+
+  .calc-card input[type="number"],
+  .calc-card select {
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    /* 16px keeps iOS Safari from auto-zooming the page on focus */
+    font-size: 16px;
+  }
+  .calc-card select {
+    text-align: left;
+  }
+  .calc-card input[type="number"]:hover,
+  .calc-card select:hover {
+    border-color: var(--color-primary);
+  }
+  .calc-card input[type="number"]:focus,
+  .calc-card select:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+    border-color: var(--color-primary);
+  }
+  .calc-card input:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  /* unit suffix (e.g. %) shown to the right of a right-aligned numeric field */
+  .num-suffix {
+    position: relative;
+    display: block;
+  }
+  .num-suffix input {
+    padding-right: 24px;
+  }
+  .num-suffix::after {
+    content: attr(data-suffix);
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-muted);
+    font-size: 13px;
+    pointer-events: none;
+  }
+
+  .tag {
+    font-size: 10.5px;
+    color: var(--color-muted);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    padding: 1px 8px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Used on BOTH the static field labels and the JS-injected result-table column
+     headers. Globalize (anchored under .calculator) so the injected headers tint too. */
+  .calculator :global(.t-inf) { color: var(--inf); }
+  .calculator :global(.t-cav) { color: var(--cav); }
+  .calculator :global(.t-arch) { color: var(--arch); }
+
+  .valora {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-3) 0;
+    font-size: 13.5px;
+    color: var(--color-ink);
+    cursor: pointer;
+    flex-wrap: wrap;
+  }
+  .check input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-primary);
+  }
+  .check strong {
+    color: var(--color-ink);
+  }
+
+  /* ===== Segmented control (replaces the legacy split-mode <select>) ===== */
+  .segmented-field {
+    border: 0;
+    padding: 0;
+    margin: var(--space-3) 0 var(--space-2);
+    min-inline-size: 0;
+  }
+  .segmented-field legend {
+    padding: 0;
+    margin-bottom: var(--space-2);
+  }
+  .segmented {
+    display: flex;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    overflow: hidden;
+  }
+  .seg {
+    flex: 1;
+    position: relative;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: var(--space-3) var(--space-2);
+    color: var(--color-ink);
+    border-right: 1px solid var(--color-border);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .seg:last-child {
+    border-right: 0;
+  }
+  /* native radio kept for semantics + keyboard, hidden visually (still focusable) */
+  .seg input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .seg:has(input:checked) {
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+  .seg:hover:not(:has(input:checked)) {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+  .seg:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+  }
+
+  .ratio {
+    margin-top: var(--space-2);
+  }
+  .ratio .field-label {
+    white-space: normal;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--color-muted);
+    line-height: 1.5;
+    margin: var(--space-4) 0 0;
+  }
+
+  /* ===== Stats / totals cards ===== */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .stat-formula {
+    font-size: 11.5px;
+    color: var(--color-muted);
+    min-height: 1.3em;
+    line-height: 1.3;
+  }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    margin-top: 2px;
+  }
+  .stat-value small {
+    font-size: 12px;
+    color: var(--color-muted);
+    font-weight: 400;
+  }
+
+  /* ===== Results table (calm: hairline rows, no zebra, tracked header) =====
+     The table body/head/foot are built by client JS via innerHTML, so those nodes
+     never receive this component's scope attribute. Anchor each rule on the static
+     .calculator root and :global() the injected part so the rows are styled. */
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+  }
+  .calculator :global(.result-table thead th) {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--color-muted);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1.5px solid var(--color-border);
+    text-align: right;
+  }
+  .calculator :global(.result-table thead th:first-child) {
+    text-align: left;
+  }
+  .calculator :global(.result-table tbody th[scope="row"]),
+  .calculator :global(.result-table tfoot th) {
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-ink);
+    padding: var(--space-3);
+    white-space: nowrap;
+  }
+  .calculator :global(.result-table tbody td),
+  .calculator :global(.result-table tfoot td) {
+    padding: var(--space-3);
+    color: var(--color-ink);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .calculator :global(.result-table tbody th),
+  .calculator :global(.result-table tbody td) {
+    border-bottom: 1px solid var(--color-border);
+  }
+  .calculator :global(.own-row th[scope="row"]),
+  .calculator :global(.own-row td) {
+    background: var(--color-highlight);
+  }
+  .calculator :global(.you-pill) {
+    display: inline-block;
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    margin-right: 6px;
+  }
+  .calculator :global(.total-row th),
+  .calculator :global(.total-row td) {
+    font-weight: 700;
+    border-top: 1.5px solid var(--color-border);
+  }
+
+  .own-pct {
+    display: none;
+    font-size: 12.5px;
+    color: var(--color-muted);
+    line-height: 1.5;
+    margin: var(--space-3) 0 0;
+  }
+  .calculator :global(.own-pct strong) {
+    color: var(--color-ink);
+  }
+
+  .btnrow {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    cursor: pointer;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+  .btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* ===== Diagnostics ===== */
+  .diag {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .diag-box {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+  }
+  .diag-k {
+    display: block;
+    font-size: 11.5px;
+    color: var(--color-muted);
+    line-height: 1.35;
+  }
+  .diag-box .v {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .v.ok { color: var(--color-success); }
+  .v.short { color: var(--color-danger); }
+  /* The OK-state check icon is injected by JS (innerHTML), so the scoped .icon rule
+     can't reach it — align it here. */
+  .calculator :global(.v svg) { vertical-align: middle; }
+
+  /* ===== 9-grid ===== */
+  .grid9 {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+  }
+  /* 9-grid body rows are JS-injected; globalize (anchored on .calculator) so they
+     get centered/bordered and the current-combo .active highlight. The thead is
+     static, so .grid9 thead th can stay scoped. */
+  .calculator :global(.grid9 th),
+  .calculator :global(.grid9 td) {
+    text-align: center;
+    font-size: 13px;
+    padding: var(--space-2);
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .grid9 thead th {
+    color: var(--color-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  .calculator :global(.grid9 th:first-child),
+  .calculator :global(.grid9 td:first-child) {
+    text-align: left;
+    color: var(--color-muted);
+  }
+  .calculator :global(.grid9 tbody tr:last-child th),
+  .calculator :global(.grid9 tbody tr:last-child td) {
+    border-bottom: 0;
+  }
+  .calculator :global(.grid9 .active) {
+    background: var(--color-highlight);
+    color: var(--color-ink);
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ===== Warnings ===== */
+  /* The whole .warn banner is injected by client JS via innerHTML, so it needs the
+     same .calculator-anchored :global() treatment as the result table. */
+  .calculator :global(.warn) {
+    background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+    border-left: 4px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  /* The warning icon is injected by client JS, so Icon.astro's scoped .icon rule
+     can't reach it — align it here (anchored on .calculator, :global() the injected svg). */
+  .calculator :global(.warn svg) {
+    vertical-align: middle;
+  }
+
+  /* ===== How it works + FAQ ===== */
+  .how {
+    margin: 0;
+    padding-left: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    font-size: 13.5px;
+    color: var(--color-ink);
+    line-height: 1.5;
+  }
+  .how strong {
+    color: var(--color-primary-hover);
+  }
+  .faq {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .faq-q {
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-1);
+  }
+  .faq-a {
+    font-size: 13.5px;
+    color: var(--color-muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
+  @media (min-width: 520px) {
+    .stats {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .diag {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 768px) {
+    .calc-grid {
+      grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+      align-items: start;
+    }
+    .explainer-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* ===== Dark "Royal Court" — the ONLY light-baked literals are the troop tints;
+     every other surface is a role token that flips automatically (the Story 1.3/1.4
+     wash-out guard). Swap the tints to the brighter dark-canvas hues. ===== */
+  :global(:root[data-theme="dark"]) .calculator {
+    --inf: #6fb6f1;
+    --cav: #f0a564;
+    --arch: #82da91;
+  }
+</style>
+
+<script>
+  /*
+    Bear Trap squad calculator — engine ported verbatim from repo-root index.html
+    (the live tool, the behaviour oracle). Constants, rounding rules, clamps and
+    the Arch→Cav→Inf backfill are preserved exactly; only two things changed from
+    the legacy DOM: the split-mode <select> is now a radio segmented control
+    (getSplitMode/setSplitMode), and the results table is the squad-row layout.
+  */
+  const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
+  // Every input here is a count or percentage — none may be negative. Clamp at the
+  // boundary so a typed/pasted negative can't render nonsense (negative troop counts,
+  // sizes, ratios) downstream. `min="0"` on the inputs is not enforced for typed values.
+  const num = (id: string) => { const v = parseFloat($(id).value); return isFinite(v) ? Math.max(0, v) : 0; };
+  const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+
+  // Lucide triangle-alert (lucide-static v1.22.0, ISC). Inlined because the warning
+  // banner is built in client JS via innerHTML, where the build-time <Icon> component
+  // can't run. Same convention as <Icon>: inline SVG, currentColor, 1em.
+  const WARN_ICON = '<svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+  // Lucide check (lucide-static v1.22.0, ISC). Inlined for the same reason as WARN_ICON:
+  // the OK diagnostics state is set via innerHTML, where the build-time <Icon> can't run.
+  const CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'valoraOn', 'valoraSquad', 'marshalTier',
+    'deploy', 'joinCap', 'maxArcher', 'usePct', 'splitMode',
+    'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
+    'rallySize', 'valoraRally'];
+
+  // fixed game constants
+  const JOINERS = 6;   // joiner rallies you join (your 6 marches)
+  const SLOTS = 14;    // joiner slots in a full 15-member rally (host + 14)
+
+  const MARSHAL: Record<string, number> = { '0': 0, 'marshal': 2500, 'big': 5000 };
+  function marshalFlat() { return MARSHAL[($('marshalTier') as unknown as HTMLSelectElement).value] || 0; }
+
+  // split mode is a radio group (segmented control), not a <select>
+  function getSplitMode() {
+    const c = document.querySelector('input[name="splitMode"]:checked') as HTMLInputElement | null;
+    return c ? c.value : 'uniform';
+  }
+  function setSplitMode(v: string) {
+    if (v !== 'uniform' && v !== 'half' && v !== 'thirds') v = 'uniform';
+    const r = document.querySelector(`input[name="splitMode"][value="${v}"]`) as HTMLInputElement | null;
+    if (r) r.checked = true;
+  }
+
+  // read & normalise a ratio (suffix 'A' | 'B' | 'C')
+  function readRatio(s: string) {
+    const i = num('rInf' + s), c = num('rCav' + s), a = num('rArch' + s), sum = i + c + a;
+    return sum > 0 ? { inf: i / sum, cav: c / sum, arch: a / sum } : { inf: 0, cav: 0, arch: 0 };
+  }
+
+  // one joiner: fill to cap, backfill Arch -> Cav -> Inf, within a per-type budget
+  function fillJoiner(budget: any, ratio: any, cap: number) {
+    const capArch = Math.floor(cap * ratio.arch), capCav = Math.floor(cap * ratio.cav);
+    const arch = Math.min(budget.arch, capArch);
+    const cav = Math.min(budget.cav, capCav + (capArch - arch));
+    const inf = Math.min(budget.inf, Math.max(0, cap - cav - arch));
+    return { inf, cav, arch };
+  }
+
+  // Bear has ~5000 troops: below that a type scales linearly, above it only by sqrt.
+  // Practical rule: never let Inf or Cav drop below 5000 in any single deployment.
+  const FLOOR = 5000;
+
+  // raise Inf & Cav up to the floor by converting archers, bounded by budget & available archers
+  function applyFloor(d: any, budget: any) {
+    let { inf, cav, arch } = d;
+    const addCav = Math.min(Math.max(0, FLOOR - cav), Math.max(0, budget.cav - cav), arch);
+    cav += addCav; arch -= addCav;
+    const addInf = Math.min(Math.max(0, FLOOR - inf), Math.max(0, budget.inf - inf), arch);
+    inf += addInf; arch -= addInf;
+    return { inf, cav, arch };
+  }
+
+  // Max Archer: Inf=Cav=FLOOR (budget-capped), archers fill the rest, shortfall backfills Cav then Inf
+  function fillMaxArcher(budget: any, cap: number) {
+    const inf0 = Math.min(FLOOR, budget.inf), cav0 = Math.min(FLOOR, budget.cav);
+    const arch = Math.min(budget.arch, Math.max(0, cap - inf0 - cav0));
+    let cav = cav0, inf = inf0, room = cap - inf - cav - arch;
+    const addCav = Math.min(Math.max(0, budget.cav - cav), room); cav += addCav; room -= addCav;
+    const addInf = Math.min(Math.max(0, budget.inf - inf), room); inf += addInf;
+    return { inf, cav, arch };
+  }
+
+  // split mode -> joiner groups (counts sum to JOINERS); own rally always uses ratio A
+  function groupsFor(mode: string) {
+    if (mode === 'half') return [{ key: 'A', count: 3 }, { key: 'B', count: 3 }];
+    if (mode === 'thirds') return [{ key: 'A', count: 2 }, { key: 'B', count: 2 }, { key: 'C', count: 2 }];
+    return [{ key: 'A', count: 6 }];
+  }
+
+  function compute() {
+    const troops = { inf: num('tInf'), cav: num('tCav'), arch: num('tArch') };
+    const valoraOn = $('valoraOn').checked;
+    const squadCore = num('squadBase') + (valoraOn ? num('valoraSquad') : 0);
+    const deploy = num('deploy');
+    const activeSquad = Math.round((squadCore + marshalFlat()) * (1 + deploy));
+
+    const maxArcher = $('maxArcher').checked;
+    const mode = maxArcher ? 'uniform' : getSplitMode();
+    const ratios: any = { A: readRatio('A'), B: readRatio('B'), C: readRatio('C') };
+    const rA = ratios.A;
+    const joinCap = num('joinCap');
+
+    // own rally = full active squad (floor-respecting); maxArcher or ratio A
+    let own: any, ownTarget: any;
+    if (maxArcher) {
+      own = fillMaxArcher(troops, activeSquad);
+      ownTarget = { inf: FLOOR, cav: FLOOR, arch: Math.max(0, activeSquad - 2 * FLOOR) };
+    } else {
+      const base: any = { inf: Math.round(activeSquad * rA.inf), cav: Math.round(activeSquad * rA.cav) };
+      base.arch = activeSquad - base.inf - base.cav;
+      ownTarget = { ...base };          // CAPTURE before applyFloor mutates the split
+      own = applyFloor(base, troops);
+    }
+
+    // own-rally composition as whole % (Inf/Cav rounded up so they hold the 5,000 floor)
+    const ownSum = own.inf + own.cav + own.arch;
+    const ownPct: any = {
+      inf: ownSum ? Math.ceil(100 * own.inf / ownSum) : 0,
+      cav: ownSum ? Math.ceil(100 * own.cav / ownSum) : 0
+    };
+    ownPct.arch = Math.max(0, 100 - ownPct.inf - ownPct.cav);
+
+    // "Own rally as %": the rally is pre-built as percentages (Valora enlarges the squad only at the bear,
+    // so exact counts can't be pre-set). Recompute its counts from the rounded % so the leftover pool &
+    // joiners stay consistent with what is actually deployed (no phantom leftover troops).
+    const usePct = $('usePct').checked;
+    if (usePct) {
+      own = { inf: Math.round(ownPct.inf / 100 * activeSquad), cav: Math.round(ownPct.cav / 100 * activeSquad) };
+      // inf% and cav% are each ceil-rounded, so for an almost-all-inf/cav rally they
+      // can sum past 100% — clamp arch at 0 so it never renders a small negative.
+      own.arch = Math.max(0, activeSquad - own.inf - own.cav);
+    }
+
+    // leftover pool after own rally; every joiner gets an equal 1/6 budget
+    const left = {
+      inf: troops.inf - own.inf,
+      cav: troops.cav - own.cav,
+      arch: troops.arch - own.arch
+    };
+    const per = {
+      inf: Math.max(0, Math.floor(left.inf / JOINERS)),
+      cav: Math.max(0, Math.floor(left.cav / JOINERS)),
+      arch: Math.max(0, Math.floor(left.arch / JOINERS))
+    };
+
+    // joiner groups: identical within a group; floor-respecting
+    let groups: any[];
+    if (maxArcher) {
+      groups = [{
+        key: 'A', count: JOINERS, ratio: null, joiner: fillMaxArcher(per, joinCap),
+        target: { inf: FLOOR, cav: FLOOR, arch: Math.max(0, joinCap - 2 * FLOOR) }
+      }];
+    } else {
+      groups = groupsFor(mode).map(g => {
+        const ratio = ratios[g.key];
+        const raw = fillJoiner(per, ratio, joinCap);
+        const joiner = applyFloor(raw, per);
+        const target = { inf: Math.round(joinCap * ratio.inf), cav: Math.round(joinCap * ratio.cav), arch: Math.round(joinCap * ratio.arch) };
+        return { ...g, ratio, raw, joiner, target };
+      });
+    }
+
+    // floor diagnostics
+    const floorUnmet = [own, ...groups.map(g => g.joiner)].some(d => d.inf < FLOOR || d.cav < FLOOR);
+    const floorApplied = !maxArcher && groups.some(g => g.joiner.inf > g.raw.inf || g.joiner.cav > g.raw.cav);
+
+    const sumSel = (sel: string) => own[sel] + groups.reduce((t, g) => t + g.count * g.joiner[sel], 0);
+    const used = { inf: sumSel('inf'), cav: sumSel('cav'), arch: sumSel('arch') };
+    const unused = {
+      inf: troops.inf - used.inf,
+      cav: troops.cav - used.cav,
+      arch: troops.arch - used.arch
+    };
+
+    // missing to send the full ideal target to own rally + all joiners
+    const need = (sel: string) => ownTarget[sel] + groups.reduce((t, g) => t + g.count * g.target[sel], 0);
+    const missing = {
+      inf: Math.max(0, need('inf') - troops.inf),
+      cav: Math.max(0, need('cav') - troops.cav),
+      arch: Math.max(0, need('arch') - troops.arch)
+    };
+
+    const rallyBonuses = (valoraOn ? num('valoraRally') : 0);
+    const rallyTotal = num('rallySize') + rallyBonuses;
+    const pjs = Math.max(0, Math.floor((rallyTotal - activeSquad) / SLOTS));
+
+    return { troops, squadCore, activeSquad, deploy, mode, maxArcher, usePct, own, groups, used, unused, missing, pjs, rallyTotal, rallyBonuses, floorUnmet, floorApplied, ownPct };
+  }
+
+  // One row per joiner GROUP (identical joiners collapsed, like the legacy
+  // "Per joiner (×6)" column): uniform/maxArcher -> "Joiners ×6"; half -> "Joiners A ×3"
+  // + "Joiners B ×3"; thirds -> A/B/C ×2. Cells show ONE joiner's troops; ×N = how many.
+  function renderTable(m: any) {
+    const sz = (d: any) => d.inf + d.cav + d.arch;
+    let h = '<thead><tr>'
+      + '<th scope="col">Rally</th>'
+      + '<th scope="col" class="t-inf">Infantry</th>'
+      + '<th scope="col" class="t-cav">Cavalry</th>'
+      + '<th scope="col" class="t-arch">Archer</th>'
+      + '<th scope="col">Size</th>'
+      + '</tr></thead><tbody>';
+
+    h += '<tr class="own-row">'
+      + '<th scope="row"><span class="you-pill">You</span>Own rally</th>'
+      + `<td>${fmt(m.own.inf)}</td><td>${fmt(m.own.cav)}</td><td>${fmt(m.own.arch)}</td>`
+      + `<td>${fmt(sz(m.own))}</td></tr>`;
+
+    m.groups.forEach((g: any) => {
+      const label = m.groups.length === 1 ? `Joiners ×${g.count}` : `Joiners ${g.key} ×${g.count}`;
+      const d = g.joiner;
+      h += `<tr><th scope="row">${label}</th>`
+        + `<td>${fmt(d.inf)}</td><td>${fmt(d.cav)}</td><td>${fmt(d.arch)}</td>`
+        + `<td>${fmt(sz(d))}</td></tr>`;
+    });
+
+    h += '</tbody><tfoot><tr class="total-row">'
+      + '<th scope="row">Total used</th>'
+      + `<td>${fmt(m.used.inf)}</td><td>${fmt(m.used.cav)}</td><td>${fmt(m.used.arch)}</td>`
+      + `<td>${fmt(m.used.inf + m.used.cav + m.used.arch)}</td></tr></tfoot>`;
+
+    $('sendTable').innerHTML = h;
+  }
+
+  function render() {
+    // Valora is bear-only & toggleable; grey out its fields when off
+    const vOn = $('valoraOn').checked;
+    $('valoraSquad').disabled = !vOn;
+    $('valoraRally').disabled = !vOn;
+
+    const m = compute();
+
+    // active squad + totals
+    const tierLbl: Record<string, string> = { '0': 'no Marshal', 'marshal': '+' + fmt(2500), 'big': '+' + fmt(5000) };
+    $('squadFormula').textContent =
+      `(${fmt(m.squadCore)} core, ${tierLbl[($('marshalTier') as unknown as HTMLSelectElement).value]}) × ${(1 + m.deploy).toFixed(2)}`;
+    $('squadSize').textContent = fmt(m.activeSquad);
+    $('rallyFormula').textContent = `${fmt(m.rallyTotal - m.rallyBonuses)} base + ${fmt(m.rallyBonuses)} bonuses`;
+    $('rallySizeTotal').textContent = fmt(m.rallyTotal);
+    $('pjs').textContent = fmt(m.pjs);
+
+    // distribution mode UI (Max Archer hides split + ratios)
+    ($('ratioControls') as unknown as HTMLElement).style.display = m.maxArcher ? 'none' : '';
+    $('distHint').textContent = m.maxArcher
+      ? 'Max Archer: Inf 5,000 / Cav 5,000 / rest Archers per deployment; shortfall backfills Cav then Inf. Split & ratios disabled.'
+      : 'Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally uses Ratio A. Inf & Cav are clamped to a 5,000 floor.';
+
+    // split-mode UI: show/hide ratio B & C, update their joiner-count tags
+    const mode = m.mode;
+    ($('ratioB') as unknown as HTMLElement).style.display = (mode === 'half' || mode === 'thirds') ? '' : 'none';
+    ($('ratioC') as unknown as HTMLElement).style.display = (mode === 'thirds') ? '' : 'none';
+    $('ratioAtag').textContent = mode === 'uniform' ? 'own + 6 joiners' : 'own + ' + m.groups[0].count + ' joiners';
+    if (m.groups[1]) $('ratioBtag').textContent = m.groups[1].count + ' joiners';
+    if (m.groups[2]) $('ratioCtag').textContent = m.groups[2].count + ' joiners';
+
+    // results table (own rally + 6 joiner rows)
+    renderTable(m);
+
+    // own-rally % readout: shown when "Own rally as %" is on (counts are then derived from these %)
+    ($('ownPct') as unknown as HTMLElement).style.display = m.usePct ? 'block' : 'none';
+    $('ownPct').innerHTML = m.usePct
+      ? `<strong>Own rally — set this formation in-game</strong> (rounded so Inf/Cav stay ≥ 5,000): <strong>${m.ownPct.inf}% Inf / ${m.ownPct.cav}% Cav / ${m.ownPct.arch}% Arch</strong>`
+      : '';
+
+    // diagnostics
+    const setMiss = (id: string, v: number) => { const e = $(id); e.innerHTML = v > 0 ? '−' + fmt(v) : CHECK_ICON + ' 0'; e.className = 'v ' + (v > 0 ? 'short' : 'ok'); };
+    setMiss('mInf', m.missing.inf); setMiss('mCav', m.missing.cav); setMiss('mArch', m.missing.arch);
+    const setLeft = (id: string, v: number) => { const e = $(id); e.textContent = fmt(v); e.className = 'v ' + (v < 0 ? 'short' : ''); };
+    setLeft('lInf', m.unused.inf); setLeft('lCav', m.unused.cav); setLeft('lArch', m.unused.arch);
+
+    // 9-grid
+    const deploys = [0, 0.1, 0.2];
+    const tiers = [
+      { key: '0', label: 'None', flat: 0 },
+      { key: 'marshal', label: 'Marshal', flat: 2500 },
+      { key: 'big', label: 'Big Marshal', flat: 5000 }
+    ];
+    const selTier = ($('marshalTier') as unknown as HTMLSelectElement).value;
+    const selDeploy = m.deploy;
+    $('grid9body').innerHTML = tiers.map(t => {
+      const cells = deploys.map(d => {
+        const val = Math.round((m.squadCore + t.flat) * (1 + d));
+        const active = (t.key === selTier && Math.abs(d - selDeploy) < 1e-9);
+        return `<td class="${active ? 'active' : ''}">${fmt(val)}</td>`;
+      }).join('');
+      return `<tr><th scope="row">${t.label}</th>${cells}</tr>`;
+    }).join('');
+
+    // warnings
+    const w: string[] = [];
+    if (!m.maxArcher) m.groups.forEach((g: any) => {
+      const s = num('rInf' + g.key) + num('rCav' + g.key) + num('rArch' + g.key);
+      if (Math.abs(s - 100) > 0.001) w.push(`Ratio ${g.key} sums to ${fmt(s)}% instead of 100% — normalized automatically.`);
+    });
+    if (m.own.inf > m.troops.inf || m.own.cav > m.troops.cav || m.own.arch > m.troops.arch)
+      w.push('Not enough troops for a full own squad — joiners get correspondingly less.');
+    if (!m.maxArcher && m.floorApplied)
+      w.push('Inf/Cav were below 5,000 and clamped up to the floor (archers reduced) — expected.');
+    if (m.floorUnmet)
+      w.push('Not enough Inf/Cav to keep every deployment at the 5,000 floor.');
+    $('warnings').innerHTML = w.map(x => `<div class="warn">${WARN_ICON} ${x}</div>`).join('');
+
+    lastModel = m;
+    saveState();
+  }
+
+  // ---- persistence (localStorage) + share link + copy-to-clipboard ----
+  const STORAGE_KEY = 'bearcalc.state';
+  let lastModel: any = null;
+
+  const readEl = (id: string) => {
+    if (id === 'splitMode') return getSplitMode();
+    const el = $(id); return el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
+  };
+  const writeEl = (id: string, v: any) => {
+    if (id === 'splitMode') { setSplitMode(v); return; }
+    const el = $(id); if (el.type === 'checkbox') el.checked = (v === '1' || v === true); else el.value = v;
+  };
+
+  function saveState() {
+    const s: Record<string, any> = {}; INPUTS.forEach(id => s[id] = readEl(id));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { }
+  }
+  function loadLocal() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (s) { INPUTS.forEach(id => { if (id in s) writeEl(id, s[id]); }); return true; }
+    } catch (e) { }
+    return false;
+  }
+  function applyHash() {
+    const h = location.hash.replace(/^#/, ''); if (!h) return false;
+    const p = new URLSearchParams(h); let any = false;
+    INPUTS.forEach(id => { if (p.has(id)) { writeEl(id, p.get(id)); any = true; } });
+    return any;
+  }
+  function shareURL() {
+    const p = new URLSearchParams(); INPUTS.forEach(id => p.set(id, readEl(id)));
+    return location.origin + location.pathname + '#' + p.toString();
+  }
+
+  function formationText() {
+    const m = lastModel; if (!m) return '';
+    const tri = (d: any) => `${fmt(d.inf)} / ${fmt(d.cav)} / ${fmt(d.arch)}`;
+    const out = ['🐻 Bear Trap formation — Inf / Cav / Arch'];
+    out.push(m.usePct
+      ? `Own rally (set in-game): ${m.ownPct.inf}% / ${m.ownPct.cav}% / ${m.ownPct.arch}%`
+      : `Own rally: ${tri(m.own)}`);
+    m.groups.forEach((g: any) => {
+      const lbl = m.groups.length === 1 ? `Joiners (×${g.count})` : `Joiners ${g.key} (×${g.count})`;
+      out.push(`${lbl}: ${tri(g.joiner)}`);
+    });
+    return out.join('\n');
+  }
+
+  function copyText(text: string, btn: HTMLElement) {
+    // Swap only the label span — not btn.textContent, which would delete the <Icon> SVG child.
+    const label = btn.querySelector('.btn-label') as HTMLElement;
+    // State lives on the button so a rapid second click can't snapshot "Copied" as the
+    // original label (which would leave it stuck), and the restore timer restarts instead of stacking.
+    const state = btn as HTMLElement & { _label?: string; _restore?: number };
+    if (state._label === undefined) state._label = label.textContent ?? '';
+    const flash = () => {
+      label.textContent = 'Copied';
+      clearTimeout(state._restore);
+      state._restore = window.setTimeout(() => { label.textContent = state._label!; }, 1500);
+    };
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); flash(); } catch (e) { }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash).catch(fallback);
+    else fallback();
+  }
+
+  ($('copyBtn') as unknown as HTMLElement).addEventListener('click', () => copyText(formationText(), $('copyBtn')));
+  ($('shareBtn') as unknown as HTMLElement).addEventListener('click', () => copyText(shareURL(), $('shareBtn')));
+
+  // ---- init ----
+  // A shared #hash pre-fills the app once; otherwise restore the last saved state.
+  const fromHash = applyHash();
+  if (!fromHash) loadLocal();
+  INPUTS.forEach(id => {
+    if (id === 'splitMode') {
+      document.querySelectorAll('input[name="splitMode"]').forEach(r => {
+        r.addEventListener('input', render); r.addEventListener('change', render);
+      });
+    } else {
+      const el = $(id); el.addEventListener('input', render); el.addEventListener('change', render);
+    }
+  });
+  render();
+  // Consume the shared link: drop the #hash so live edits & refreshes use localStorage, not the stale snapshot.
+  if (fromHash) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { } }
+</script>

@@ -1,0 +1,441 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+
+// Featured: our own flagship calculator. Internal link (same tab) — we never
+// iframe our own page. Icon is an inline Lucide SVG via the shared <Icon>
+// component (currentColor, 1em), matching the index.astro / Nav.astro convention.
+const featured = {
+  icon: 'calculator',
+  name: 'Bear Trap Squad Calculator',
+  href: '/tools/bear-trap-calculator',
+  blurb:
+    'Plan your own rally + 6 joiner rallies — squad caps, buffs, and exactly what troops to send where.',
+  note: 'Ours · runs in your browser · no login',
+};
+
+/*
+  Curated EXTERNAL tools (the kingdom's editorial pick — content, not logic).
+  A flat array so adding/removing a tool is a one-line edit.
+
+  `embed` is decided at AUTHOR TIME from the tool's HTTP framing headers, never
+  by a runtime probe (a cross-origin frame block can't be reliably detected from
+  the parent — see the "no broken iframe" note below). Verified 2026-06-30:
+    • kingshotoptimizer.com → `X-Frame-Options: SAMEORIGIN`  → NOT framable
+    • kingshotguide.org      → no XFO/CSP, but header-absence can't rule out JS
+      frame-busting, and AC-3 wants a structural guarantee → link-out by default.
+  Realistic MVP-1 outcome: every curated tool links out. The embed branch below
+  is implemented and ready for any tool that genuinely permits framing.
+*/
+const tools = [
+  {
+    icon: 'building-2',
+    name: 'Building Upgrade Calculator',
+    href: 'https://www.kingshotguide.org/calculator/building-calculator',
+    blurb: 'Plan building upgrade costs, resources and timings across your base.',
+    credit: 'kingshotguide.org',
+    embed: false,
+  },
+  {
+    icon: 'swords',
+    name: 'Hero Gear Optimizer',
+    href: 'https://kingshotoptimizer.com/hero-gear/',
+    blurb: 'Optimize hero gear upgrades — XP, Forgehammers, Mythic Gear and Mithril.',
+    credit: 'Kingshot Optimizer',
+    embed: false,
+  },
+  {
+    icon: 'crown',
+    name: 'Governor Gear Optimizer',
+    href: 'https://kingshotoptimizer.com/governor-gear/',
+    blurb: 'Plan governor gear upgrades with Satin, Gilded Threads and Artisan’s Vision.',
+    credit: 'Kingshot Optimizer',
+    embed: false,
+  },
+  {
+    icon: 'gem',
+    name: 'Charms Optimizer',
+    href: 'https://kingshotoptimizer.com/charms/',
+    blurb: 'Plan charm upgrades efficiently using Charm Guides and Charm Designs.',
+    credit: 'Kingshot Optimizer',
+    embed: false,
+  },
+];
+---
+
+<Layout title="Tools — Kingdom 1516">
+  <main class="tools">
+    <header class="tools-header">
+      <h1 class="tools-title">Tools</h1>
+      <p class="tools-sub">
+        Our own Bear Trap calculator, plus a few community-built tools we think are
+        worth your time — most are external, all are vetted.
+      </p>
+    </header>
+
+    {/* ===== Featured: our flagship calculator (internal, whole-card link) ===== */}
+    <section class="section" aria-labelledby="featured-heading">
+      <h2 id="featured-heading" class="section-title">Our calculator</h2>
+      <a class="featured-card" href={featured.href}>
+        <span class="featured-icon" aria-hidden="true"><Icon name={featured.icon} /></span>
+        <div class="featured-body">
+          <h3 class="featured-name">{featured.name}</h3>
+          <p class="featured-blurb">{featured.blurb}</p>
+          <span class="featured-note">{featured.note}</span>
+          <span class="featured-cta">Open the calculator <Icon name="arrow-right" /></span>
+        </div>
+      </a>
+    </section>
+
+    {/* ===== Honest external-tools note (AC-7: never overclaim) ===== */}
+    <p class="hub-note" role="note">
+      The tools below are made and maintained by other Kingshot players —
+      <strong>not by us</strong>. We link them because they’re genuinely useful, but
+      we don’t run them: they’re independent third-party sites that can change, break,
+      or go offline, and their results may differ from what you see in-game. Always
+      sanity-check against your own numbers.
+    </p>
+
+    {/* ===== Curated external tools ===== */}
+    <section class="section" aria-labelledby="community-heading">
+      <h2 id="community-heading" class="section-title">Community tools</h2>
+      <div class="tool-grid">
+        {tools.map((t) =>
+          t.embed ? (
+            /* Embeddable tool: inline iframe + a guaranteed open-in-new-tab link,
+               so a silently-blocked frame still leaves a working path (AC-5). */
+            <div class="tool-card tool-card--embed">
+              <div class="tool-head">
+                <span class="tool-icon" aria-hidden="true"><Icon name={t.icon} /></span>
+                <h3 class="tool-name">{t.name}</h3>
+              </div>
+              <p class="tool-blurb">{t.blurb}</p>
+              <div class="embed-frame">
+                <iframe
+                  src={t.href}
+                  title={t.name}
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  sandbox="allow-scripts allow-same-origin"
+                ></iframe>
+              </div>
+              <div class="tool-foot">
+                <span class="tool-credit">Third-party · by {t.credit}</span>
+                <a
+                  class="tool-cta"
+                  href={t.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >Open {t.name} in a new tab <Icon name="arrow-up-right" /></a>
+              </div>
+            </div>
+          ) : (
+            /* Link-out tool: the whole card is the external link (UX-DR-20). */
+            <a
+              class="tool-card"
+              href={t.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div class="tool-head">
+                <span class="tool-icon" aria-hidden="true"><Icon name={t.icon} /></span>
+                <h3 class="tool-name">{t.name}</h3>
+              </div>
+              <p class="tool-blurb">{t.blurb}</p>
+              <div class="tool-foot">
+                <span class="tool-credit">Third-party · by {t.credit}</span>
+                <span class="tool-cta">Open <Icon name="arrow-up-right" /></span>
+              </div>
+            </a>
+          )
+        )}
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  /*
+    Tools-hub recipes are page-scoped here. This is the 2nd consumer of a card
+    recipe (Home is the 1st); per the Rule of Three we do NOT extract a shared
+    Card component yet — the featured card copies Home's gold-framed recipe, the
+    curated cards use a quieter token-only `tool-card` variant. Every light-baked
+    gradient/shadow literal gets a [data-theme="dark"] override; the token-only
+    surfaces flip automatically and need none.
+  */
+  .tools {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) var(--space-9);
+  }
+
+  /* ===== Header ===== */
+  .tools-header {
+    margin-bottom: var(--space-4);
+  }
+  .tools-title {
+    font-size: clamp(30px, 6vw, 46px);
+    line-height: 1.05;
+    color: var(--color-ink);
+  }
+  .tools-sub {
+    color: var(--color-muted);
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 620px;
+    margin: var(--space-3) 0 0;
+  }
+
+  .section {
+    margin-top: var(--space-7);
+  }
+  .section-title {
+    font-size: 22px;
+    color: var(--color-ink);
+    margin-bottom: var(--space-4);
+  }
+
+  /* ===== Featured card — gold-framed parchment, the flagship (copied from Home) ===== */
+  .featured-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-card);
+    padding: var(--space-6) var(--space-5);
+    color: var(--color-ink); /* override global a{color:accent} so body is ink */
+    text-decoration: none;
+    box-shadow:
+      0 8px 20px rgba(224, 138, 43, .18),
+      inset 0 0 0 1px rgba(255, 255, 255, .5),
+      inset 0 0 22px rgba(224, 138, 43, .07);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .featured-card:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 26px rgba(224, 138, 43, .26),
+      inset 0 0 0 1px rgba(255, 255, 255, .5),
+      inset 0 0 22px rgba(224, 138, 43, .07);
+  }
+  .featured-card:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  .featured-icon {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-card);
+    background: linear-gradient(#FBE4C2, #F4CF9C);
+    border: 1px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+  }
+  .featured-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .featured-name {
+    font-size: 20px;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-2);
+  }
+  .featured-blurb {
+    color: var(--color-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 var(--space-3);
+  }
+  .featured-note {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary-hover);
+    margin-bottom: var(--space-3);
+  }
+  .featured-cta {
+    color: var(--color-accent);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .featured-card:hover .featured-cta {
+    color: var(--color-primary-hover);
+  }
+
+  /* ===== Honest note — calm (accent left-rule), not the danger-red combat block ===== */
+  .hub-note {
+    margin: var(--space-6) 0 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4) var(--space-5);
+    color: var(--color-ink);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .hub-note strong {
+    color: var(--color-ink);
+  }
+
+  /* ===== Curated grid ===== */
+  .tool-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* mobile: single-column stack */
+    gap: var(--space-5);
+  }
+
+  /* tool-card — quieter token-only recipe (no light-baked literals → flips with
+     the theme automatically, no dark override needed). */
+  .tool-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* let the grid item shrink so long names wrap instead of overflowing the track */
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-5);
+    color: var(--color-ink);
+    text-decoration: none;
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  a.tool-card:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    border-color: var(--color-primary);
+  }
+  a.tool-card:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  .tool-card--embed {
+    /* an embed card is not a link; it must not lift on hover */
+    cursor: default;
+  }
+
+  .tool-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .tool-icon {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-card);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+  }
+  .tool-name {
+    font-size: 17px;
+    color: var(--color-ink);
+    margin: 0;
+    overflow-wrap: anywhere; /* break a long unbroken tool name instead of overflowing */
+  }
+  .tool-blurb {
+    color: var(--color-muted);
+    font-size: 13.5px;
+    line-height: 1.45;
+    margin: 0 0 var(--space-4);
+    overflow-wrap: anywhere;
+  }
+  .tool-foot {
+    margin-top: auto; /* pin credit + CTA to the bottom so cards align across a row */
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .tool-credit {
+    font-size: 11.5px;
+    color: var(--color-muted);
+  }
+  .tool-cta {
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  a.tool-card:hover .tool-cta {
+    color: var(--color-primary-hover);
+  }
+
+  /* ===== Embed frame (embed:true only) — sized, token-framed, responsive.
+     Never zero-height; a token border/surface keeps a light tool clean on the
+     dark page. */
+  .embed-frame {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    background: var(--color-surface);
+    margin-bottom: var(--space-3);
+  }
+  .embed-frame iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    aspect-ratio: 4 / 3;
+    min-height: 420px;
+  }
+  .tool-card--embed .tool-foot {
+    margin-top: 0;
+  }
+
+  /* The global reduced-motion rule only zeroes transition-duration; the lift
+     would still jump. Drop the displacement entirely for these users. */
+  @media (prefers-reduced-motion: reduce) {
+    .featured-card:hover,
+    a.tool-card:hover {
+      transform: none;
+    }
+  }
+
+  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
+  @media (min-width: 768px) {
+    .featured-card {
+      padding: var(--space-7) var(--space-6);
+    }
+    .featured-icon {
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
+    }
+    .tool-grid {
+      /* scales 1 → N as tools are added/removed; ready to extend */
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+  }
+
+  /* ===== Dark "Royal Court" — only the featured card bakes light literals
+     (gold gradient/emboss). Remap them; token-only surfaces need nothing.
+     (The Story 1.3/1.4 wash-out guard — copied from index.astro:296–311.) ===== */
+  :global(:root[data-theme="dark"]) .featured-card {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, .35),
+      inset 0 0 0 1px rgba(255, 255, 255, .04),
+      inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+  :global(:root[data-theme="dark"]) .featured-card:hover {
+    box-shadow:
+      0 12px 26px rgba(0, 0, 0, .45),
+      inset 0 0 0 1px rgba(255, 255, 255, .04),
+      inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+  :global(:root[data-theme="dark"]) .featured-icon {
+    background: linear-gradient(rgba(242, 169, 59, .18), rgba(242, 169, 59, .07));
+  }
+</style>
