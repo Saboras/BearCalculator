@@ -1,19 +1,24 @@
 name: Build site
 
-# Off-box build for the Astro project in site/. Runs entirely on GitHub Actions
-# and uploads the static dist/ as an artifact — no build tools touch any server box.
+# Off-box build for the Astro project in site/. Runs entirely on GitHub Actions,
+# builds the static dist/ and rsyncs it to the Caddy host — no build tools touch
+# any server box (AR-20 / AD-16). Do NOT publish to GitHub Pages here: the Pages
+# root is reserved for the existing single-file calculator (index.html) until
+# cutover (AR-1).
 #
-# No host deploy yet: the Vultr VPS + domain are provisioned in Story 3.1, which
-# adds the SSH/rsync deploy step (and the Directus repository_dispatch rebuild
-# trigger — AR-20). Do NOT publish to GitHub Pages here: the Pages root is reserved
-# for the existing single-file calculator (index.html) until cutover (AR-1).
+# Scope: CI ships ONLY the static site. The Caddy+Directus compose stack lifecycle
+# is managed manually on the host via infra/README.md — no container CD here (KISS,
+# single hobby host).
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Directus publish/edit webhook fires repository_dispatch to rebuild + redeploy (AR-4).
+  repository_dispatch:
+    types: [directus-publish]
 
-# Build-only job: pin least privilege explicitly instead of inheriting the repo default token scope.
+# Build + deploy: rsync uses an SSH key secret, not GITHUB_TOKEN — keep least privilege.
 permissions:
   contents: read
 
@@ -42,6 +47,7 @@ jobs:
         run: npm run build
         working-directory: site
 
+      # Keep the artifact around even after deploy lands — it is the rollback source.
       - name: Upload static artifact
         uses: actions/upload-artifact@v7
         with:
@@ -50,5 +56,38 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      # Host deploy (SSH/rsync to the Caddy host) lands in Story 3.1, once the
-      # Vultr VPS + domain + deploy secrets exist (AR-20 / AD-16). None here.
+      # Host deploy: rsync the built static site to the Caddy host's /srv/site root
+      # (Caddy serves it read-only). Gated to the main-branch ref only — push to main,
+      # Directus repository_dispatch, or a manual workflow_dispatch on main; a dispatch
+      # from any other branch will NOT push that branch to prod. Raw rsync over SSH (no
+      # third-party action) — boring + auditable. The in-script SSH_HOST guard keeps the
+      # build green before the VPS exists (Open Q1); once SSH_HOST is set the companion
+      # secrets are required (fail-loud), so a missing DEPLOY_PATH can never make the
+      # rsync target the host root.
+      - name: Deploy static site to host
+        if: github.ref == 'refs/heads/main'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_HOST:-}" ]; then
+            echo "SSH_HOST not set — VPS not provisioned yet (Open Q1); skipping deploy."
+            exit 0
+          fi
+          # SSH_HOST is set → a real deploy. Require the companion secrets so an empty
+          # DEPLOY_PATH can never make the rsync target "$SSH_USER@$SSH_HOST:/" and
+          # --delete mirror onto the host root.
+          : "${SSH_USER:?SSH_USER secret is required once SSH_HOST is set}"
+          : "${SSH_KEY:?SSH_KEY secret is required once SSH_HOST is set}"
+          : "${DEPLOY_PATH:?DEPLOY_PATH secret is required once SSH_HOST is set}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          # TOFU host-key pinning; for stricter security swap in a SSH_KNOWN_HOSTS secret.
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_deploy -o UserKnownHostsFile=~/.ssh/known_hosts" \
+            site/dist/ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"

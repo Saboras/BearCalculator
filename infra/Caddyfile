@@ -1,0 +1,25 @@
+# Kingdom 1516 — Caddy edge config (Story 3.1 / AC3, NFR-10).
+#
+# Caddy is the single public surface: it serves the static Astro site on the apex
+# domain and reverse-proxies Directus (Studio/API) on a dedicated admin subdomain.
+# Directus is NEVER exposed directly (AR-5 / AD-3) — this file is the only route to it.
+#
+# Domains are env-var seams (Open Q1, deferred) with obviously-fake defaults injected
+# from infra/.env. A real domain is a launch blocker, not a build blocker: auto-HTTPS
+# goes live the moment a real domain points at the host.
+
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+# Public static site — Astro dist/ rsynced to /srv/site by CI (read-only mount).
+{$SITE_DOMAIN} {
+	root * /srv/site
+	encode zstd gzip
+	file_server
+}
+
+# Admin subdomain — the ONLY path to Directus, over auto-HTTPS.
+{$DIRECTUS_DOMAIN} {
+	reverse_proxy directus:8055
+}

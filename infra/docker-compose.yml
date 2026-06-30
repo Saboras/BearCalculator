@@ -1,0 +1,95 @@
+# Kingdom 1516 — single-host backend stack (Story 3.1 / AD-16, AR-20).
+#
+# Two pinned, non-root SERVING containers: Caddy (the single public edge — static
+# site + Directus proxy) and Directus (headless, no published port). SQLite file DB
+# on a named volume — there is no DB port to publish (AC1). Stack lifecycle is run
+# manually on the host via README.md; CI only ships the static site (no container CD).
+#
+# Real domain + secrets live in host-only infra/.env (see .env.example). Without an
+# .env, `docker compose config` still parses via the :- fallback defaults below.
+
+services:
+  # Directus: headless CMS/API, reachable ONLY on the internal compose network — Caddy
+  # proxies it on the admin subdomain (AR-5 / AD-3). The official image already runs as
+  # the non-root `node` user (uid 1000) and owns its data dirs, so named volumes are
+  # writable as-is (verified). No `ports:` — never a public surface.
+  directus:
+    image: directus/directus:12.0.2
+    restart: unless-stopped
+    env_file:
+      - .env            # SECRET, PUBLIC_URL, ADMIN_EMAIL, ADMIN_PASSWORD — host-only
+    environment:
+      DB_CLIENT: sqlite3
+      DB_FILENAME: /directus/database/data.db
+      WEBSOCKETS_ENABLED: "false"   # YAGNI — no realtime need yet
+      LICENSE_KEY: ""
+      # Directus 12 needs only SECRET for token signing — no legacy KEY (see README).
+    volumes:
+      - directus_db:/directus/database          # holds data.db
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # One-shot ownership fix: fresh caddy_data/caddy_config named volumes inherit Caddy's
+  # root-owned /data /config (0755), which the non-root Caddy below cannot write — ACME
+  # certs + autosave would silently fail (verified WRITE-DENIED). This root-only init
+  # chowns them once, then exits, so the steady-state stack stays two non-root serving
+  # containers. Idempotent — harmless to re-run on every `up`.
+  caddy-init:
+    image: caddy:2.11.4
+    restart: "no"       # one-shot: must NOT restart (unless-stopped would loop forever)
+    user: "0:0"
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /data /config"]
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Caddy: the single public edge. Non-root (uid 1000); the official binary carries the
+  # cap_net_bind_service file capability, so with NET_BIND_SERVICE kept in the cap set it
+  # binds 80/443 without root (verified). Every other capability is dropped.
+  caddy:
+    image: caddy:2.11.4
+    restart: unless-stopped
+    depends_on:
+      caddy-init:
+        condition: service_completed_successfully
+    ports:
+      - "80:80"         # the only published ports in the entire stack
+      - "443:443"
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-kingdom1516.example}
+      DIRECTUS_DOMAIN: ${DIRECTUS_DOMAIN:-admin.kingdom1516.example}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:-ops@kingdom1516.example}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # Let's Encrypt certs — persist across restarts
+      - caddy_config:/config
+      - /srv/site:/srv/site:ro    # static Astro dist/ rsynced by CI (read-only)
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  directus_db:
+  directus_uploads:
+  directus_extensions:
+  caddy_data:
+  caddy_config:

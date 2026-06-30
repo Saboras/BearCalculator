@@ -5,3 +5,9 @@ _bmad-output/
 
 # Local Claude Code / agent config
 .claude/
+
+# Environment files — real secrets live only on the host, never in git.
+# (site/ has its own .env* rule; this covers the repo root, incl. infra/.env.)
+.env
+.env.*
+!.env.example
