@@ -1,0 +1,339 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import alliancesData from '../data/alliances.json';
+
+/*
+  Apply-step config — Owner-provided, like the alliances data and the domain.
+  The Google Form is a public link (no secret), but it lives here in named
+  constants rather than scattered in markup. Both ship with obviously-fake
+  REPLACE_WITH_… placeholders so an un-filled deploy fails loudly (dev defaults
+  must be obviously fake). Sabo must replace them before a live launch:
+    (a) JOIN_FORM_URL          — the form's published `viewform` URL
+    (b) JOIN_FORM_ALLIANCE_ENTRY — the `entry.<id>` of the desired-alliance
+        field, from the form's "Get pre-filled link" feature
+  Everything else on this page works with the placeholders in place — the page
+  builds, renders, and shows the correct copy; only the outbound link is a stub.
+*/
+const JOIN_FORM_URL = 'https://docs.google.com/forms/d/e/REPLACE_WITH_REAL_GOOGLE_FORM_ID/viewform';
+const JOIN_FORM_ALLIANCE_ENTRY = 'entry.REPLACE_WITH_DESIRED_ALLIANCE_FIELD_ID';
+
+/*
+  Trusted slug → name map, built at build time from the canonical alliances data.
+  finder.astro already gates the whole build on malformed data (same build run),
+  so its validator is NOT re-run here (DRY/KISS). The client resolves the shown
+  alliance name from THIS map keyed by the ?alliance slug — never from the
+  untrusted ?name URL param (XSS / spoofing boundary, see the client script).
+*/
+const allianceNames = Object.fromEntries(alliancesData.map((a) => [a.slug, a.name]));
+---
+
+<Layout title="Kingdom 1516 — Apply to transfer">
+  <main class="join">
+    <header class="join-head">
+      <div class="ribbon"><span class="ribbon-band">Join 1516</span></div>
+      <h1>Apply to transfer</h1>
+      <p class="lead">One last step to join Kingdom 1516.</p>
+    </header>
+
+    <section class="apply-card">
+      {/*
+        Pre-filled block — hidden on the server default (no-JS-safe generic apply
+        step). The client reveals it only when ?alliance resolves to a known slug,
+        setting #join-alliance via textContent from the trusted map.
+      */}
+      <div class="chosen" id="join-chosen" hidden>
+        <p class="chosen-line">Your desired alliance: <b id="join-alliance"></b></p>
+        <p class="reassure">
+          <span class="reassure-ic" aria-hidden="true"><Icon name="check" /></span>Pre-fills this alliance — you can change it.
+        </p>
+      </div>
+
+      <p class="reassure">
+        <span class="reassure-ic" aria-hidden="true"><Icon name="check" /></span>These are recommendations.
+      </p>
+
+      <div class="apply-foot">
+        {/*
+          Server default href = the bare JOIN_FORM_URL (generic, no pre-fill) so a
+          no-JS visitor still reaches the form and never dead-ends; the client
+          upgrades it to the pre-filled URL when an alliance is known.
+        */}
+        <a id="join-cta" class="btn-gold" href={JOIN_FORM_URL}>Apply to transfer</a>
+        <a class="change-link" id="join-change" href="/finder" hidden>Not this one? Change your alliance →</a>
+      </div>
+
+      {/*
+        Generic / no-alliance forward path (UJ-1): reaching /join from the Nav or a
+        direct visit still leads back to step 1 of the journey. Visible by default;
+        the client hides it once an alliance is pre-filled.
+      */}
+      <p class="find-first" id="join-find-first">
+        <a href="/finder">Find the alliance that fits your timezone →</a>
+      </p>
+    </section>
+
+    {/* Trusted build-time data the bundled module below reads (no runtime fetch). */}
+    <script id="alliance-names" type="application/json" set:html={JSON.stringify(allianceNames)} />
+    <script id="join-form-config" type="application/json" set:html={JSON.stringify({ url: JOIN_FORM_URL, entry: JOIN_FORM_ALLIANCE_ENTRY })} />
+  </main>
+</Layout>
+
+<style>
+  /*
+    Join-only recipes. This is consumer #3 of the gold-button recipe (Home #1,
+    Finder #2) — Rule of Three is met, but the three copies still diverge per
+    surface, so KISS keeps them copied rather than extracted (Open Q #5, default).
+    Tokens are role-named; the only literal hex are the DESIGN gold gradient stops
+    the others use verbatim, and every light-baked gradient gets a dark variant
+    (the Story 1.3/1.4 wash-out guard).
+  */
+  .join {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: var(--space-7) var(--space-5) var(--space-9);
+  }
+
+  /* ===== Heading + ribbon (recipe mirrors Home / Finder) ===== */
+  .join-head {
+    position: relative;
+    text-align: center;
+    padding: var(--space-5) var(--space-4) 0;
+  }
+  .ribbon {
+    position: relative;
+    display: inline-block;
+    margin-bottom: var(--space-2);
+  }
+  .ribbon::before,
+  .ribbon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 54px;
+    height: 16px;
+    background: var(--color-primary);
+    transform: translateY(-50%);
+    box-shadow: 0 2px 4px rgba(44, 38, 34, .2);
+    display: none; /* desktop-only ornament; shown at 768px (see breakpoint) */
+  }
+  .ribbon::before {
+    left: -66px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%);
+  }
+  .ribbon::after {
+    right: -66px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+  }
+  .ribbon-band {
+    display: inline-block;
+    background: linear-gradient(#E8A149, #E08A2B);
+    color: var(--color-primary-foreground);
+    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 10px rgba(224, 138, 43, .35), inset 0 1px 0 rgba(255, 255, 255, .4);
+    text-shadow: 0 1px 1px rgba(44, 38, 34, .3);
+  }
+  .join-head h1 {
+    font-size: clamp(24px, 6vw, 34px);
+    line-height: 1.1;
+    margin: var(--space-4) auto var(--space-2);
+    color: var(--color-ink);
+  }
+  .join-head .lead {
+    color: var(--color-muted);
+    font-size: 15px;
+    margin: 0;
+  }
+
+  /* ===== Apply card — gold-framed parchment (mirrors the Finder cards) ===== */
+  .apply-card {
+    margin-top: var(--space-6);
+    background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-card);
+    padding: var(--space-6) var(--space-5);
+    box-shadow:
+      0 8px 20px rgba(224, 138, 43, .18),
+      inset 0 0 0 1px rgba(255, 255, 255, .5),
+      inset 0 0 22px rgba(224, 138, 43, .06);
+  }
+
+  .chosen {
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .chosen[hidden] {
+    display: none;
+  }
+  .chosen-line {
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-2);
+  }
+  .chosen-line b {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 400;
+    color: var(--color-primary-hover);
+  }
+
+  /* ===== Reassurance (reuses the Finder's .reassure idiom) ===== */
+  .reassure {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+    font-size: 13px;
+    color: var(--color-muted);
+  }
+  .reassure-ic {
+    color: var(--color-accent);
+    display: inline-flex;
+  }
+
+  /* ===== Apply button + change link ===== */
+  .apply-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: var(--space-5);
+  }
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    background: linear-gradient(#EDA44E, #E08A2B);
+    color: var(--color-primary-foreground);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid var(--color-primary-hover);
+    border-radius: var(--radius-button);
+    text-decoration: none;
+    box-shadow:
+      0 6px 14px rgba(224, 138, 43, .35),
+      inset 0 1px 0 rgba(255, 255, 255, .45),
+      inset 0 -2px 4px rgba(201, 120, 31, .3);
+    text-shadow: 0 1px 1px rgba(44, 38, 34, .25);
+  }
+  .btn-gold:hover {
+    background: linear-gradient(#E08A2B, #C9781F);
+    text-decoration: none;
+  }
+  .btn-gold:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  .change-link {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .change-link[hidden] {
+    display: none;
+  }
+
+  /* ===== Generic forward path back to the Finder ===== */
+  .find-first {
+    margin: var(--space-5) 0 0;
+    font-size: 14px;
+  }
+  .find-first[hidden] {
+    display: none;
+  }
+  .find-first a {
+    font-weight: 600;
+  }
+
+  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
+  @media (min-width: 768px) {
+    .ribbon::before,
+    .ribbon::after {
+      display: block;
+    }
+  }
+
+  /* ===== Mobile: full-width tap target ===== */
+  @media (max-width: 767.98px) {
+    .btn-gold {
+      width: 100%;
+    }
+    .change-link {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  /* ===== Dark "Royal Court" — every light-baked gradient/emboss needs a dark
+     variant (the Story 1.3/1.4 wash-out guard). ===== */
+  :global(:root[data-theme="dark"]) .ribbon-band {
+    background: linear-gradient(#F2A93B, #E0962A);
+    text-shadow: none;
+  }
+  :global(:root[data-theme="dark"]) .apply-card {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, .35),
+      inset 0 0 0 1px rgba(255, 255, 255, .04),
+      inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+  :global(:root[data-theme="dark"]) .btn-gold {
+    background: linear-gradient(#F2A93B, #E0962A);
+    box-shadow:
+      0 6px 16px rgba(242, 169, 59, .3),
+      inset 0 1px 0 rgba(255, 255, 255, .25),
+      inset 0 -2px 4px rgba(0, 0, 0, .25);
+    text-shadow: none;
+  }
+  :global(:root[data-theme="dark"]) .btn-gold:hover {
+    background: linear-gradient(#E0962A, #C9781F);
+  }
+</style>
+
+<script>
+  /*
+    /join client logic — resolve the desired alliance from the URL and upgrade the
+    Apply CTA to a pre-filled Google-Form link. A bundled module (not is:inline):
+    no render-timing dependency, and the trusted data it needs is embedded in JSON
+    script tags (the same "embed trusted data at build, resolve client-side"
+    pattern the Finder uses), so no define:vars / no runtime fetch.
+
+    Security: the URL query is attacker-controllable. The shown alliance name comes
+    ONLY from the trusted build-time slug → name map keyed by ?alliance — the raw
+    ?name param is never rendered. An unknown slug → the generic apply step.
+  */
+  function readJson(id: string): Record<string, string> {
+    const el = document.getElementById(id);
+    if (!el || !el.textContent) return {};
+    try { return JSON.parse(el.textContent); } catch { return {}; }
+  }
+
+  const names = readJson('alliance-names');
+  const slug = new URLSearchParams(location.search).get('alliance');
+  const display = slug && Object.prototype.hasOwnProperty.call(names, slug) ? names[slug] : null;
+
+  if (display) {
+    const allianceEl = document.getElementById('join-alliance');
+    if (allianceEl) allianceEl.textContent = display; // textContent, never innerHTML
+
+    document.getElementById('join-chosen')?.removeAttribute('hidden');
+    document.getElementById('join-change')?.removeAttribute('hidden');
+    document.getElementById('join-find-first')?.setAttribute('hidden', '');
+
+    const cfg = readJson('join-form-config');
+    const cta = document.getElementById('join-cta');
+    if (cta && cfg.url && cfg.entry) {
+      cta.setAttribute(
+        'href',
+        cfg.url + '?usp=pp_url&' + cfg.entry + '=' + encodeURIComponent(display),
+      );
+    }
+  }
+</script>
