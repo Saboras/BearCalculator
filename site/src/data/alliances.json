@@ -1,0 +1,47 @@
+[
+  {
+    "name": "516",
+    "slug": "516",
+    "bear_trap_1": "00:30",
+    "bear_trap_2": "12:00",
+    "peak": null,
+    "farm_alliance": null,
+    "official": "Osmo"
+  },
+  {
+    "name": "ROK",
+    "slug": "rok",
+    "bear_trap_1": "14:00",
+    "bear_trap_2": "20:00",
+    "peak": null,
+    "farm_alliance": "rok",
+    "official": "Ritter"
+  },
+  {
+    "name": "FOO",
+    "slug": "foo",
+    "bear_trap_1": "03:00",
+    "bear_trap_2": "19:00",
+    "peak": null,
+    "farm_alliance": "CAT",
+    "official": "Liam1"
+  },
+  {
+    "name": "NRV",
+    "slug": "nrv",
+    "bear_trap_1": "13:30",
+    "bear_trap_2": "18:00",
+    "peak": null,
+    "farm_alliance": null,
+    "official": "NellyWonka"
+  },
+  {
+    "name": "ACE",
+    "slug": "ace",
+    "bear_trap_1": "11:00",
+    "bear_trap_2": "19:00",
+    "peak": null,
+    "farm_alliance": "AcE",
+    "official": "Nevada"
+  }
+]
