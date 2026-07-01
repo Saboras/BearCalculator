@@ -47,6 +47,21 @@ jobs:
         run: npm run build
         working-directory: site
 
+      # Fail loud if the build emitted no CSS. This toolchain silently drops every
+      # stylesheet when the build runs on Node 24 (see site/CLAUDE.md → Known issues):
+      # astro build exits 0 and prints "Complete!" while shipping an unstyled dist/.
+      # .nvmrc pins Node 22 to prevent it; this is the backstop so a future regression
+      # (Node bump, dep change) can never rsync an unstyled site to the host.
+      - name: Verify CSS emitted
+        run: |
+          count=$(find dist -name '*.css' | wc -l)
+          echo "CSS files in dist/: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Build produced no CSS — unstyled artifact. Refusing to deploy."
+            exit 1
+          fi
+        working-directory: site
+
       # Keep the artifact around even after deploy lands — it is the rollback source.
       - name: Upload static artifact
         uses: actions/upload-artifact@v7
