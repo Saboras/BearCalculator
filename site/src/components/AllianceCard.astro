@@ -1,0 +1,318 @@
+---
+import Icon from './Icon.astro';
+import type { Alliance } from '../data/alliances';
+
+interface Props {
+  alliance: Alliance;
+}
+
+const { alliance: a } = Astro.props;
+const bearTimes = [a.bear_trap_1, a.bear_trap_2].filter((t): t is string => t !== null);
+---
+
+{/*
+  One result card. Rendered server-side with honest UTC values labelled "· UTC";
+  the finder client script (src/scripts/finder/index.ts) rewrites the times to the
+  visitor's local zone, sets the fit badge, and crowns rank-1. The data-* / ids /
+  class names below are that script's contract — keep them in sync with readCards()
+  and applyToCard(). The gold Apply button uses the shared global .btn-gold recipe.
+*/}
+<li
+  class="alliance-card"
+  data-slug={a.slug}
+  data-name={a.name}
+  data-bear1={a.bear_trap_1 ?? ''}
+  data-bear2={a.bear_trap_2 ?? ''}
+  data-peak={a.peak ?? ''}
+>
+  <div class="ac-skeleton" aria-hidden="true">
+    <div class="sk-bar sk-title"></div>
+    <div class="sk-bar sk-meta"></div>
+    <div class="sk-bar sk-block"></div>
+    <div class="sk-bar sk-btn"></div>
+  </div>
+
+  <div class="ac-top">
+    <span class="ac-name">{a.name}</span>
+    <span class="badge-major">Major</span>
+    <span class="fit-badge fit-stretch" data-fit>
+      <span class="fit-dots" aria-hidden="true">●○○</span>
+      <span class="fit-label">Stretch</span>
+    </span>
+  </div>
+
+  {a.farm_alliance && (
+    <p class="ac-farm">Farm alliance: <b>{a.farm_alliance}</b></p>
+  )}
+
+  <div class="times">
+    <div class="time-block">
+      <div class="lbl">
+        <span class="lbl-ic" aria-hidden="true"><Icon name="clock" /></span>
+        <span class="lbl-text">Bear Trap · UTC</span>
+      </div>
+      <div class="bear-times" data-bear-times>
+        {bearTimes.length === 0 && <span class="t-none">No Bear Trap time set</span>}
+        {bearTimes.length === 1 && <span class="t">{bearTimes[0]}</span>}
+        {bearTimes.length === 2 && (
+          <Fragment>
+            <span class="t">{bearTimes[0]}</span>
+            <span class="amp">&amp;</span>
+            <span class="t">{bearTimes[1]}</span>
+          </Fragment>
+        )}
+      </div>
+    </div>
+
+    {a.peak && (
+      <div class="time-block peak-block">
+        <div class="lbl">
+          <span class="lbl-ic" aria-hidden="true"><Icon name="swords" /></span>
+          <span class="lbl-text">Peak activity · UTC</span>
+        </div>
+        <div class="peak-val" data-peak-val>{a.peak}</div>
+      </div>
+    )}
+  </div>
+
+  <div class="ac-foot">
+    <a class="btn-gold" href={`/join?alliance=${encodeURIComponent(a.slug)}&name=${encodeURIComponent(a.name)}`} data-slug={a.slug} data-name={a.name}>Apply to transfer</a>
+    <span class="prefill-note">Pre-fills this alliance — you can change it.</span>
+  </div>
+</li>
+
+<style>
+  /*
+    Alliance card recipe (card shell, fit/Major badges, times, Best-fit ribbon,
+    loading skeleton). Tokens are role-named; the only literal hex are the DESIGN
+    gold gradient stops the mockup spells out, and every light-baked gradient gets
+    a dark variant. Fit-badge / Major tints use color-mix on a role token, so they
+    flip with the theme automatically (no separate dark rule needed).
+  */
+  .alliance-card {
+    position: relative;
+    background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-card);
+    padding: var(--space-5);
+    box-shadow:
+      0 8px 20px rgba(224, 138, 43, .18),
+      inset 0 0 0 1px rgba(255, 255, 255, .5),
+      inset 0 0 22px rgba(224, 138, 43, .06);
+  }
+  /* Best-fit ribbon — rank-1 only (set client-side after ranking) */
+  .alliance-card.rank-1::after {
+    content: 'Best fit';
+    position: absolute;
+    top: -11px;
+    left: var(--space-5);
+    background: linear-gradient(#E8A149, #E08A2B);
+    color: var(--color-primary-foreground);
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 12px;
+    border-radius: 5px;
+    box-shadow: 0 3px 7px rgba(224, 138, 43, .35);
+  }
+
+  .ac-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-1);
+  }
+  .ac-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--color-ink);
+  }
+  .badge-major {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    color: var(--color-primary-hover);
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+    border: 1px solid var(--color-primary);
+  }
+  .fit-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid;
+    color: var(--color-ink); /* ink text = high contrast in both themes; the dots carry the hue */
+  }
+  .fit-dots {
+    letter-spacing: 1px;
+    font-size: 11px;
+  }
+  .fit-great {
+    background: color-mix(in srgb, var(--color-success) 16%, transparent);
+    border-color: var(--color-success);
+  }
+  .fit-great .fit-dots { color: var(--color-success); }
+  .fit-good {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    border-color: var(--color-primary);
+  }
+  .fit-good .fit-dots { color: var(--color-primary-hover); }
+  .fit-stretch {
+    background: color-mix(in srgb, var(--color-muted) 14%, transparent);
+    border-color: color-mix(in srgb, var(--color-muted) 55%, transparent);
+  }
+  .fit-stretch .fit-dots { color: var(--color-muted); }
+
+  .ac-farm {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0 0 var(--space-3);
+  }
+  .ac-farm b {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .times {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .time-block {
+    flex: 1;
+    min-width: 200px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    padding: var(--space-3) var(--space-4);
+  }
+  .lbl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--color-muted);
+    margin-bottom: var(--space-2);
+  }
+  .bear-times {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .bear-times .t {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--color-primary-hover);
+  }
+  .bear-times .amp {
+    color: var(--color-muted);
+    font-size: 13px;
+    margin: 0 var(--space-1);
+  }
+  .t-none {
+    font-size: 13px;
+    color: var(--color-muted);
+    font-style: italic;
+  }
+  .peak-val {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  .ac-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: var(--space-4);
+  }
+  .prefill-note {
+    font-size: 11.5px;
+    color: var(--color-muted);
+  }
+
+  /* ===== Loading skeleton (AC1) — JS-gated, no-JS-safe. finder.astro's is:inline
+     marker sets :root[data-finder-resolving]; this hides the honest-but-about-to-
+     change UTC/Stretch card content and shows placeholder bars until the finder
+     script converts to local time and clears the flag. No marker (JS off) → these
+     rules never match → real cards show immediately. ===== */
+  .ac-skeleton {
+    display: none;
+  }
+  :global(:root[data-finder-resolving]) .alliance-card > * {
+    display: none;
+  }
+  :global(:root[data-finder-resolving]) .alliance-card > .ac-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .sk-bar {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    /* color-mix on role tokens → visible and theme-correct in both modes with no
+       separate dark rule. Solid fill, so the bar stays visible if the shimmer
+       animation is suppressed by prefers-reduced-motion (never degrades to blank). */
+    background: color-mix(in srgb, var(--color-muted) 20%, var(--color-surface));
+  }
+  .sk-title { width: 45%; height: 22px; }
+  .sk-meta  { width: 30%; height: 14px; }
+  .sk-block { width: 100%; height: 64px; border-radius: var(--radius-button); }
+  .sk-btn   { width: 160px; height: 40px; border-radius: var(--radius-button); }
+  .sk-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    /* A neutral light sweep; reads as a shimmer on both themes (more visible on
+       dark, never washed out), so no dark variant is needed. The global
+       prefers-reduced-motion reset (global.css) zeroes this animation, leaving
+       the solid bar behind it. */
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .35), transparent);
+    transform: translateX(-100%);
+    animation: sk-shimmer 1.2s ease-in-out infinite;
+  }
+  @keyframes sk-shimmer {
+    100% { transform: translateX(100%); }
+  }
+
+  @media (max-width: 767.98px) {
+    .time-block {
+      min-width: 0;
+      flex-basis: 100%;
+    }
+    .prefill-note {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  /* ===== Dark "Royal Court" — the baked light gradients/embosses need dark
+     variants (the Story 1.3/1.4 wash-out guard). The badge tints use color-mix on
+     tokens, so they flip on their own and are not repeated here. ===== */
+  :global(:root[data-theme="dark"]) .alliance-card.rank-1::after {
+    background: linear-gradient(#F2A93B, #E0962A);
+    text-shadow: none;
+  }
+  :global(:root[data-theme="dark"]) .alliance-card {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, .35),
+      inset 0 0 0 1px rgba(255, 255, 255, .04),
+      inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+</style>

@@ -1,0 +1,132 @@
+---
+import Icon from './Icon.astro';
+
+/*
+  Curated IANA list for the manual "change" override — a native <select>, no tz
+  library (KISS). Spans the offset range including the fractional zones
+  (+5:30 / +5:45 / +6:30 / +9:30) so conversion is exercised at the edges.
+*/
+const TZ_OPTIONS = [
+  'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles', 'America/Denver',
+  'America/Chicago', 'America/New_York', 'America/Halifax', 'America/Sao_Paulo',
+  'Atlantic/Azores', 'UTC', 'Europe/London', 'Europe/Berlin', 'Europe/Athens',
+  'Europe/Moscow', 'Asia/Dubai', 'Asia/Karachi', 'Asia/Kolkata', 'Asia/Kathmandu',
+  'Asia/Dhaka', 'Asia/Yangon', 'Asia/Bangkok', 'Asia/Shanghai', 'Asia/Tokyo',
+  'Australia/Adelaide', 'Australia/Sydney', 'Pacific/Auckland',
+];
+---
+
+{/*
+  Timezone control. The ids (#tz-name/#tz-detected/#tz-change/#tz-select) are the
+  contract with the finder client script (src/scripts/finder/index.ts), which reads
+  the visitor's zone and rewrites the cards to local time. No-JS: the row renders
+  inert and the cards stay honest UTC.
+*/}
+<div class="tz-row">
+  <span class="tz-pin" aria-hidden="true"><Icon name="map-pin" /></span>
+  <p class="tz-text">
+    Your timezone: <b id="tz-name">UTC</b>
+    <span class="tz-detected" id="tz-detected">default</span>
+  </p>
+  <button
+    type="button"
+    class="tz-change"
+    id="tz-change"
+    aria-expanded="false"
+    aria-controls="tz-select-wrap"
+  >change</button>
+  <label class="tz-select-wrap" id="tz-select-wrap" hidden>
+    <span class="label">Pick your timezone</span>
+    <select id="tz-select">
+      {TZ_OPTIONS.map((tz) => <option value={tz}>{tz}</option>)}
+    </select>
+  </label>
+</div>
+
+<style>
+  .tz-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin: var(--space-6) 0 var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: linear-gradient(#FDF9EF, #F8EFD8);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-card);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5);
+  }
+  .tz-pin {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-button);
+    background: linear-gradient(#FBE4C2, #F4CF9C);
+    border: 1px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    color: var(--color-primary-hover);
+  }
+  .tz-text {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--color-ink);
+  }
+  .tz-detected {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: var(--space-2);
+  }
+  .tz-change {
+    margin-left: auto;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+    border-radius: 7px;
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+  }
+  .tz-change:hover {
+    background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  }
+  .tz-change:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .tz-select-wrap {
+    flex-basis: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+  }
+  .tz-select-wrap[hidden] {
+    display: none;
+  }
+  #tz-select {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--color-ink);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* Dark "Royal Court" — the baked light gradient needs a dark variant (the
+     Story 1.3/1.4 wash-out guard). The tz-change tint uses color-mix on a token,
+     so it flips on its own and is not repeated here. */
+  :global(:root[data-theme="dark"]) .tz-row {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04);
+  }
+  :global(:root[data-theme="dark"]) .tz-pin {
+    background: linear-gradient(rgba(242, 169, 59, .18), rgba(242, 169, 59, .07));
+  }
+</style>

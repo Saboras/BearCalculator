@@ -192,6 +192,55 @@ a:hover {
   text-decoration: underline;
 }
 
+/* ===== Gold CTA button — the primary "Apply / calculate" action.
+   Shared design-system recipe (Home, Finder, Alliance card, Join, Bear Trap,
+   Leader all use it): 5+ consumers, so it lives here, not copied per page.
+   Both themes are baked (the light emboss would wash out on dark). ===== */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: linear-gradient(#EDA44E, #E08A2B);
+  color: var(--color-primary-foreground);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--color-primary-hover);
+  border-radius: var(--radius-button);
+  text-decoration: none;
+  box-shadow:
+    0 6px 14px rgba(224, 138, 43, .35),
+    inset 0 1px 0 rgba(255, 255, 255, .45),
+    inset 0 -2px 4px rgba(201, 120, 31, .3);
+  text-shadow: 0 1px 1px rgba(44, 38, 34, .25);
+}
+.btn-gold:hover {
+  background: linear-gradient(#E08A2B, #C9781F);
+  text-decoration: none;
+}
+.btn-gold:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+:root[data-theme="dark"] .btn-gold {
+  background: linear-gradient(#F2A93B, #E0962A);
+  box-shadow:
+    0 6px 16px rgba(242, 169, 59, .3),
+    inset 0 1px 0 rgba(255, 255, 255, .25),
+    inset 0 -2px 4px rgba(0, 0, 0, .25);
+  text-shadow: none;
+}
+:root[data-theme="dark"] .btn-gold:hover {
+  background: linear-gradient(#E0962A, #C9781F);
+}
+@media (max-width: 767.98px) {
+  .btn-gold {
+    width: 100%;
+  }
+}
+
 /* Respect reduced-motion globally for any future transitions */
 @media (prefers-reduced-motion: reduce) {
   *,
