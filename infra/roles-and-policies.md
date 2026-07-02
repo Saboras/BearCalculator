@@ -3,7 +3,8 @@
 **Status:** canonical, version-controlled security contract (Story 3.3).
 **Scope:** the Directus **role / policy / permission MODEL** every MVP-2 admin surface
 inherits — Candidates pipeline (Epic 5), Alliances row-editing (Epic 4), Guides publish
-gate (Epic 6), Accounts (Story 3.4). This document is the **source of truth**; the running
+gate (Epic 6), Accounts (Story 3.4 — **delivered**: the account-lifecycle runbook now lives in
+[`README.md` §8](README.md)). This document is the **source of truth**; the running
 Directus config is applied from it in the Data Studio (see `README.md` §7). The per-collection
 grants attach to these same policies **as each collection lands** (Epics 4–6) — this file
 lists every one of them with the story that wires it.
@@ -181,6 +182,23 @@ Accounts**.
 
 > **Curator ≠ stack both.** A Curator is given `transfer-curator` *instead of*
 > `transfer-viewer` (curator already includes read). Don't attach both.
+
+> **Accounts is Owner-only — there is no `accounts-*` leader policy.** The fourth governed area
+> (Transfer, Guides, Alliances, **Accounts**) is the one with **no** per-area leader policy:
+> creating accounts and changing roles is the Owner's exclusive domain via the built-in
+> **Administrator** (`admin_access`) — exactly the AD-9 `users / roles / policies → Owner` row
+> (§3), enforceable-now and license-free. The day-to-day account lifecycle (create / assign /
+> reset / offboard) is **delivered in [`README.md` §8](README.md)** (Story 3.4).
+
+> **Own-profile scope (resolves the 3.3-review deferral — a resolution, not a new open question).**
+> A leader's **read-own-profile** is served by Directus's built-in **`/users/me`** (proven in
+> Story 3.2 — `getCurrentUser()` → `readMe()` returned the leader's own record), so the base
+> `Leader` role needs **no** `directus_users` read grant — a collection-level read grant would
+> leak **all** leaders' emails/data. A **scoped own-profile *edit*** (`directus_users` update
+> filtered `{ "id": { "_eq": "$CURRENT_USER" } }`, `role` / `policies` excluded) is a **custom
+> permission rule → `403 RESOURCE_RESTRICTED` on the Core tier (Option 3, §0)**, so leader
+> self-service profile editing is **not offered**; **all account edits stay Owner-only** unless
+> Directus is licensed.
 
 **Role table — reconciling epics vs UX terminology (use these exact names, from EXPERIENCE.md
 §Roles & Access + PRD FR-12).** A **Guides Viewer** = a leader who *reads* drafts
@@ -406,8 +424,10 @@ schema-snapshot scope; Story 3.1 §Task 5 boundary; code-conventions §"When in 
 The step-by-step Data-Studio runbook (order to create policies, how leaders receive a
 *combination* of per-area policies, the Owner = Administrator mapping, the Public = no-access
 check, the Curator ≤2 discipline, and the first-login role smoke test) lives in
-[`README.md` §7 "Roles, policies & permissions"](README.md). This file is the **what** (the
-contract); the README is the **how-to-apply**.
+[`README.md` §7 "Roles, policies & permissions"](README.md). The **account lifecycle** that
+*consumes* those policies — how the Owner creates each leader's user account, attaches the
+policy combination, resets a password, and offboards — is [`README.md` §8 "Leader accounts"](README.md)
+(Story 3.4). This file is the **what** (the contract); the README is the **how-to-apply**.
 
 ---
 

@@ -301,6 +301,114 @@ server-enforced; the *headcount* is your discipline here.
 Then run the **first-login role smoke test** in §2 (item 4) to confirm the boundary, the Owner
 override, `/permissions/me`, and the Public lock.
 
+## 8. Leader accounts — create, assign roles, reset, offboard (Story 3.4)
+
+§7 is the **policy** apply-runbook (author the six per-area policies once). This section is the
+**user-account lifecycle** that consumes them: how the **Owner** creates each leader's account
+and attaches the §7 policy *combination*, day to day, in the Data Studio. **All of it is
+Owner-only and happens in the Data Studio — there is no custom account-management screen** (AC2 /
+AD-3 / AR-5 / NFR-18). The **only** custom admin surface in the whole product is the Candidates
+pipeline (Story 3.5); Accounts, Roles, Guides authoring, and Alliances CRUD all use the Studio
+directly. For the *policy* names and what each grants, see §7 and `roles-and-policies.md` §2 —
+**not** repeated here.
+
+> **Why the Owner and only the Owner.** Writing `directus_users` / `directus_roles` /
+> `directus_policies` is the **AD-9 `users / roles / policies → Owner`** field-group: a non-Owner
+> leader gets a server-enforced **403** on creating an account or changing anyone's role/policies
+> (the privilege-escalation guard, AC1 / NFR-9), and the Owner writes via the built-in
+> **Administrator** (`admin_access`) bypass. This is base RBAC — free on the Core tier, no custom
+> permission rule, no license (proven, see the verification trailer).
+
+### 8.1 Create a leader account (AC1)
+
+Data Studio → **User Directory** (the people icon in the module bar; on some 12.x builds also
+reachable via **Settings**) → **Create User**. Then either:
+
+- **Set an initial password** — enter `email` + `password`, or
+- **Invite** — enter `email` only and use **Invite**; the user is created with status
+  **`invited`** and stays inactive until they click the emailed link and set their **own**
+  password. ⚠ **Invite needs email/SMTP, which is NOT configured on the current stack**
+  (`docker-compose.yml` sets no `EMAIL_*`): no invite mail is sent and the `invited` account can
+  never activate — use **Set an initial password** until a host SMTP is configured.
+
+Assign the base **`Leader`** role (the shared container from §7 step 3). API-equivalents (both
+Owner-only): `POST /users {email, password, role}` or `POST /users/invite {email, role}` — `role`
+is the role **id**.
+
+### 8.2 Assign the per-area role combination (AC3)
+
+On the user, attach the §7 per-area **policies** as a *combination* on top of the base `Leader`
+role — Directus grants the **union** of every policy held, and areas apply **independently**.
+Worked example (the AC3 case): a leader who is **Viewer in Transfer *and* Editor in Guides** gets
+**two** policies — **`transfer-viewer` + `guides-editor`**. Add `guides-viewer` for a
+Guides-reader, `alliances-official` for an alliance owner, and so on; each area is a separate
+policy.
+
+> **Curator ≠ stack both.** A Transfer **Curator** gets **`transfer-curator` *instead of***
+> `transfer-viewer` (curator already includes read). Don't attach both. (Same rule as §7 step 5.)
+
+### 8.3 Change a leader's roles later (AC3)
+
+Add or remove a policy on the account; the union **recomputes** on the next request and areas
+stay **independent** — e.g. promoting a Guides Editor to Senior is *swap `guides-editor` →
+`guides-senior`*, and it leaves their Transfer access untouched. No account is ever rebuilt; you
+only edit the attached policy set.
+
+### 8.4 Owner-driven password reset (resolves the Story 3.2 deferral)
+
+Two Owner-driven paths, **no custom screen** (AD-3):
+
+- **In the Studio** — open the user and set a new `password` directly; or
+- **Built-in email flow** — trigger Directus's `POST /auth/password/request {email}`, which sends
+  the user a reset link. ⚠ This needs email/SMTP configured, which the current stack does **not**
+  have (`docker-compose.yml` sets no `EMAIL_*`); worse, the endpoint returns **2xx even when no
+  mail is sent**, so it fails *silently*. Until a host SMTP is configured, use the **Studio
+  set-password** path above (the reliable Owner-driven reset).
+
+A **leader-facing "forgot password" UX is explicitly out of scope** — password administration is
+Owner-driven, consistent with the headless-only posture. (This closes the 3.2 "password reset =
+Owner-via-Data-Studio, Story 3.4" deferral.)
+
+### 8.5 Offboard a leader
+
+Prefer **revoke-but-keep** over delete, for the audit trail:
+
+- **`status: suspended`** — the account can no longer authenticate but the record (and its
+  authorship of past edits) survives. The default offboard.
+- **`status: archived`** — same auth block, filed away.
+- **`delete`** — only when the record is genuinely unneeded. Avoid mid-transfer-window: deleting
+  an account that authored candidate/group edits loses that trail.
+
+API: `PATCH /users/:id {status: "suspended"}` (or `"archived"`). Suspended/archived users cannot
+log in — **Directus built-in** status behavior (not exercised by the 3.4 proof, which covered
+account create + role/policy change; see the verification trailer's honest-limits note).
+
+### 8.6 Administrative disciplines (Owner governance, NOT runtime checks)
+
+These are **governance rules the Owner follows**, not constraints Directus enforces — do **not**
+build a counter or cardinality check for either (KISS/YAGNI; see §7 and `roles-and-policies.md`
+§5):
+
+- **Curator ≤ 2 (anti-bias)** — attach `transfer-curator` to **at most two** accounts. The
+  *permission boundary* (Curator writes, Viewer 403s) is server-enforced; the *headcount* is your
+  discipline.
+- **One Alliance Official per alliance** — under the ratified **Option 3**, `alliances-official`
+  is a **full-collection** `alliances` update grant (the `official = $CURRENT_USER` own-row filter
+  is the 🔒 licensed Option-1 upgrade target, not wired now), so "one Official per alliance" and
+  own-row editing are **Owner discipline**, not a 403. The Official edits their alliance in the
+  **Data Studio** (per the §8 preamble — Alliances are not part of the Candidates admin shell,
+  AD-3). Attach the policy to one account per alliance.
+
+### 8.7 `app_access` — who needs the Data Studio
+
+A leader whose work happens **in the Data Studio** (Guides **Editor** / **Senior**, Alliance
+**Official**, the **Owner**) needs **`app_access: true`** on a policy they hold. The
+Candidates-shell-only Transfer roles (**Viewer** / **Curator**) **may** be API-only *without*
+`app_access` — they use the custom admin shell (Story 3.5), not the Studio; **host-confirm** the
+exact implication when that shell + the domain collections exist (Epic 5). Plain **API login does
+NOT require `app_access`** (verified in Story 3.3 — a test leader with `app_access: false`
+authenticated and hit the API).
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
@@ -342,3 +450,39 @@ proven here at collection granularity; the per-collection targets and the row/fi
 with their collections (and require the §0 license for the granular half). The **production**
 role model is applied on the host per §7 and captured by the daily backup — the local DB used
 for this proof is throwaway (`down -v`).
+
+### Account administration (Story 3.4) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API proof on the dev box (throwaway git-ignored `infra/.env` with
+`ADMIN_EMAIL=admin@example.com`, `docker compose up -d directus`, fresh DB, probe run **inside**
+the container, **22/22 checks**, torn down with `down -v`). This re-proves the **account slice**
+of the AD-9 `users / roles / policies → Owner` boundary (Story 3.3 proved the system-collection
+writes generally; 3.4 proves account create + role/policy change specifically) and the **policy
+union** (AC3):
+
+- **AC1 — Owner-only account & role administration:** a **non-Owner** leader (base `Leader` role,
+  one read-only policy, `app_access: false`) → **403** on `POST /users` (create account), on
+  `PATCH /users/:id` changing **another** user's `role` **and** `policies` (privilege escalation),
+  on `POST /policies`, and on `PATCH /roles/:id`. The **Owner** (Administrator) → **200** on
+  `POST /users` and on changing a user's role. Unauthenticated `GET /users` → **403**. ✅
+- **AC3 — per-area policies union independently:** two collection-level (license-free) read
+  policies on two different existing system collections (`directus_dashboards`, `directus_files`)
+  attached to one leader → `GET /permissions/me` returns **both**; functional reads confirm the
+  **union** *and* **independence** — leader-A (dashboards only): `/dashboards` 200 / `/files` 403;
+  leader-B (files only): the mirror; leader-AB (both): both 200. The production
+  `transfer-viewer` + `guides-editor` union is the **identical** mechanism, provable once those
+  domain collections land (Epics 5/6). ✅
+- **Bootstrap fix confirmed:** `ADMIN_EMAIL=admin@example.com` (the Task-1 `.invalid` → RFC-2606
+  fix) is accepted by Directus's email validator and the bootstrap admin logs in. The probe
+  incidentally re-confirmed that Directus rejects **reserved TLDs** — `@…test` account creates
+  failed the same way `.invalid` does — so `example.com` (a real, reserved-for-docs domain) is
+  the correct obviously-fake default. ✅
+
+**Not verified here (honest limits):** the **suspended/archived login-block** (§8.5) and the
+**`/users/invite`** flow (both Directus built-ins, not exercised by this proof); domain-collection
+role behavior (`transfer-viewer`/`guides-editor` on `candidates`/`guides`) — those collections
+don't exist yet (Epics 5/6); the built-in email password-reset round-trip
+(`/auth/password/request` needs SMTP — a host concern); and everything already flagged host-only
+above. The **production** account state
+is authored in the Data Studio per §8 and captured by the daily `data.db` backup — the local DB
+used for this proof is throwaway.
