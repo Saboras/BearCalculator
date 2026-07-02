@@ -4,9 +4,13 @@ This directory stands up the **MVP-2 backend substrate**: Directus (headless CMS
 and Caddy (the single public edge), on one VPS via Docker Compose. It is the foundation
 every later MVP-2 epic (auth, dynamic alliances, transfer pipeline, guides) builds on.
 
-> **Scope:** infrastructure only. No auth wiring, no `src/lib/directus.ts`, no admin
-> shell, no collections — those land in later Epic 3–6 stories. The public static site
-> (`site/`) is unchanged; MVP-2 is purely additive (AR-3 / AD-1).
+> **Scope:** infrastructure + the backend half of **leader auth** + the **role model**
+> (Story 3.3 — the authorization contract in `roles-and-policies.md`, applied per §7). Story
+> 3.2 adds the cross-subdomain CORS + httpOnly session-cookie config to the Directus service
+> (see **Auth model** below); the login UI + `site/src/lib/directus.ts` live in `site/`. Still
+> to come: the admin shell (3.5) and the domain collections (Epic 4–6) — the per-collection
+> permission **grants** attach to the 3.3 policies as those collections land. Public pages are
+> unchanged and render with Directus offline; MVP-2 is purely additive (AR-3 / AD-1).
 
 ## What's here
 
@@ -16,6 +20,7 @@ every later MVP-2 epic (auth, dynamic alliances, transfer pipeline, guides) buil
 | `Caddyfile` | TLS edge: serves the static site + reverse-proxies Directus on the admin subdomain. |
 | `.env.example` | Template for the host-only `.env` (secrets + domains). Real `.env` is git-ignored. |
 | `backup.sh` | Daily online SQLite snapshot + uploads tarball → rclone → Cloudflare R2. |
+| `roles-and-policies.md` | Canonical role/policy/permission spec — the authorization contract (Story 3.3). Applied in the Data Studio per §7. |
 | `README.md` | This runbook. |
 
 ## The stack (AD-16 / AR-20)
@@ -52,6 +57,36 @@ Caddy must run non-root (AC1 / NFR-15). Two facts make that work, and one trap t
 `docker compose ps -a` shows `caddy-init` as `Exited (0)` — that is success, not a crash.
 Directus needs no such fix: its image already runs as `node` (uid 1000) and owns its data
 dirs, so its named volumes are writable as-is.
+
+## Auth model — leader login (Story 3.2)
+
+Leaders sign in at the static site's **`/leader`** page. The flow is **client-side** — the
+site is `output: 'static'` (Caddy only serves files; there is no Astro server runtime):
+
+1. The browser (on `/leader`) calls Directus directly on the **admin subdomain** via the
+   `@directus/sdk` in **session-cookie mode** (`login({ mode: 'session' })`).
+2. Directus responds by setting an **httpOnly `directus_session_token` cookie**. The token
+   is **never** exposed to JavaScript and **never** written to `localStorage` — the XSS
+   defense required by AR-18 / NFR-D.
+3. On later requests the browser attaches that cookie automatically (`credentials: 'include'`),
+   so `getCurrentUser()` and any admin read is authenticated; an unauthenticated call gets a
+   server-enforced **401** (AD-4). Admin data is never baked into the static HTML.
+
+**Why the cross-subdomain config exists.** The site (apex `$SITE_DOMAIN`) and Directus
+(`$DIRECTUS_DOMAIN`) are **different origins** but the **same site** (shared registrable
+domain). The login fetch is cross-origin, so the Directus service carries this config — all
+derived from `SITE_DOMAIN`, **non-secret**, set directly in `docker-compose.yml`:
+
+| Env | Value | Why |
+|---|---|---|
+| `CORS_ENABLED` / `CORS_ORIGIN` | `true` / `https://$SITE_DOMAIN` | allow the apex origin (never `*` with credentials) |
+| `CORS_CREDENTIALS` | `true` | sends `Access-Control-Allow-Credentials`; without it the browser drops the cookie |
+| `SESSION_COOKIE_SECURE` | `true` | HTTPS-only cookie |
+| `SESSION_COOKIE_SAME_SITE` | `lax` | apex + subdomain are same-site → `lax` suffices and is stronger than `None` |
+| `SESSION_COOKIE_DOMAIN` | `.$SITE_DOMAIN` | parent-domain cookie shared across apex + subdomain |
+
+The frontend seam is `site/.env` → **`PUBLIC_DIRECTUS_URL`** (the `https://` admin subdomain).
+It **must equal** the live `DIRECTUS_DOMAIN` — a mismatch breaks CORS and login.
 
 ## 1. Host provisioning
 
@@ -94,6 +129,40 @@ Open the admin subdomain in a browser, log in with the bootstrap admin, and:
 2. **Remove `ADMIN_PASSWORD`** from `infra/.env` (it is a first-run bootstrap only) and
    `docker compose up -d` to re-apply env. Keep `SECRET` stable — rotating it invalidates
    all existing sessions/tokens.
+3. **Verify the first leader login end-to-end** (the Story 3.2 AC1–AC4 smoke test). On the
+   live HTTPS host, open the site's **`/leader`** page and log in with the admin credentials:
+   - the **`directus_session_token`** cookie is present and flagged **`HttpOnly`** +
+     **`Secure`** (DevTools → Application → Cookies);
+   - **`localStorage` and `sessionStorage` are empty** — no token is in JS;
+   - the page swaps to "Signed in as …"; **Log out** clears the cookie and returns the form.
+
+   `PUBLIC_DIRECTUS_URL` in the site build env **must equal** this host's `DIRECTUS_DOMAIN`,
+   or the browser blocks the cross-origin login.
+
+4. **Apply the role model, then run the first-login role smoke test** (Story 3.3 — do this
+   after §7 has been applied). With a **non-Owner test leader** account (create one in the
+   Studio, assign it a single read-only policy):
+   - authenticate as that leader and confirm they can `GET` **only** what their policy allows;
+   - a raw API **write above their role** — e.g. `POST`/`PATCH`/`DELETE` to `directus_users`,
+     `directus_roles`, or `directus_policies` — returns **403** (deny-by-default; the
+     privilege-escalation guard). *(Proven locally, Story 3.3 — see the verification trailer.)*
+   - `GET /permissions/me` as the leader shows **exactly** their policy set (the read the 3.5
+     shell will use for the role chip + absent tabs);
+   - the **Owner** (Administrator) overrides the same write (→ 200).
+   - **Unauthenticated** `GET /users` / `/roles` / `/policies` → **403** (Public is locked).
+
+   > ⚠️ **Row/field-scoped rules need a Directus license — Owner chose Option 3 (see
+   > `roles-and-policies.md` §0).** The own-row (`official = $CURRENT_USER`) and
+   > publish-field-gate boundaries are *custom permission rules*, which Directus 12 restricts to
+   > a **licensed** tier (Core tier → `403 RESOURCE_RESTRICTED` at creation). **Decision
+   > (2026-07-01): collection-level enforcement only** — those two boundaries are UX-guided in
+   > the Story 3.5 shell, **not** server-enforced. The collection boundary above (Viewer can't
+   > write, Owner overrides, Public locked) is free, proven, and the real server riegel.
+   >
+   > **Scope of this test:** it exercises only the *collection* boundary. It **cannot** detect a
+   > leaked Option-3 UX-only boundary — an Editor publishing, an Official editing another row, a
+   > Curator writing a non-work field — because those have **no** server check; verify them by
+   > inspecting the Story 3.5 shell UI. A green smoke test is **not** full-model verification.
 
 ## 3. Backups → Cloudflare R2 (AC4 / NFR-16)
 
@@ -181,6 +250,57 @@ docker compose pull && docker compose up -d   # update — but keep the PINNED t
 docker system prune -af              # weekly housekeeping (dangling images/containers)
 ```
 
+## 7. Roles, policies & permissions (Story 3.3)
+
+The **what** — the canonical role/policy/permission contract — is
+[`roles-and-policies.md`](roles-and-policies.md). This section is the **how-to-apply**: a
+one-time, first-run Owner task in the Directus Data Studio (**Settings → Access Policies**).
+Roles/policies live only in `data.db`; there is no import script (AD-3 / YAGNI) — you author
+them once, and the daily backup (§3) preserves them.
+
+> ⚠️ **Licensing gate — Owner chose Option 3 (read `roles-and-policies.md` §0).** Directus 12
+> restricts **custom permission rules** (row/item filters, field-level subsets, validation,
+> presets) to a **licensed** tier; the unlicensed **Core** tier rejects them with
+> `403 RESOURCE_RESTRICTED`. **Decision (2026-07-01): accept collection-level enforcement** —
+> the **Alliance Official own-row** (AD-5) and **Guides publish field-gate** (AD-6) become
+> **UX-guided in the Story 3.5 shell, not server-enforced**. Everything below at **collection
+> granularity** is the real server riegel and works on Core tier. (Licensing later → the 🔒
+> rules flip back on with no spec change.)
+
+**Order to apply (first run):**
+
+1. **Owner = Administrator.** The bootstrap admin (you) already maps to the built-in
+   **Administrator** role (`admin_access: true`) — the universal override. **Do not** add
+   per-collection Owner allow-rules; the admin bypass *is* the override.
+2. **Confirm Public is locked.** The built-in **Public** policy must have **no** permissions
+   (the secure baseline). Epic 5.2 later adds the single **create-only** `candidates` grant —
+   nothing before then.
+3. **Create the base `Leader` role** — the container every leader shares (login +
+   read-own-profile only).
+4. **Create the six per-area policies** named in `roles-and-policies.md` §2 —
+   `transfer-viewer`, `transfer-curator`, `guides-viewer`, `guides-editor`, `guides-senior`,
+   `alliances-official`. Their **collection-level** grants are free; their **row/field** rules
+   are 🔒 licensed (attach per §3 as each collection lands in Epics 4–6).
+5. **Leaders receive a *combination* of per-area policies**, attached to their account **on top
+   of** the base `Leader` role — **not** a new monolithic role. Example: a leader who is
+   *Viewer in Transfer* **and** *Editor in Guides* gets **two** policies
+   (`transfer-viewer` + `guides-editor`); Directus unions them. A **Curator** gets
+   `transfer-curator` **instead of** `transfer-viewer` (curator already includes read — don't
+   stack both).
+6. **`app_access`:** set `true` on policies whose holders use the Data Studio
+   (Editor / Senior / Official / Owner). The Candidates-shell-only Transfer roles *may* be
+   API-only — confirm when the shell + collections exist (Epic 5). API login itself does **not**
+   need `app_access`.
+
+**Curator ≤ 2 (anti-bias) — an Owner discipline, not a check.** Attach `transfer-curator` to
+**at most two** accounts. Directus has no "max N per policy" constraint, and building a counter
+would be over-engineering (KISS/YAGNI). ~8 read-only Viewers + ≤2 Curators = anti-bias +
+transparency-by-design. The *permission boundary* (Curator writes, Viewer 403s) **is**
+server-enforced; the *headcount* is your discipline here.
+
+Then run the **first-login role smoke test** in §2 (item 4) to confirm the boundary, the Owner
+override, `/permissions/me`, and the Public lock.
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
@@ -197,3 +317,28 @@ Host-only (not runnable on the dev box — verified by parse/runbook, **not** li
 live auto-HTTPS (needs a real domain), the real `rclone`→R2 backup + prune (`rclone`/`sqlite3`
 are not installed here; `backup.sh` passes `bash -n`), and the real Directus→GitHub webhook
 (verify with the manual `curl` dispatch above).
+
+### Role model (Story 3.3) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API proof on the dev box (`docker compose up directus`, fresh DB, 20/20 checks):
+
+- **AC3 — deny-by-default 403:** a non-admin leader → **403** on `POST`/`PATCH`/`DELETE` to
+  `directus_users` / `directus_roles` / `directus_policies` (the AD-9 privilege-escalation
+  guard). ✅
+- **AC4 — Owner override:** the Administrator succeeds on the same writes (admin bypass). ✅
+- **Collection-level RBAC works free:** a full `read` grant on a collection flips the leader
+  from 403 → 200; `/permissions/me` reflects it (`access: full`) — the 3.5 role-chip seam. ✅
+- **Public is locked:** unauthenticated `GET /users` / `/roles` / `/policies` → **403**. ✅
+- **⛔ License gate (verified, not a bug):** every **custom permission rule** — item/row filter
+  (`$CURRENT_USER`, AD-5), field-level subset (AD-6), validation, presets — is rejected at
+  creation with **`403 RESOURCE_RESTRICTED`** on the unlicensed Core tier. So AD-5 (Alliance
+  Official own-row) and AD-6 (Guides publish gate) are **not** enforceable until the licensing
+  decision in `roles-and-policies.md` §0 is made. **Faithfully reported: these row/field
+  boundaries were NOT verified working — they were verified *blocked*.**
+
+**Deferred (provable only when the domain collections exist, Epics 4–6):** the per-collection
+403s (Viewer-on-`candidates`, Editor-can't-publish, Official-cross-row). The **mechanism** is
+proven here at collection granularity; the per-collection targets and the row/field grants land
+with their collections (and require the §0 license for the granular half). The **production**
+role model is applied on the host per §7 and captured by the daily backup — the local DB used
+for this proof is throwaway (`down -v`).

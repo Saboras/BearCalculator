@@ -1,0 +1,423 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+
+/*
+  /leader — the header shield's destination (Story 3.2). A no-JS-safe login card
+  that a bundled module upgrades into either the login flow or a minimal signed-in
+  landing. Structural twin of /join: a real page, a bundled module <script> (not
+  is:inline — no render-timing dependency), no-JS-safe default markup, and the
+  gold-framed parchment card idiom with Royal-Court dark variants.
+
+  Scope line: this signed-in panel is a PLACEHOLDER ("Signed in as … / Log out")
+  — just enough to prove the gate. The tabbed admin shell, role chip, and tabs are
+  Story 3.5 (src/pages/admin/). Do not build them here.
+*/
+---
+
+<Layout title="Kingdom 1516 — Leader login">
+  <main class="leader">
+    <header class="leader-head">
+      <div class="ribbon"><span class="ribbon-band">Leader</span></div>
+      <h1>Leader login</h1>
+      <p class="lead">Sign in to reach the admin area.</p>
+    </header>
+
+    <section class="leader-card">
+      {/*
+        Login form — visible by default (no-JS-safe). The bundled module hides it
+        and reveals the signed-in panel when a leader session is already active.
+        method="post" (no action) so an accidental no-JS submit never puts the
+        password in the URL/history; the real login is JS-driven (see .js-note).
+      */}
+      <form class="login-form" id="login-form" method="post" novalidate>
+        <div class="field">
+          <label for="leader-email">Email</label>
+          <input
+            type="email"
+            id="leader-email"
+            name="email"
+            autocomplete="username"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="leader-password">Password</label>
+          <input
+            type="password"
+            id="leader-password"
+            name="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <p class="form-error" id="login-error" role="alert" hidden></p>
+
+        <button type="submit" class="btn-gold" id="login-submit">Log in</button>
+
+        <p class="js-note" id="login-js-note">Logging in needs JavaScript enabled.</p>
+      </form>
+
+      {/* Signed-in landing — hidden until the module confirms an active session. */}
+      <div class="signed-in" id="signed-in" hidden>
+        <p class="signed-line">
+          <span class="signed-ic" aria-hidden="true"><Icon name="shield" /></span>
+          Signed in as <b id="signed-who"></b>.
+        </p>
+        <button type="button" class="btn-gold" id="logout-btn">Log out</button>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  /*
+    Leader-only recipes. Copies the gold-button / parchment-card idiom from
+    join.astro (Rule of Three met, but each surface diverges, so KISS keeps it
+    copied per the join.astro Open-Q5 default). Every light-baked gradient/emboss
+    gets a dark variant (the Story 1.3/1.4 wash-out guard).
+  */
+  .leader {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: var(--space-7) var(--space-5) var(--space-9);
+  }
+
+  /* ===== Heading + ribbon (recipe mirrors Home / Finder / Join) ===== */
+  .leader-head {
+    position: relative;
+    text-align: center;
+    padding: var(--space-5) var(--space-4) 0;
+  }
+  .ribbon {
+    position: relative;
+    display: inline-block;
+    margin-bottom: var(--space-2);
+  }
+  .ribbon::before,
+  .ribbon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 54px;
+    height: 16px;
+    background: var(--color-primary);
+    transform: translateY(-50%);
+    box-shadow: 0 2px 4px rgba(44, 38, 34, .2);
+    display: none; /* desktop-only ornament; shown at 768px (see breakpoint) */
+  }
+  .ribbon::before {
+    left: -66px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%);
+  }
+  .ribbon::after {
+    right: -66px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+  }
+  .ribbon-band {
+    display: inline-block;
+    background: linear-gradient(#E8A149, #E08A2B);
+    color: var(--color-primary-foreground);
+    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 10px rgba(224, 138, 43, .35), inset 0 1px 0 rgba(255, 255, 255, .4);
+    text-shadow: 0 1px 1px rgba(44, 38, 34, .3);
+  }
+  .leader-head h1 {
+    font-size: clamp(24px, 6vw, 34px);
+    line-height: 1.1;
+    margin: var(--space-4) auto var(--space-2);
+    color: var(--color-ink);
+  }
+  .leader-head .lead {
+    color: var(--color-muted);
+    font-size: 15px;
+    margin: 0;
+  }
+
+  /* ===== Login card — gold-framed parchment (mirrors the Join / Finder cards) ===== */
+  .leader-card {
+    margin-top: var(--space-6);
+    background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-card);
+    padding: var(--space-6) var(--space-5);
+    box-shadow:
+      0 8px 20px rgba(224, 138, 43, .18),
+      inset 0 0 0 1px rgba(255, 255, 255, .5),
+      inset 0 0 22px rgba(224, 138, 43, .06);
+  }
+
+  /* ===== Form fields ===== */
+  .field {
+    margin-bottom: var(--space-4);
+  }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-bottom: var(--space-2);
+  }
+  .field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--space-3) var(--space-4);
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--color-ink);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+  }
+  .field input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+    border-color: var(--color-primary);
+  }
+
+  /* ===== Inline, plain-language error (no raw Directus envelope ever) ===== */
+  .form-error {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    font-size: 13.5px;
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-button);
+  }
+  .form-error[hidden] {
+    display: none;
+  }
+
+  .js-note {
+    margin: var(--space-3) 0 0;
+    font-size: 12.5px;
+    color: var(--color-muted);
+  }
+  .js-note[hidden] {
+    display: none;
+  }
+
+  /* ===== Signed-in landing (placeholder — real admin shell is Story 3.5) ===== */
+  .signed-in[hidden] {
+    display: none;
+  }
+  .signed-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-5);
+  }
+  .signed-ic {
+    color: var(--color-accent);
+    display: inline-flex;
+  }
+  .signed-line b {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--color-primary-hover);
+  }
+
+  /* ===== Gold button (recipe copied from Join) ===== */
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
+    background: linear-gradient(#EDA44E, #E08A2B);
+    color: var(--color-primary-foreground);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid var(--color-primary-hover);
+    border-radius: var(--radius-button);
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow:
+      0 6px 14px rgba(224, 138, 43, .35),
+      inset 0 1px 0 rgba(255, 255, 255, .45),
+      inset 0 -2px 4px rgba(201, 120, 31, .3);
+    text-shadow: 0 1px 1px rgba(44, 38, 34, .25);
+  }
+  .btn-gold:hover {
+    background: linear-gradient(#E08A2B, #C9781F);
+    text-decoration: none;
+  }
+  .btn-gold:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  .btn-gold:disabled {
+    opacity: .6;
+    cursor: progress;
+  }
+
+  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
+  @media (min-width: 768px) {
+    .ribbon::before,
+    .ribbon::after {
+      display: block;
+    }
+  }
+
+  /* ===== Dark "Royal Court" — every light-baked gradient/emboss needs a dark
+     variant (the Story 1.3/1.4 wash-out guard). ===== */
+  :global(:root[data-theme="dark"]) .ribbon-band {
+    background: linear-gradient(#F2A93B, #E0962A);
+    text-shadow: none;
+  }
+  :global(:root[data-theme="dark"]) .leader-card {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, .35),
+      inset 0 0 0 1px rgba(255, 255, 255, .04),
+      inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+  :global(:root[data-theme="dark"]) .btn-gold {
+    background: linear-gradient(#F2A93B, #E0962A);
+    box-shadow:
+      0 6px 16px rgba(242, 169, 59, .3),
+      inset 0 1px 0 rgba(255, 255, 255, .25),
+      inset 0 -2px 4px rgba(0, 0, 0, .25);
+    text-shadow: none;
+  }
+  :global(:root[data-theme="dark"]) .btn-gold:hover {
+    background: linear-gradient(#E0962A, #C9781F);
+  }
+</style>
+
+<script>
+  /*
+    /leader client logic — a bundled module (not is:inline: no render-timing
+    dependency, and it imports the Directus SDK helpers). Two-layer gate: this is
+    only the UX gate (reveal admin UI after a successful getCurrentUser); the real
+    security is Directus's server-enforced 401/403 (AD-4). The session credential
+    is the browser-managed httpOnly cookie — nothing is read from / written to
+    localStorage here.
+  */
+  import { login, logout, getCurrentUser } from '../lib/directus';
+
+  const form = document.getElementById('login-form') as HTMLFormElement | null;
+  const submitBtn = document.getElementById('login-submit') as HTMLButtonElement | null;
+  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement | null;
+  const errorEl = document.getElementById('login-error');
+  const jsNote = document.getElementById('login-js-note');
+  const signedIn = document.getElementById('signed-in');
+  const signedWho = document.getElementById('signed-who');
+
+  // JS is on → real login works, so the "needs JavaScript" note is no longer true.
+  jsNote?.setAttribute('hidden', '');
+
+  // A 401/403 is a real auth rejection. Anything else — server down, CORS/URL mismatch,
+  // 5xx — rejects fetch with no response, and must NOT be reported as a wrong password.
+  function authRejected(err: unknown): boolean {
+    const status = (err as { response?: { status?: number } }).response?.status;
+    return status === 401 || status === 403;
+  }
+
+  function showError(message: string) {
+    if (!errorEl) return;
+    errorEl.textContent = message;
+    errorEl.removeAttribute('hidden');
+  }
+
+  function clearError() {
+    if (!errorEl) return;
+    errorEl.textContent = '';
+    errorEl.setAttribute('hidden', '');
+  }
+
+  function showSignedIn(who: string) {
+    if (signedWho) signedWho.textContent = who; // textContent, never innerHTML
+    form?.setAttribute('hidden', '');
+    signedIn?.removeAttribute('hidden');
+  }
+
+  function showLoginForm() {
+    signedIn?.setAttribute('hidden', '');
+    form?.removeAttribute('hidden');
+  }
+
+  // Guard the on-load probe against a submit that starts before it resolves: once the user
+  // has interacted, a late probe result must not clobber the login flow (and vice versa).
+  let interacted = false;
+
+  // On load: reveal the admin UI ONLY after a confirmed session (the UX gate).
+  getCurrentUser()
+    .then((user) => { if (!interacted) showSignedIn(user.first_name || user.email || 'leader'); })
+    .catch(() => { /* not signed in — keep the login form (the default) */ });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!submitBtn || submitBtn.disabled) return; // one attempt per click (double-submit guard)
+    interacted = true; // a late on-load probe must not overwrite this flow
+    clearError();
+
+    const data = new FormData(form);
+    const email = String(data.get('email') ?? '').trim();
+    const password = String(data.get('password') ?? '');
+    if (!email || !password) {
+      showError('Enter your email and password.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    const label = submitBtn.textContent;
+    submitBtn.textContent = 'Logging in…';
+    try {
+      try {
+        await login(email, password);
+      } catch (err) {
+        // Only a genuine 401/403 is a credential problem. A network / CORS / URL-mismatch
+        // failure must not masquerade as a wrong password — that would misdirect launch
+        // debugging (the Open-Q1 PUBLIC_DIRECTUS_URL/CORS risk). Never surface the raw envelope.
+        showError(authRejected(err)
+          ? 'Wrong email or password.'
+          : 'Couldn’t reach the server. Please try again.');
+        return;
+      }
+      // Login succeeded → the session cookie is set. A profile-load failure now is NOT a
+      // credential error; the leader is authenticated either way, so show the panel.
+      try {
+        const user = await getCurrentUser();
+        showSignedIn(user.first_name || user.email || 'leader');
+      } catch {
+        showSignedIn(email);
+      }
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = label;
+    }
+  });
+
+  logoutBtn?.addEventListener('click', async () => {
+    if (logoutBtn.disabled) return;
+    logoutBtn.disabled = true;
+    const label = logoutBtn.textContent;
+    logoutBtn.textContent = 'Signing out…';
+    try {
+      await logout();
+    } catch (err) {
+      // A 401 means the session was already gone server-side — safe to drop the UI. Any
+      // other failure (network/CORS) means the cookie may still be LIVE: do NOT show a false
+      // "signed out" (shared-machine risk). Stay signed in and let the leader retry.
+      if (!authRejected(err)) {
+        logoutBtn.textContent = 'Couldn’t sign out — try again';
+        logoutBtn.disabled = false;
+        return;
+      }
+    }
+    logoutBtn.textContent = label;
+    logoutBtn.disabled = false;
+    showLoginForm();
+  });
+</script>

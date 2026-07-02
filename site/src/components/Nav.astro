@@ -41,7 +41,11 @@ const isActive = (href: string) =>
     >Join 1516</a>
   </nav>
   <div class="topbar-right">
-    <a href={loginHref} class="login-link"><Icon name="shield" /> Leader login</a>
+    <a
+      href={loginHref}
+      class:list={['login-link', { active: isActive(loginHref) }]}
+      aria-current={isActive(loginHref) ? 'page' : undefined}
+    ><Icon name="shield" /> Leader login</a>
     <ThemeToggle />
   </div>
 </header>
@@ -50,7 +54,12 @@ const isActive = (href: string) =>
 <header class="m-header">
   <a href="/" class="brand">Kingdom <span class="brand-num">1516</span></a>
   <div class="m-header-right">
-    <a href={loginHref} class="icon-btn" aria-label="Leader login"><Icon name="shield" /></a>
+    <a
+      href={loginHref}
+      class:list={['icon-btn', { active: isActive(loginHref) }]}
+      aria-label="Leader login"
+      aria-current={isActive(loginHref) ? 'page' : undefined}
+    ><Icon name="shield" /></a>
     <ThemeToggle />
   </div>
 </header>
@@ -104,6 +113,10 @@ const isActive = (href: string) =>
   .icon-btn:hover {
     border-color: var(--color-primary);
     text-decoration: none;
+  }
+  .icon-btn.active {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
   }
 
   /* ===== Desktop top bar: hidden by default (mobile-first) ===== */
@@ -236,6 +249,9 @@ const isActive = (href: string) =>
     .login-link:hover {
       color: var(--color-ink);
       text-decoration: none;
+    }
+    .login-link.active {
+      color: var(--color-primary-hover);
     }
     /* Bump the shield above the 13px label cap-height so it reads as an icon, not a glyph */
     .login-link :global(.icon) {

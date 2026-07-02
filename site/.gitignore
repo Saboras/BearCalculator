@@ -13,8 +13,9 @@ yarn-error.log*
 pnpm-debug.log*
 
 
-# environment variables
+# environment variables (real .env stays ignored; the template is committed)
 .env*
+!.env.example
 
 # macOS-specific files
 .DS_Store

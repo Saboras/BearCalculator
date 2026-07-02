@@ -24,6 +24,19 @@ services:
       WEBSOCKETS_ENABLED: "false"   # YAGNI — no realtime need yet
       LICENSE_KEY: ""
       # Directus 12 needs only SECRET for token signing — no legacy KEY (see README).
+      # --- Leader auth: cross-subdomain httpOnly session cookie + CORS (Story 3.2) ---
+      # The static site is served from the apex; Directus lives on the admin subdomain.
+      # A login/readMe fetch from an apex page is cross-ORIGIN but same-SITE (shared
+      # registrable domain), so it needs credentialed CORS + a parent-domain cookie.
+      # Non-secret config (derived from SITE_DOMAIN, like Caddy's domains) — kept out
+      # of .env/env_file. ${VAR:-default} mirrors Caddy so `compose config` parses with
+      # no .env. See README §Auth model.
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "https://${SITE_DOMAIN:-kingdom1516.example}"
+      CORS_CREDENTIALS: "true"       # → Access-Control-Allow-Credentials; without it the browser drops the cookie
+      SESSION_COOKIE_SECURE: "true"  # HTTPS-only cookie (AC4)
+      SESSION_COOKIE_SAME_SITE: "lax"  # apex + admin subdomain are same-site — lax suffices and is stronger than None
+      SESSION_COOKIE_DOMAIN: ".${SITE_DOMAIN:-kingdom1516.example}"  # parent-domain cookie, shared across apex + subdomain
     volumes:
       - directus_db:/directus/database          # holds data.db
       - directus_uploads:/directus/uploads
