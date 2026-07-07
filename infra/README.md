@@ -377,7 +377,10 @@ Prefer **revoke-but-keep** over delete, for the audit trail:
   authorship of past edits) survives. The default offboard.
 - **`status: archived`** — same auth block, filed away.
 - **`delete`** — only when the record is genuinely unneeded. Avoid mid-transfer-window: deleting
-  an account that authored candidate/group edits loses that trail.
+  an account that authored candidate/group edits loses that trail. **If the account is an Alliance
+  Official** (Story 4.1), deleting it nulls that alliance's `official` M2O pointer (`ON DELETE SET
+  NULL`) — the alliance row survives but is left **without an Official until reassigned** (§9.3), so
+  prefer `suspended`, or reassign the Official first.
 
 API: `PATCH /users/:id {status: "suspended"}` (or `"archived"`). Suspended/archived users cannot
 log in — **Directus built-in** status behavior (not exercised by the 3.4 proof, which covered
@@ -408,6 +411,67 @@ Candidates-shell-only Transfer roles (**Viewer** / **Curator**) **may** be API-o
 exact implication when that shell + the domain collections exist (Epic 5). Plain **API login does
 NOT require `app_access`** (verified in Story 3.3 — a test leader with `app_access: false`
 authenticated and hit the API).
+
+## 9. Alliances collection (Story 4.1)
+
+The `alliances` collection is the canonical, dynamically-maintainable home for the alliance
+dataset (AD-18) — created here and seeded from the MVP-1 static mirror
+(`site/src/data/alliances.json`). **CRUD is Data-Studio-only — no custom UI** (AD-3 / AR-5 /
+NFR-18). The public Finder still reads the static file; the build-time swap to Directus is
+**Story 4.3**, not this story.
+
+**Reproducibility:** the data model is version-controlled in **`infra/directus-schema.yaml`** (a
+`directus schema snapshot` — collections, fields, and relations, plus a `systemFields` block of
+Directus's own system-field index state; **not** permissions or rows). Rebuild the empty collection
+on a fresh box:
+
+```bash
+docker compose cp ./directus-schema.yaml directus:/tmp/schema.yaml
+docker compose exec directus npx directus schema apply --yes /tmp/schema.yaml
+```
+
+`schema apply` is **version-gated**: the snapshot is pinned to `directus: 12.0.2` (matching the
+compose image). **After any Directus image bump (§6), regenerate the snapshot** (`schema snapshot`)
+and commit it — otherwise `schema apply` aborts on the version mismatch. On the same version the
+`systemFields` block is a no-op; on a divergent instance `--yes` would apply those system-index
+changes non-interactively, so re-snapshot rather than apply across versions.
+
+Grants land in Story 4.2; the seed rows are re-entered per §9.2 or restored from the daily
+`data.db` backup (§3).
+
+### 9.1 Field spec (canonical AD-18 shape)
+
+| Field | Directus type | Null | Notes |
+|---|---|---|---|
+| `id` | integer (auto PK) | no | internal only; public addressing is by `slug`, never the id (AR-18) |
+| `name` | string | no | display name / in-game tag |
+| `slug` | string, **unique** | no | immutable kebab-case public address; set once at creation. Server-enforced immutability is a 🔒 licensed validation rule (§0, `roles-and-policies.md`) — so it is Owner discipline + an optional readonly interface, not a rule |
+| `bear_trap_1` | **`time`** | yes | UTC time-of-day `HH:MM` (AR-12 / AD-10) |
+| `bear_trap_2` | **`time`** | yes | UTC time-of-day — two **independent** scalars ("two, OR"; attending one suffices) |
+| `peak` | **`time`** | yes | UTC time-of-day; a single scalar, **never a range** |
+| `farm_alliance` | string | yes | optional in-game farm-alliance tag; **case preserved verbatim** (not a boolean, not an FK) |
+| `official` | **M2O → `directus_users`** | yes | the alliance's leader account; **`ON DELETE SET NULL`**; the Owner assigns it (FR-3) |
+
+`bear_trap_*` / `peak` are `time` (not `datetime`) — the values are recurring daily event
+times-of-day with **no date**. SQLite stores `HH:MM` verbatim (`00:30` stays `00:30`).
+
+### 9.2 Seed from the static mirror
+
+Import the **six scalar fields** of each of the 5 rows in `site/src/data/alliances.json` verbatim —
+via the Data Studio import (**import as JSON — the file is a bare JSON array; a CSV import
+numeric-coerces the digits-only `516` name/slug**) or a `POST /items/alliances`. **Omit `official`**
+(the file holds leader *name strings*, which cannot go into the `directus_users` M2O). Preserve the
+`farm_alliance` casing and the digits-only `516` **slug as a string** (no numeric coercion).
+
+### 9.3 Assign each alliance's Official (FR-3)
+
+After seeding, the Owner sets each row's `official` to the matching leader's **Directus user** in the
+Data Studio — using the `official` name in `alliances.json` as the name→user map. The Official's
+account must exist first (create it per §8.1). Under **Option 3**, an Official receives a
+full-collection `alliances` update grant in **Story 4.2**; own-row editing is Owner discipline in the
+Data Studio, not a server-side filter (§0; `roles-and-policies.md` §4). Deleting an Official's account
+nulls the `official` pointer (the `SET NULL` above), leaving the alliance without an Official until
+reassigned — see §8.5.
 
 ## Local verification status (Story 3.1 / MIN-1)
 
@@ -486,3 +550,31 @@ don't exist yet (Epics 5/6); the built-in email password-reset round-trip
 above. The **production** account state
 is authored in the Data Studio per §8 and captured by the daily `data.db` backup — the local DB
 used for this proof is throwaway.
+
+### Alliances collection (Story 4.1) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API proof on the Windows/Docker dev box (disposable `directus:12.0.2` container, fresh DB,
+Owner/admin session, torn down after). The container's DB was kept on the container overlay FS to
+sidestep the Windows named-volume SQLite `CANTOPEN` quirk — schema/field/seed behavior is identical:
+
+- **AC1 — canonical shape:** `alliances` created with `id` (int auto PK) + `name`, `slug`,
+  `bear_trap_1`, `bear_trap_2`, `peak`, `farm_alliance`, `official` — `snake_case`, plural. `slug`
+  is **unique** + not-null (immutable kebab-case by convention). `official` is a real **M2O →
+  `directus_users`** (`ON DELETE SET NULL`). ✅
+- **AC2 — two scalar Bear Traps:** `bear_trap_1` + `bear_trap_2` are two **independent nullable
+  `time`** fields — no array, no relation, no `special`. ✅
+- **AC3 — clean seed:** all **5** rows imported from `alliances.json` (six scalar fields); the `516`
+  slug stored as a **string** (no numeric coercion); `farm_alliance` casing verbatim
+  (`rok` / `CAT` / `AcE`); `peak` null on every row; `official` null on every row. SQLite stored the
+  `HH:MM` Bear-trap values **verbatim** (`00:30` stayed `00:30` — no `:00` normalization; clean for
+  the Story 4.3 read path). ✅
+- **AC4 — Owner CRUD + assign Official:** the Owner (Administrator) created, edited, and deleted a
+  throwaway row, and set a row's `official` M2O to a `directus_users` id (assignment persisted). ✅
+- **License does not bite 4.1 (verified):** every step returned 2xx — **no `403
+  RESOURCE_RESTRICTED`**. Collection/field/relation creation and Owner CRUD are free Core-tier (admin
+  bypass); the 🔒 gate is Story 4.2's `official = $CURRENT_USER` row filter. ✅
+- **Snapshot fidelity:** `directus schema apply --dry-run infra/directus-schema.yaml` → **"No changes
+  to apply"** — the committed snapshot is a faithful, replayable capture of the live schema.
+
+The **production** collection is created on the host per §9 (or `schema apply`) and captured by the
+daily `data.db` backup — the local DB used for this proof is throwaway.
