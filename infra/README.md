@@ -161,8 +161,11 @@ Open the admin subdomain in a browser, log in with the bootstrap admin, and:
    >
    > **Scope of this test:** it exercises only the *collection* boundary. It **cannot** detect a
    > leaked Option-3 UX-only boundary — an Editor publishing, an Official editing another row, a
-   > Curator writing a non-work field — because those have **no** server check; verify them by
-   > inspecting the Story 3.5 shell UI. A green smoke test is **not** full-model verification.
+   > Curator writing a non-work field — because those have **no** server check; verify the
+   > Transfer/Guides ones by inspecting the Story 3.5 shell UI, and the **Alliances** one (an Official
+   > editing another row, or writing `official`/`slug`) via **Data-Studio Owner discipline** — alliances
+   > are Data-Studio-only, **not** in the 3.5 shell (`roles-and-policies.md` §4 mechanism 1; §9.4). A
+   > green smoke test is **not** full-model verification.
 
 ## 3. Backups → Cloudflare R2 (AC4 / NFR-16)
 
@@ -280,7 +283,8 @@ them once, and the daily backup (§3) preserves them.
 4. **Create the six per-area policies** named in `roles-and-policies.md` §2 —
    `transfer-viewer`, `transfer-curator`, `guides-viewer`, `guides-editor`, `guides-senior`,
    `alliances-official`. Their **collection-level** grants are free; their **row/field** rules
-   are 🔒 licensed (attach per §3 as each collection lands in Epics 4–6).
+   are 🔒 licensed (attach per §3 as each collection lands in Epics 4–6). *(The `alliances-official`
+   read + update grants are now wired — see §9.4, Story 4.2.)*
 5. **Leaders receive a *combination* of per-area policies**, attached to their account **on top
    of** the base `Leader` role — **not** a new monolithic role. Example: a leader who is
    *Viewer in Transfer* **and** *Editor in Guides* gets **two** policies
@@ -436,8 +440,8 @@ and commit it — otherwise `schema apply` aborts on the version mismatch. On th
 `systemFields` block is a no-op; on a divergent instance `--yes` would apply those system-index
 changes non-interactively, so re-snapshot rather than apply across versions.
 
-Grants land in Story 4.2; the seed rows are re-entered per §9.2 or restored from the daily
-`data.db` backup (§3).
+Grants are wired in Story 4.2 (the `alliances-official` read + update grant — see §9.4); the seed rows
+are re-entered per §9.2 or restored from the daily `data.db` backup (§3).
 
 ### 9.1 Field spec (canonical AD-18 shape)
 
@@ -467,11 +471,81 @@ numeric-coerces the digits-only `516` name/slug**) or a `POST /items/alliances`.
 
 After seeding, the Owner sets each row's `official` to the matching leader's **Directus user** in the
 Data Studio — using the `official` name in `alliances.json` as the name→user map. The Official's
-account must exist first (create it per §8.1). Under **Option 3**, an Official receives a
-full-collection `alliances` update grant in **Story 4.2**; own-row editing is Owner discipline in the
-Data Studio, not a server-side filter (§0; `roles-and-policies.md` §4). Deleting an Official's account
+account must exist first (create it per §8.1). Under **Option 3**, an Official holds a
+full-collection `alliances` update grant (**wired in Story 4.2 — see §9.4**); own-row editing is Owner
+discipline in the Data Studio, not a server-side filter (§0; `roles-and-policies.md` §4). Deleting an Official's account
 nulls the `official` pointer (the `SET NULL` above), leaving the alliance without an Official until
 reassigned — see §8.5.
+
+### 9.4 Alliance Official editing (Story 4.2)
+
+Wire the `alliances-official` policy so an Alliance Official can maintain **their own** alliance in the
+Data Studio. This is the read + update grant on the `alliances` collection (created in §9.1); it
+attaches to the **same** `alliances-official` policy authored in §7 step 4, **in combination on the
+base `Leader` role** (union — §7 step 5). **The grant lives only in `data.db`** (the daily backup, §3);
+it is **not** in `directus-schema.yaml` — a `schema snapshot` captures collections/fields/relations
+only, never permissions (`roles-and-policies.md` §6). So there is no git artifact for the grant itself;
+this runbook + `roles-and-policies.md` §3 are the source of truth.
+
+**Prerequisite:** the Official's user account exists (§8.1) and holds the `alliances-official` policy
+(§7 step 5); the Owner has also assigned it as that alliance's `official` (§9.3).
+
+> **Edit access comes from *holding the policy*, not from the `official` assignment.** The grant is
+> full-collection (no row filter), so the `official` M2O records *intent* (whose row it is) but does
+> **not** gate who can edit. To **revoke** an Official's edit access, **detach the `alliances-official`
+> policy** — nulling or reassigning the `official` pointer (§8.5 / §9.3) does **not** remove edit rights.
+
+**Grant shapes** — Data Studio → **Settings → Access Policies → `alliances-official` → Permissions**,
+on the `alliances` collection:
+
+| Action | Fields | Filter (`permissions`) | Note |
+|---|---|---|---|
+| **read** | `["*"]` | none | ✅ free |
+| **update** | `["*"]` | none (`permissions: {}`) | ✅ free — **the only free update shape** |
+
+- **Do NOT** author the field subset `["name","bear_trap_1","bear_trap_2","peak","farm_alliance"]` and
+  **do NOT** author the row filter `{ "official": { "_eq": "$CURRENT_USER" } }`. On the Core tier **each
+  is a 🔒 custom permission rule → `403 RESOURCE_RESTRICTED`** (re-verified in the 4.2 proof below); they
+  are the Option-1 upgrade target only (`roles-and-policies.md` §0/§3).
+- **Do NOT** grant `create`/`delete` — the Owner creates/deletes alliances (AD-9 / FR-3); an Official
+  only edits an existing assigned row.
+- Confirm **`app_access: true`** on the policy (Officials use the Data Studio — §7 step 6). *(API login
+  itself does not need it, but Studio editing does.)*
+
+**Free interface guards (best-effort — reduce fat-finger edits, NOT security).** Because the update
+grant is `fields:["*"]`, an Official can technically edit **any** field on **any** row, including
+`slug` and `official`. Field-interface `meta` (app-level, **not** a permission rule, so it never 403s
+and needs no license) narrows the *accidental* surface in the Studio:
+
+- **`slug`** → on the field, add a **condition** *readonly when `id` is not empty* (`rule:
+  { id: { _nnull: true } }`, `readonly: true`). This makes `slug` editable only while creating a new
+  row and readonly on every existing row **in the Studio UI** — so the Owner can still type a slug at
+  creation but nobody edits it afterward *in the Studio* (a direct API call still reaches it — see the
+  honest limits below). **Free — the `meta` config applies without 403; the readonly-after-create
+  behavior is a Studio-interface effect (design-asserted, not exercised by the raw-API proof).** This
+  addresses the Story 4.1 review **D2** ("back the immutable-slug claim with the free `readonly` lever")
+  without the plain global `readonly`, which would also block the Owner's own slug authorship —
+  **closed as a manual Data-Studio step, not a reproducible artifact** (see the schema-sync note below).
+  > **Schema out-of-sync (honest reproducibility note).** This guard is **field-interface config**,
+  > which a `schema snapshot` *does* capture (unlike permissions) — but Story 4.2 makes **no
+  > `directus-schema.yaml` change** (Task-5 scope fence), so the committed schema still shows `slug`
+  > `readonly: false`. The guard lives in `data.db` (daily backup, §3) and **must be re-applied by hand
+  > after a from-scratch `schema apply` rebuild**; a daily-backup restore preserves it. Re-snapshot
+  > `directus-schema.yaml` if you ever want the guard reproducible from the schema itself.
+- **`official`** → protecting it from an Official is **per-role field control = 🔒 licensed**, so there
+  is no free rule that hides it from an Official while keeping it editable for the Owner. A **global**
+  `official` `readonly`/`hidden` is free but also blocks the **Owner's** assignment (§9.3), so it is
+  **not** recommended; `official` stays **Owner discipline + the honest limit** (the accepted Option-3
+  answer).
+
+> **Honest Option-3 limits (NFR-9 — what is / isn't server-enforced).**
+> **Server-enforced (free, proven):** a leader **without** `alliances-official` gets **403** on any
+> `alliances` write (the collection boundary); the **Owner** (Administrator) overrides any row.
+> **NOT server-enforced (the ratified softening):** an Official editing **another** Official's row, or
+> writing **`official`**/**`slug`** on any row — the `fields:["*"]` grant permits it and a direct API
+> call reaches it. The practical mitigations are the interface guards above, Owner discipline in the
+> Data Studio, and the daily `data.db` backup. Flip the 🔒 row filter + field subset back on if Directus
+> is ever licensed (Option 1) — no spec change, just the grant.
 
 ## Local verification status (Story 3.1 / MIN-1)
 
@@ -578,3 +652,37 @@ sidestep the Windows named-volume SQLite `CANTOPEN` quirk — schema/field/seed 
 
 The **production** collection is created on the host per §9 (or `schema apply`) and captured by the
 daily `data.db` backup — the local DB used for this proof is throwaway.
+
+### Alliance Official editing (Story 4.2) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API proof on the Windows/Docker dev box (disposable `directus:12.0.2` container, `LICENSE_KEY=""`,
+fresh DB on the container overlay FS, brought up **via PowerShell** to avoid the Git-Bash/MSYS
+`SQLITE_CANTOPEN` path-mangling wall; **every check below passed**; container torn down after, the 3.5-leftover
+volumes `k1516db`/`k1516vdb` left untouched for the Owner to prune). The proof creates the `alliances`
+collection, a base `Leader` role, the `alliances-official` policy with the §9.4 grants, a throwaway
+Official (assigned as one row's `official`) and a policy-less plain leader:
+
+- **AC3 — the free editing path:** the Official `PATCH`es **their own** alliance's
+  `name`/`bear_trap_1`/`bear_trap_2`/`peak`/`farm_alliance` → **200** (no `403 RESOURCE_RESTRICTED` — the
+  `fields:["*"]`,`permissions:{}` read+update grant is free Core-tier). ✅
+- **AC2 — collection boundary (server-enforced):** a leader with **no** `alliances-official` policy →
+  **403** on `PATCH /items/alliances/:id` (deny-by-default). ✅
+- **AC4-style Owner override:** the Owner (Administrator) edits **any** alliance row → **200** (admin
+  bypass). ✅
+- **Honest Option-3 non-enforcement (recorded, not hidden — NFR-9):** the same Official **can also**
+  `PATCH` **another** alliance's row → **200**, and write **`slug`** → **200** (AR-18 exposure) and
+  **`official`** → **200** (AD-9 exposure) on any row — because the free grant is `fields:["*"]` with no
+  row filter. This is the ratified softening; the §9.4 interface guards + Owner discipline + daily backup
+  are the practical mitigation, **not** a server riegel. ✅ (behaves exactly as documented)
+- **⛔ License gate re-proven (confirms `fields:["*"]` is correct as-built):** attempting to create the
+  **field-subset** update grant **or** the **row-filter** (`official = $CURRENT_USER`) update grant each
+  returns **`403 RESOURCE_RESTRICTED`** (`custom_permission_rules_enabled is a restricted resource`) — so
+  the Option-1 target is genuinely licensed and the full-collection grant is the only free path. ✅
+- **Free interface guards (Task 2):** setting the **`slug`** field's `conditions` (readonly when `id` is
+  not empty) → **200** (free interface `meta`, no 403 — the config is *accepted*; the readonly-after-create
+  behavior is a Studio-UI effect this raw-API proof does **not** exercise); a **global `official`
+  `readonly`** → **200** (free, but it also blocks the Owner's assignment, so it is left optional — §9.4). ✅
+
+The **production** grant is authored in the Data Studio per §9.4 and captured by the daily `data.db`
+backup — the local DB used for this proof is throwaway. **ZERO `site/` change** and **no
+`directus-schema.yaml` change** (permissions are not in a schema snapshot — §6).

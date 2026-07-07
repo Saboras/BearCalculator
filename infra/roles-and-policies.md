@@ -167,7 +167,7 @@ Accounts**.
 | Guides | `guides-viewer` | yes | **read** drafts (`guides` non-published, leader-visible) | collection **read** grant ✅ free |
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
-| Alliances | `alliances-official` | yes | update **own** `alliances` row only (name, `bear_trap_1`, `bear_trap_2`, `peak`, `farm_alliance`) | **row filter `official = $CURRENT_USER`** (AD-5) 🔒 |
+| Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
 | all | **Owner** = built-in **Administrator** role (`admin_access: true`) | — | **everything** (universal override) | admin bypass — **no per-collection rules** ✅ free |
 | public | built-in **Public** policy | — | **nothing** now; Epic 5.2 adds **create-only** on `candidates`, **no read** | locked baseline (AD-12) ✅ free (basic create-only; the AD-12/AR-14 field/validation/rate-limit **hardening** is 🔒 — §3/§0) |
 
@@ -176,12 +176,18 @@ Accounts**.
 
 > **As-built vs upgrade-target (Option 3, §0).** Under the ratified Option 3, the 🔒 rows are
 > **not** wired as row/field rules — each ships as a **full-collection grant + a UX guard**: the
-> **Story 3.5 shell** for the Transfer/Guides surfaces, and — for `alliances-official` — **Owner
-> discipline in the Data Studio** (Alliances CRUD is Data-Studio-only per AD-3; alliances are **not**
-> in the custom Candidates shell — see §4 mechanism 1). The 🔒 rule shown in this table and in §3 is
-> the **Option-1 upgrade target** (flip it on the moment Directus is licensed), **not** the as-built
-> config. Epics 4–6 wire the **full-collection** grant, not the 🔒 rule — see each mechanism's
-> blockquote in §4.
+> **Story 3.5 shell** for the Transfer/Guides surfaces, and — for `alliances-official` (**delivered
+> Story 4.2**, live-verified) — **Owner discipline in the Data Studio** (Alliances CRUD is
+> Data-Studio-only per AD-3; alliances are **not** in the custom Candidates shell — see §4
+> mechanism 1). The 🔒 rule shown in this table and in §3 is the **Option-1 upgrade target** (flip it
+> on the moment Directus is licensed), **not** the as-built config. Epics 4–6 wire the
+> **full-collection** grant, not the 🔒 rule — see each mechanism's blockquote in §4.
+>
+> **Note the widened surface for `alliances-official`:** the only free update grant is
+> `fields:["*"]`, so an Official can also write **`official`** (AD-9) and **`slug`** (AR-18) on **any**
+> row — not merely a peer's row. This is wider than the row-scoping the AC names; it is the ratified
+> Option-3 softening (§0, §4 mechanism 1), reduced — not closed — by the free interface guards
+> (Task 2) and Owner discipline.
 
 > **Curator ≠ stack both.** A Curator is given `transfer-curator` *instead of*
 > `transfer-viewer` (curator already includes read). Don't attach both.
@@ -214,7 +220,7 @@ Accounts**.
 | Guides | **Viewer** | `Guides · Read` | read drafts | edit / publish |
 | Guides | **Editor** (many) | `Guides · Work` | create/edit drafts, assign category (`body` / `category`) | set `status = published` → **403** |
 | Guides | **Senior** | `Guides · Work+` | Editor + approve / **publish** (`status`) | — |
-| Alliances | **Alliance Official** (1/alliance) | `Alliances · Work (row-scoped)` | edit **own** row only (name, 2× Bear Trap, peak, farm) | edit another row → **403** |
+| Alliances | **Alliance Official** (1/alliance) | `Alliances · Work` | edit alliance rows in the Data Studio (name, 2× Bear Trap, peak, farm); as-built the grant is **full-collection** (`fields:["*"]`), so own-row + own-fields are **Owner discipline**, not server-scoped | *no server-enforced row/field limit under Option 3 — cross-row / `official` / `slug` edits are Owner discipline, **not** a 403 (a non-Official gets 403 at the collection level); see §3 / §4* |
 | all | **Owner** (Sabo) | `Owner · all` | provision accounts + roles; edit all alliances; publish guides; full Curator powers | — (universal override) |
 
 *(UX-DR-17 — the role chip + "tabs absent, not disabled" — is defined in epics.md §UX Design
@@ -266,17 +272,27 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > (Viewer), **6.2** draft create/update (Editor), **6.3** publish (Senior). No grant attaches
 > before 6.1 creates the collection.
 
-### `alliances-official` (Alliances · Work, row-scoped)
+### `alliances-official` (Alliances · Work)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| `alliances` | read | `["*"]` | — | ⏳ Epic 4.2 · ✅ free |
-| `alliances` | update | `["name","bear_trap_1","bear_trap_2","peak","farm_alliance"]` | **`{ "official": { "_eq": "$CURRENT_USER" } }`** | ⏳ Epic 4.2 · 🔒 row filter (AD-5) |
+| `alliances` | read | `["*"]` | — | ✅ **delivered Story 4.2** · free |
+| `alliances` | update — **as-built (Option 3)** | `["*"]` (all fields, incl. `official`/`slug`) | — none | ✅ **delivered Story 4.2** · free — the **only** free update shape (§0) |
+| `alliances` | update — *Option-1 target* | `["name","bear_trap_1","bear_trap_2","peak","farm_alliance"]` (excludes `official`, `slug`) | **`{ "official": { "_eq": "$CURRENT_USER" } }`** | 🔒 licensed (AD-5) — flip on license |
 
 > **Collection status:** the `alliances` collection + fields were **created in Story 4.1** (canonical
 > AD-18 shape, Owner CRUD, seeded from the static mirror — see `README.md` §9 and
-> `directus-schema.yaml`). The two grants above are still **⏳ Epic 4.2** (the `read` grant + the
-> Option-3 full-collection `update`). The `update` field list deliberately **excludes `official`** —
-> only the Owner assigns it (AD-9).
+> `directus-schema.yaml`). **Story 4.2 wired the two as-built grants above** (read `["*"]` + update
+> `["*"]`, `permissions:{}`) — live-verified against `directus:12.0.2` (README §9.4).
+>
+> **The Option-3 softening here is wider than row-scoping.** Because the only free update grant is
+> `fields:["*"]` (a field subset OR a row filter each `403 RESOURCE_RESTRICTED` — §0 proof, re-proven
+> in 4.2), the Official's grant can write **any field on any row** — not only a peer's row but also
+> **`official`** (reassign the alliance's leader → violates AD-9 "only the Owner assigns `official`")
+> and **`slug`** (rewrite the immutable public address → AR-18). So the field-exclusion of
+> `official`/`slug` is **also** an Owner-discipline + free-interface-guard convention (Task 2), **not
+> only** the row-scoping — it is *not* server-held. The Option-1 target row above restores both the
+> field subset and the row filter the moment Directus is licensed. **Do NOT grant `create`/`delete`**
+> to this policy — the Owner creates/deletes alliances (AD-9 / FR-3).
 
 ### `Public` (built-in, unauthenticated)
 | Collection | Action | Fields | Row filter | Status |
@@ -319,16 +335,27 @@ active flag. (Epic 5.1 lands the collection; it attaches **no** non-Owner grant.
 1. **Row-level — Alliance Official (AD-5).** A Directus **item permission** with the filter
    **`{ "official": { "_eq": "$CURRENT_USER" } }`** on `alliances` *update*. Officials get
    **own-row** write; every other row → 403. `$CURRENT_USER` resolves to the requester's user
-   id at evaluation time. Wired in **Story 4.2** when `alliances` exists; the *rule* is
-   specified here. **🔒 Requires a Directus license (§0)** — item filters are a custom
+   id at evaluation time. The *rule* specified here is the **Option-1 upgrade target** — it is
+   **NOT** wired (it 403s on Core); **Story 4.2 wired the free full-collection grant instead** (see the
+   blockquote below). **🔒 Requires a Directus license (§0)** — item filters are a custom
    permission rule; verified `403 RESOURCE_RESTRICTED` on the Core tier. The *identical*
    mechanism is `{ "id": { "_eq": "$CURRENT_USER" } }` for own-profile — the docs' canonical
    example.
-   > **Per Owner decision (§0, Option 3): NOT implemented as a row filter.** Officials share a
-   > full-collection `alliances` update grant; own-row is guided by the **Data Studio** (Alliances
-   > CRUD is Data-Studio-only per AD-3 — not the custom Candidates shell), not server-enforced. This
-   > spec stays the **Option-1 upgrade target** — flip to the filter above the moment Directus is
-   > licensed.
+   > **Per Owner decision (§0, Option 3): NOT implemented as a row filter — delivered in Story 4.2
+   > as a full-collection grant (live-verified).** Officials share a **`fields:["*"]`,
+   > `permissions:{}`** `alliances` update grant — the **only** free shape (§0 proof, re-proven in
+   > 4.2: a field subset OR a row filter each returns `403 RESOURCE_RESTRICTED`). Because the grant is
+   > `fields:["*"]`, the softening is **wider than row-scoping**: an Official can also write
+   > **`official`** (reassign the alliance's leader → AD-9) and **`slug`** (rewrite the public address
+   > → AR-18) on **any** row, not only a peer's. Mitigations are all UX / Owner-discipline (**not**
+   > server rules): own-row + one-official editing is **Data-Studio Owner discipline** (Alliances CRUD
+   > is Data-Studio-only per AD-3 — not the custom Candidates shell); free **interface guards** shrink
+   > the *accidental* surface in the Studio (a `slug` `conditions` readonly-after-create — free,
+   > verified; and, if wanted, a global `official` readonly — free but it also blocks the Owner's own
+   > assignment, so it is optional — see README §9.4); and the daily `data.db` backup catches a bad
+   > edit. A direct API call with the grant still reaches those fields/rows — the honest Option-3 limit
+   > (NFR-9). This spec stays the **Option-1 upgrade target** — flip to the filter + field subset above
+   > the moment Directus is licensed.
 
 2. **Field-level — Guides publish gate (AD-6).** `guides.status` is writable to `published`
    **only** by `guides-senior` / Owner. `guides-editor` may write `body` / `category` but the
@@ -378,10 +405,11 @@ accept/reject/suggest, each pulls candidates toward their own alliance); ~8 read
 transparency-by-design. [Source: FR-12; AR-7; PRD addendum bias rationale; EXPERIENCE.md.]
 
 **One Alliance Official per alliance — also an Owner discipline under Option 3.** Like the
-Curator cap, "1 Official/alliance" is **not** filter-enforced now: Option 3 gives every
-`alliances-official` a **full-collection** `alliances` update grant (the `official =
-$CURRENT_USER` row filter is the 🔒 Option-1 upgrade target). So an Official editing **another**
-alliance's row is **UX-guided (Owner discipline in the Data Studio), not a 403**, and attaching the
+Curator cap, "1 Official/alliance" is **not** filter-enforced: Option 3 gives every
+`alliances-official` a **full-collection** `alliances` update grant (**wired in Story 4.2**,
+live-verified; the `official = $CURRENT_USER` row filter is the 🔒 Option-1 upgrade target). So an
+Official editing **another** alliance's row is **UX-guided (Owner discipline in the Data Studio), not
+a 403** (proven: a peer-row `PATCH` by an Official returns 200 — README §9.4), and attaching the
 policy to two accounts for the same alliance is caught by **Owner discipline**, not the server. Do **not**
 build a cardinality check (same KISS/YAGNI reasoning as the Curator cap).
 
