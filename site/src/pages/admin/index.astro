@@ -1,0 +1,565 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+
+/*
+  /admin — the custom admin shell (Story 3.5), the Structural-Seed "custom Candidates
+  admin shell" path. A no-JS-safe frame that a bundled module fills client-side with the
+  leader session: a role chip + a tab strip whose tabs are PRESENT ONLY for areas the
+  leader can access (absent, not disabled — UX-DR-17). Only Candidates is a custom surface
+  (a placeholder here; the pipeline is Epic 5); Guides/Alliances/Accounts hand off to the
+  Directus Data Studio (AR-5/NFR-18).
+
+  Static-site model (AD-1/AD-2): output:'static', no SSR/API route. All data is fetched in
+  the browser with the httpOnly session cookie — the static HTML bakes ZERO admin data.
+  The gate is UX-only; Directus server-enforces 401/403 regardless (AD-4).
+*/
+---
+
+<Layout title="Kingdom 1516 — Admin">
+  <main class="admin">
+    {/* No-JS-safe default: the whole shell needs JS + a leader session. Nothing admin here. */}
+    <noscript>
+      <div class="admin-note">
+        <h1>Admin</h1>
+        <p>The admin area needs JavaScript enabled and a leader sign-in.</p>
+        <p><a href="/leader">Go to the leader login →</a></p>
+      </div>
+    </noscript>
+
+    {/* Loading — the default visible state; the module swaps to shell / empty / error. */}
+    <div class="admin-state" id="admin-loading">
+      <p class="muted">Loading the admin shell…</p>
+    </div>
+
+    {/* Backend-unreachable (not a 401 — those redirect to /leader). */}
+    <div class="admin-state" id="admin-error" hidden>
+      <p class="admin-msg" role="alert">Couldn’t reach the admin backend. Please try again.</p>
+      <button type="button" class="btn-gold btn-narrow" id="admin-retry">Retry</button>
+    </div>
+
+    {/* Signed in, but no area granted yet (deny-by-default). */}
+    <div class="admin-state" id="admin-empty" hidden>
+      <p class="admin-msg">No admin areas are assigned to your account yet. Ask the Owner to grant you access.</p>
+      <button type="button" class="btn-plain" id="admin-empty-logout">Log out</button>
+    </div>
+
+    {/* The shell — revealed only after a confirmed session with ≥1 accessible area. */}
+    <div class="shell" id="admin-shell" hidden>
+      <header class="shell-head">
+        <div class="shell-brand">Kingdom <span class="shell-num">1516</span> <small>Admin</small></div>
+        <div class="role-chips" id="role-chips" aria-label="Your roles"></div>
+        <button type="button" class="shell-logout" id="admin-logout">
+          <Icon name="shield" /> Log out
+        </button>
+      </header>
+
+      <nav class="tabs" id="admin-tabs" aria-label="Admin areas" role="tablist"></nav>
+
+      <section class="panels" id="admin-panels"></section>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .admin {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-4) var(--space-9);
+  }
+
+  /* ===== States (loading / error / empty) ===== */
+  .admin-state {
+    max-width: 520px;
+    margin: var(--space-7) auto;
+    text-align: center;
+  }
+  .admin-state[hidden] {
+    display: none;
+  }
+  .admin-note {
+    max-width: 520px;
+    margin: var(--space-7) auto;
+    text-align: center;
+  }
+  .admin-msg {
+    color: var(--color-ink);
+    font-size: 15px;
+    margin: 0 0 var(--space-5);
+  }
+  #admin-error .admin-msg {
+    color: var(--color-danger);
+  }
+
+  /* ===== The shell ===== */
+  .shell[hidden] {
+    display: none;
+  }
+
+  /* Shell header — wordmark + role chips + logout. Mirrors the topbar chrome recipe
+     (light parchment literal; dark variant below is the 1.3/1.4 wash-out guard). */
+  .shell-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    background: linear-gradient(#FBF6EA, #F1E6CC);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    box-shadow: 0 4px 14px rgba(224, 138, 43, .14);
+  }
+  .shell-brand {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--color-primary);
+    letter-spacing: .3px;
+  }
+  .shell-num {
+    color: var(--color-ink);
+  }
+  .shell-brand small {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-muted);
+    margin-left: var(--space-1);
+  }
+
+  /* Role chip(s) — gold pill (the mockup recipe), theme-aware via tokens. */
+  .role-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+  .role-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(224, 138, 43, .14);
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary-hover);
+    font-weight: 700;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .role-chip .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-primary);
+  }
+
+  .shell-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-button);
+    cursor: pointer;
+  }
+  .shell-logout:hover {
+    border-color: var(--color-primary);
+  }
+  .shell-logout:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .shell-logout :global(.icon) {
+    width: 15px;
+    height: 15px;
+    color: var(--color-accent);
+  }
+
+  /* Tab strip — gold active-underline, absent (not disabled) tabs are simply not built. */
+  .tabs {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-4) 0;
+    border-left: 2px solid var(--color-primary);
+    border-right: 2px solid var(--color-primary);
+    background: linear-gradient(#FBF6EA, #FBF6EA);
+    overflow-x: auto;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: transparent;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-button) var(--radius-button) 0 0;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .tab:hover {
+    color: var(--color-primary-hover);
+  }
+  .tab[aria-selected='true'] {
+    color: var(--color-primary-hover);
+    border-bottom-color: var(--color-primary);
+    background: rgba(224, 138, 43, .06);
+  }
+  .tab:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+  }
+  .tab :global(.icon) {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Panels — gold-framed parchment card (the UX-DR-8 recipe from leader.astro). */
+  .panels {
+    background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
+    border: 2px solid var(--color-primary);
+    border-top: 0;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+    padding: var(--space-6) var(--space-5);
+    box-shadow:
+      0 8px 20px rgba(224, 138, 43, .18),
+      inset 0 0 0 1px rgba(255, 255, 255, .5),
+      inset 0 0 22px rgba(224, 138, 43, .06);
+    min-height: 220px;
+  }
+  .panel[hidden] {
+    display: none;
+  }
+  .panel h2 {
+    font-size: 22px;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-3);
+  }
+  .panel p {
+    color: var(--color-muted);
+    font-size: 15px;
+    max-width: 52ch;
+  }
+
+  .btn-plain {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-button);
+    cursor: pointer;
+  }
+  .btn-plain:hover {
+    border-color: var(--color-primary);
+  }
+  .btn-plain:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .btn-narrow {
+    width: auto;
+  }
+  .panel .btn-gold {
+    width: auto;
+    margin-top: var(--space-4);
+  }
+  .panel .btn-gold :global(.icon) {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
+  :global(:root[data-theme='dark']) .shell-head,
+  :global(:root[data-theme='dark']) .tabs {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+  }
+  :global(:root[data-theme='dark']) .role-chip {
+    background: rgba(242, 169, 59, .14);
+  }
+  :global(:root[data-theme='dark']) .panels {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, .35),
+      inset 0 0 0 1px rgba(255, 255, 255, .04),
+      inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+
+  /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
+  @media (max-width: 767.98px) {
+    .shell-head {
+      padding: var(--space-3) var(--space-4);
+    }
+    .role-chips {
+      width: 100%;
+      margin-left: 0;
+      order: 3;
+    }
+  }
+</style>
+
+<script>
+  /*
+    /admin client logic — a bundled module (not is:inline: it imports the SDK helpers).
+    Resolves the session + access client-side, then builds the role chip and the tab strip
+    (tabs are BUILT from accessible areas → inaccessible ones are absent, not disabled).
+    Nothing security-relevant is enforced here; Directus returns 401/403 regardless (AD-4).
+  */
+  import {
+    getCurrentUser,
+    getAdminAccess,
+    getMyPermissions,
+    logout,
+    DATA_STUDIO_URL,
+  } from '../../lib/directus';
+
+  type Kind = 'custom' | 'studio';
+  interface AreaDef {
+    key: string; // the /permissions/me collection key
+    area: string; // chip word (Transfer/Guides/Alliances/Accounts)
+    label: string; // tab label
+    icon: string;
+    kind: Kind;
+    ownerOnly?: boolean;
+  }
+
+  // The four conceptual admin areas. Only Candidates (Transfer) is a custom surface; the
+  // rest hand off to the Data Studio. Accounts is Owner-only (§2 roles-and-policies).
+  const AREAS: AreaDef[] = [
+    { key: 'candidates', area: 'Transfer', label: 'Candidates', icon: 'clipboard', kind: 'custom' },
+    { key: 'guides', area: 'Guides', label: 'Guides', icon: 'book-open', kind: 'studio' },
+    { key: 'alliances', area: 'Alliances', label: 'Alliances', icon: 'building-2', kind: 'studio' },
+    { key: 'directus_users', area: 'Accounts', label: 'Accounts', icon: 'crown', kind: 'studio', ownerOnly: true },
+  ];
+
+  const loadingEl = document.getElementById('admin-loading');
+  const errorEl = document.getElementById('admin-error');
+  const emptyEl = document.getElementById('admin-empty');
+  const shellEl = document.getElementById('admin-shell');
+  const chipsEl = document.getElementById('role-chips');
+  const tabsEl = document.getElementById('admin-tabs');
+  const panelsEl = document.getElementById('admin-panels');
+
+  function showOnly(el: HTMLElement | null) {
+    for (const s of [loadingEl, errorEl, emptyEl, shellEl]) {
+      if (s) s.hidden = s !== el;
+    }
+  }
+
+  // A 401/403 = a real auth rejection (not signed in / forbidden). Anything else — server
+  // down, CORS/URL mismatch — is a reachability failure, NOT a sign-out.
+  function authRejected(err: unknown): boolean {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    return status === 401 || status === 403;
+  }
+
+  const svg = (name: string): string => {
+    // Minimal inline-Lucide echo of the shared Icon component (currentColor, 1em). Path
+    // strings mirror src/components/Icon.astro; kept in sync there.
+    const paths: Record<string, string> = {
+      clipboard:
+        '<rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />',
+      'book-open':
+        '<path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />',
+      'building-2':
+        '<path d="M10 12h4" /><path d="M10 8h4" /><path d="M14 21v-3a2 2 0 0 0-4 0v3" /><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2" /><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />',
+      crown:
+        '<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" /><path d="M5 21h14" />',
+      'arrow-up-right': '<path d="M7 7h10v10" /><path d="M7 17 17 7" />',
+    };
+    return `<svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] ?? ''}</svg>`;
+  };
+
+  interface ResolvedArea extends AreaDef {
+    mode: string; // chip mode word: Read | Work | all
+  }
+
+  // Normalize /permissions/me (handle both raw and {data:...}) and decide, per area,
+  // whether it is accessible and at what mode.
+  function resolveNonOwnerAreas(perms: unknown): ResolvedArea[] {
+    const raw = perms as { data?: unknown } | null;
+    const map = ((raw && (raw.data ?? raw)) || {}) as Record<
+      string,
+      Record<string, { access?: string } | undefined> | undefined
+    >;
+    const has = (entry: { access?: string } | undefined) =>
+      !!entry && entry.access !== undefined && entry.access !== 'none';
+
+    const out: ResolvedArea[] = [];
+    for (const a of AREAS) {
+      if (a.ownerOnly) continue; // Accounts is Owner-only; a non-Owner never sees it
+      const c = map[a.key];
+      if (!c) continue; // no entry → no grant → tab absent
+      const canRead = has(c.read);
+      const canWrite = has(c.create) || has(c.update) || has(c.delete);
+      if (!canRead && !canWrite) continue;
+      out.push({ ...a, mode: canWrite ? 'Work' : 'Read' });
+    }
+    return out;
+  }
+
+  function renderChips(areas: ResolvedArea[], isOwner: boolean) {
+    if (!chipsEl) return;
+    chipsEl.textContent = '';
+    const labels = isOwner ? ['Owner · all'] : areas.map((a) => `${a.area} · ${a.mode}`);
+    for (const text of labels) {
+      const chip = document.createElement('span');
+      chip.className = 'role-chip';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.setAttribute('aria-hidden', 'true');
+      chip.append(dot, document.createTextNode(text)); // textContent path — no innerHTML for the label
+      chipsEl.append(chip);
+    }
+  }
+
+  function panelBody(area: AreaDef): string {
+    if (area.kind === 'custom') {
+      return `<h2>${area.label}</h2><p>The transfer-candidate pipeline is built here in a later update. There is nothing to manage yet.</p>`;
+    }
+    const owner = area.ownerOnly ? ' (Owner only)' : '';
+    return `<h2>${area.label}</h2><p>${area.area}${owner} is managed in the Directus Data Studio — the ready-made admin, not a screen built here.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a>`;
+  }
+
+  function selectTab(index: number, tabs: HTMLButtonElement[], panels: HTMLElement[]) {
+    tabs.forEach((t, i) => {
+      const on = i === index;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      if (panels[i]) panels[i].hidden = !on;
+    });
+  }
+
+  function renderShell(areas: AreaDef[]) {
+    if (!tabsEl || !panelsEl) return;
+    tabsEl.textContent = '';
+    panelsEl.textContent = '';
+    const tabs: HTMLButtonElement[] = [];
+    const panels: HTMLElement[] = [];
+
+    areas.forEach((a, i) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'tab';
+      tab.setAttribute('role', 'tab');
+      tab.id = `tab-${a.key}`;
+      tab.setAttribute('aria-controls', `panel-${a.key}`);
+      tab.innerHTML = `${svg(a.icon)}<span>${a.label}</span>`;
+
+      const panel = document.createElement('section');
+      panel.className = 'panel';
+      panel.setAttribute('role', 'tabpanel');
+      panel.id = `panel-${a.key}`;
+      panel.setAttribute('aria-labelledby', `tab-${a.key}`);
+      panel.tabIndex = 0; // focusable so a keyboard user can reach a text-only panel (e.g. Candidates)
+      panel.innerHTML = panelBody(a); // trusted constants only (no user data)
+
+      tab.addEventListener('click', () => selectTab(i, tabs, panels));
+      tab.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
+        selectTab(next, tabs, panels);
+        tabs[next].focus();
+      });
+
+      tabs.push(tab);
+      panels.push(panel);
+      tabsEl.append(tab);
+      panelsEl.append(panel);
+    });
+
+    selectTab(0, tabs, panels); // default to the first accessible tab (Candidates if present)
+  }
+
+  async function doLogout(btn: HTMLButtonElement) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = 'Signing out…';
+    try {
+      await logout();
+    } catch (err) {
+      // A live cookie after a failed logout (network/CORS) must not falsely sign the leader
+      // out on a shared machine — stay put and let them retry. A 401 = already gone → proceed.
+      if (!authRejected(err)) {
+        // Surface the failure — a silent no-op reads as "signed out" while the session is live.
+        btn.textContent = 'Couldn’t sign out — try again';
+        btn.disabled = false;
+        return;
+      }
+    }
+    window.location.replace('/leader'); // success (or already-gone 401) → back to login
+  }
+
+  async function boot() {
+    showOnly(loadingEl);
+    try {
+      const user = await getCurrentUser(); // 401 here → not signed in
+      void user;
+    } catch (err) {
+      if (authRejected(err)) {
+        window.location.replace('/leader'); // gate: sign in first
+        return;
+      }
+      showOnly(errorEl); // backend unreachable — offer retry
+      return;
+    }
+
+    let isOwner = false;
+    let accessible: ResolvedArea[] = [];
+    try {
+      isOwner = await getAdminAccess();
+      if (isOwner) {
+        accessible = AREAS.map((a) => ({ ...a, mode: 'all' }));
+      } else {
+        accessible = resolveNonOwnerAreas(await getMyPermissions());
+      }
+    } catch {
+      showOnly(errorEl);
+      return;
+    }
+
+    renderChips(accessible, isOwner);
+
+    if (accessible.length === 0) {
+      showOnly(emptyEl); // signed in, no area granted yet
+      return;
+    }
+
+    renderShell(accessible);
+    showOnly(shellEl);
+  }
+
+  // In-flight guard: a second boot (a double-clicked Retry, or a Retry during the initial
+  // load) must not race the first — interleaved runs can clear-then-append the tab strip
+  // out of order and double the tabs/chips.
+  let booting = false;
+  function runBoot() {
+    if (booting) return;
+    booting = true;
+    boot().finally(() => { booting = false; });
+  }
+
+  document.getElementById('admin-retry')?.addEventListener('click', () => runBoot());
+  document
+    .getElementById('admin-logout')
+    ?.addEventListener('click', (e) => doLogout(e.currentTarget as HTMLButtonElement));
+  document
+    .getElementById('admin-empty-logout')
+    ?.addEventListener('click', (e) => doLogout(e.currentTarget as HTMLButtonElement));
+
+  runBoot();
+</script>

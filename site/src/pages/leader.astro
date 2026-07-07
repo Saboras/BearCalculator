@@ -9,9 +9,9 @@ import Icon from '../components/Icon.astro';
   is:inline — no render-timing dependency), no-JS-safe default markup, and the
   gold-framed parchment card idiom with Royal-Court dark variants.
 
-  Scope line: this signed-in panel is a PLACEHOLDER ("Signed in as … / Log out")
-  — just enough to prove the gate. The tabbed admin shell, role chip, and tabs are
-  Story 3.5 (src/pages/admin/). Do not build them here.
+  Scope line: /leader is login-only. A confirmed session hands off to the tabbed
+  admin shell at /admin (Story 3.5) — this page never renders admin data or tabs.
+  (/admin sends unauthenticated visitors back here; opposite conditions, no loop.)
 */
 ---
 
@@ -59,13 +59,16 @@ import Icon from '../components/Icon.astro';
         <p class="js-note" id="login-js-note">Logging in needs JavaScript enabled.</p>
       </form>
 
-      {/* Signed-in landing — hidden until the module confirms an active session. */}
+      {/*
+        Signed-in state — hidden until the module confirms an active session. A
+        signed-in leader is redirected into the admin shell (/admin, Story 3.5);
+        this is a brief hand-off message, not a landing (logout lives in the shell).
+      */}
       <div class="signed-in" id="signed-in" hidden>
         <p class="signed-line">
           <span class="signed-ic" aria-hidden="true"><Icon name="shield" /></span>
-          Signed in as <b id="signed-who"></b>.
+          Signed in as <b id="signed-who"></b> — opening the admin shell…
         </p>
-        <button type="button" class="btn-gold" id="logout-btn">Log out</button>
       </div>
     </section>
   </main>
@@ -304,11 +307,10 @@ import Icon from '../components/Icon.astro';
     is the browser-managed httpOnly cookie — nothing is read from / written to
     localStorage here.
   */
-  import { login, logout, getCurrentUser } from '../lib/directus';
+  import { login, getCurrentUser } from '../lib/directus';
 
   const form = document.getElementById('login-form') as HTMLFormElement | null;
   const submitBtn = document.getElementById('login-submit') as HTMLButtonElement | null;
-  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement | null;
   const errorEl = document.getElementById('login-error');
   const jsNote = document.getElementById('login-js-note');
   const signedIn = document.getElementById('signed-in');
@@ -336,24 +338,22 @@ import Icon from '../components/Icon.astro';
     errorEl.setAttribute('hidden', '');
   }
 
-  function showSignedIn(who: string) {
+  // A confirmed session hands off to the admin shell. Show a brief message, then
+  // redirect. `replace` so the login page isn't left in the back-stack.
+  function goToShell(who: string) {
     if (signedWho) signedWho.textContent = who; // textContent, never innerHTML
     form?.setAttribute('hidden', '');
     signedIn?.removeAttribute('hidden');
-  }
-
-  function showLoginForm() {
-    signedIn?.setAttribute('hidden', '');
-    form?.removeAttribute('hidden');
+    window.location.replace('/admin');
   }
 
   // Guard the on-load probe against a submit that starts before it resolves: once the user
   // has interacted, a late probe result must not clobber the login flow (and vice versa).
   let interacted = false;
 
-  // On load: reveal the admin UI ONLY after a confirmed session (the UX gate).
+  // On load: an already-signed-in leader goes straight to the shell (the UX gate).
   getCurrentUser()
-    .then((user) => { if (!interacted) showSignedIn(user.first_name || user.email || 'leader'); })
+    .then((user) => { if (!interacted) goToShell(user.first_name || user.email || 'leader'); })
     .catch(() => { /* not signed in — keep the login form (the default) */ });
 
   form?.addEventListener('submit', async (event) => {
@@ -386,38 +386,16 @@ import Icon from '../components/Icon.astro';
         return;
       }
       // Login succeeded → the session cookie is set. A profile-load failure now is NOT a
-      // credential error; the leader is authenticated either way, so show the panel.
+      // credential error; the leader is authenticated either way, so hand off to the shell.
       try {
         const user = await getCurrentUser();
-        showSignedIn(user.first_name || user.email || 'leader');
+        goToShell(user.first_name || user.email || 'leader');
       } catch {
-        showSignedIn(email);
+        goToShell(email);
       }
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = label;
     }
-  });
-
-  logoutBtn?.addEventListener('click', async () => {
-    if (logoutBtn.disabled) return;
-    logoutBtn.disabled = true;
-    const label = logoutBtn.textContent;
-    logoutBtn.textContent = 'Signing out…';
-    try {
-      await logout();
-    } catch (err) {
-      // A 401 means the session was already gone server-side — safe to drop the UI. Any
-      // other failure (network/CORS) means the cookie may still be LIVE: do NOT show a false
-      // "signed out" (shared-machine risk). Stay signed in and let the leader retry.
-      if (!authRejected(err)) {
-        logoutBtn.textContent = 'Couldn’t sign out — try again';
-        logoutBtn.disabled = false;
-        return;
-      }
-    }
-    logoutBtn.textContent = label;
-    logoutBtn.disabled = false;
-    showLoginForm();
   });
 </script>
