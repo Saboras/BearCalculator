@@ -43,7 +43,16 @@ jobs:
         run: npm ci
         working-directory: site
 
+      # Build-time env for the dynamic Finder read (Story 4.3). PUBLIC_DIRECTUS_URL is
+      # the Directus base (public → a repo variable); DIRECTUS_TOKEN is the read-only
+      # static token (a secret). Both unset pre-launch → the build sources the committed
+      # src/data/alliances.json seed and stays green (see src/lib/directus-build.ts
+      # toggle). Setting DIRECTUS_TOKEN switches the Finder to live Directus data; the
+      # alliances publish Flow then fires repository_dispatch (above) to rebuild on edit.
       - name: Build static site
+        env:
+          PUBLIC_DIRECTUS_URL: ${{ vars.PUBLIC_DIRECTUS_URL }}
+          DIRECTUS_TOKEN: ${{ secrets.DIRECTUS_TOKEN }}
         run: npm run build
         working-directory: site
 

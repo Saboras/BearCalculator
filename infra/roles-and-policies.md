@@ -168,6 +168,7 @@ Accounts**.
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
 | Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
+| Alliances | `finder-build-read` (service) | no | **read `alliances`** only — the SSG build token (Story 4.3); no write, no other collection | collection **read** grant ✅ free — **delivered Story 4.3** (keeps Public locked; §3) |
 | all | **Owner** = built-in **Administrator** role (`admin_access: true`) | — | **everything** (universal override) | admin bypass — **no per-collection rules** ✅ free |
 | public | built-in **Public** policy | — | **nothing** now; Epic 5.2 adds **create-only** on `candidates`, **no read** | locked baseline (AD-12) ✅ free (basic create-only; the AD-12/AR-14 field/validation/rate-limit **hardening** is 🔒 — §3/§0) |
 
@@ -294,10 +295,24 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > field subset and the row filter the moment Directus is licensed. **Do NOT grant `create`/`delete`**
 > to this policy — the Owner creates/deletes alliances (AD-9 / FR-3).
 
+### `finder-build-read` (Build · Read) — the SSG read token (Story 4.3)
+| Collection | Action | Fields | Row filter | Status |
+|---|---|---|---|---|
+| `alliances` | read | `["*"]` (all fields) | — none | ✅ **delivered Story 4.3** · whole-collection read = free (§0) |
+
+> Not a leader role — a **service policy** attached to a dedicated `finder-build` user whose **static
+> token** the Astro build uses to pull `alliances` at build time (AR-18: "the build pulls with a
+> read-only token"). It grants **read on `alliances` only** — nothing else, no write, no other
+> collection. This is why **Public stays locked** (AD-12): the build authenticates with its own token
+> instead of opening the collection to the world. The token lives in the `DIRECTUS_TOKEN` build secret
+> (non-`PUBLIC_`, never in the client bundle); the grant lives only in `data.db` (backed up, §6), not in
+> `directus-schema.yaml`. Runbook: `README.md` §9.5. When Directus is licensed, this can tighten to
+> read-only-published, but on Core the whole-collection read is the free, correct shape.
+
 ### `Public` (built-in, unauthenticated)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| — | — | — | — | **no access now** (verified via unauthenticated `GET /users`/`/roles`/`/policies` → 403 — 3 system endpoints, not an exhaustive public-surface audit). ⏳ Epic 5.2 adds **`candidates` create-only, no read** (AD-12) · basic create-only ✅ free, the field/validation/rate-limit **hardening** 🔒 |
+| — | — | — | — | **no access now** (verified via unauthenticated `GET /users`/`/roles`/`/policies` → 403 — 3 system endpoints, not an exhaustive public-surface audit). Confirmed **no `alliances` read** — the build reads via the `finder-build-read` token above, not Public. ⏳ Epic 5.2 adds **`candidates` create-only, no read** (AD-12) · basic create-only ✅ free, the field/validation/rate-limit **hardening** 🔒 |
 
 ### Owner (Administrator)
 No per-collection rows — the `admin_access` bypass **is** the override (§4). Adding Owner

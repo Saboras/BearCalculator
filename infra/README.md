@@ -421,8 +421,9 @@ authenticated and hit the API).
 The `alliances` collection is the canonical, dynamically-maintainable home for the alliance
 dataset (AD-18) — created here and seeded from the MVP-1 static mirror
 (`site/src/data/alliances.json`). **CRUD is Data-Studio-only — no custom UI** (AD-3 / AR-5 /
-NFR-18). The public Finder still reads the static file; the build-time swap to Directus is
-**Story 4.3**, not this story.
+NFR-18). The public Finder sources this collection at **build time** via a read-only token
+(Story 4.3 — see **§9.5**); an alliance edit fires a rebuild so the change goes live after a
+~1–3 min build, with no runtime fetch on the public page (NFR-3 / AR-4).
 
 **Reproducibility:** the data model is version-controlled in **`infra/directus-schema.yaml`** (a
 `directus schema snapshot` — collections, fields, and relations, plus a `systemFields` block of
@@ -486,6 +487,56 @@ base `Leader` role** (union — §7 step 5). **The grant lives only in `data.db`
 it is **not** in `directus-schema.yaml` — a `schema snapshot` captures collections/fields/relations
 only, never permissions (`roles-and-policies.md` §6). So there is no git artifact for the grant itself;
 this runbook + `roles-and-policies.md` §3 are the source of truth.
+
+### 9.5 Build-time Finder read + rebuild-on-publish (Story 4.3)
+
+The public Finder reads `alliances` at **build time** (SSG), never at runtime (NFR-3 / AD-1 / AD-2).
+The Astro build (off-box CI, AD-16) pulls the collection with a **read-only static token** (AR-18) and
+bakes the rows into static HTML; a Directus edit fires a **Flow → `repository_dispatch`** that rebuilds.
+
+**A. Read-only build token + grant** (mint once; lives only in `data.db`, backed up per §3):
+
+1. **Settings → Access Policies → +**: create a policy `finder-build-read`. Add **one permission**:
+   collection `alliances`, action **read**, **no filter, all fields** — a whole-collection read grant
+   (**free on Core**; only row/field-filtered rules are 🔒 licensed, §0). Do **not** grant it anything else.
+2. **Settings → Users → +**: create a service user `finder-build` (no app/admin access), attach **only**
+   the `finder-build-read` policy. Under its **Token** field, generate a **static access token** and copy it.
+3. Store the token as the **`DIRECTUS_TOKEN`** GitHub Actions **secret** (Settings → Secrets → Actions) and
+   in local `site/.env`. It is build-only and **non-`PUBLIC_`** — never in the client bundle
+   (`site/src/lib/directus-build.ts` reads it from `process.env`). Also set the repo **variable**
+   `PUBLIC_DIRECTUS_URL` = the live `DIRECTUS_DOMAIN` (`https://…`). Both are wired into the `deploy.yml`
+   "Build static site" step. **Public stays locked** — the anonymous role gets no `alliances` read.
+
+   > Toggle: with `DIRECTUS_TOKEN` unset/placeholder the build falls back to the committed
+   > `site/src/data/alliances.json` seed and stays green — so CI is not blocked before the token exists.
+   > A real token switches the Finder to live Directus data. A configured-but-failing read (bad token/URL,
+   > Directus down) **fails the build loud** — it never ships a stale or empty Finder.
+
+4. **Verify** (raw API, from anywhere that can reach Directus):
+   ```bash
+   curl -s -H "Authorization: Bearer <DIRECTUS_TOKEN>" \
+     "https://<DIRECTUS_DOMAIN>/items/alliances?fields=name,slug,bear_trap_1,bear_trap_2,peak,farm_alliance&limit=-1"
+   # → 200 + the rows.  Without the token → 401/403 (Public has no alliances read).
+   ```
+
+**B. Alliances publish Flow** (attach now that the collection exists — Story 4.1 deferred it to here):
+
+5. **Settings → Flows → +**: trigger **Event Hook → Action (non-blocking)** on
+   `items.create`, `items.update`, `items.delete` for **`alliances`**. Add a **Webhook / Request URL**
+   operation POSTing the GitHub dispatch from §4:
+   ```
+   POST https://api.github.com/repos/<owner>/<repo>/dispatches
+   Authorization: Bearer <fine-grained PAT, "Dispatch" / contents scope>
+   Accept: application/vnd.github+json
+   Body: {"event_type":"directus-publish"}
+   ```
+   The GitHub receiving end is already wired (`deploy.yml` `repository_dispatch: [directus-publish]`, §4).
+   Store the PAT inside the Flow operation (Directus secret), never in git. Publish is live after the
+   ~1–3 min rebuild (NFR-4) — no staging, by design.
+
+6. **Verify** the Flow fires the dispatch by editing any `alliances` row and confirming a new **Build site**
+   run appears in GitHub Actions (or use the manual `curl` dispatch in §4). Live Flow verification needs a
+   real VPS + PAT, so it is a **host/launch step** (same posture as the §4 webhook).
 
 **Prerequisite:** the Official's user account exists (§8.1) and holds the `alliances-official` policy
 (§7 step 5); the Owner has also assigned it as that alliance's `official` (§9.3).

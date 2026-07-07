@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
-import alliancesData from '../data/alliances.json';
+import { alliances } from '../data/alliances';
 
 /*
   Apply-step config — Owner-provided, like the alliances data and the domain.
@@ -19,13 +19,14 @@ const JOIN_FORM_URL = 'https://docs.google.com/forms/d/e/REPLACE_WITH_REAL_GOOGL
 const JOIN_FORM_ALLIANCE_ENTRY = 'entry.REPLACE_WITH_DESIRED_ALLIANCE_FIELD_ID';
 
 /*
-  Trusted slug → name map, built at build time from the canonical alliances data.
-  finder.astro already gates the whole build on malformed data (same build run),
-  so its validator is NOT re-run here (DRY/KISS). The client resolves the shown
-  alliance name from THIS map keyed by the ?alliance slug — never from the
-  untrusted ?name URL param (XSS / spoofing boundary, see the client script).
+  Trusted slug → name map, built at build time from the canonical alliances loader
+  (Directus-backed in MVP-2, Story 4.3), so a newly-created alliance the Finder links
+  to resolves its name here too. The loader validates the data (same build run), so it
+  is NOT re-validated here (DRY/KISS). The client resolves the shown alliance name from
+  THIS map keyed by the ?alliance slug — never from the untrusted ?name URL param
+  (XSS / spoofing boundary, see the client script).
 */
-const allianceNames = Object.fromEntries(alliancesData.map((a) => [a.slug, a.name]));
+const allianceNames = Object.fromEntries(alliances.map((a) => [a.slug, a.name]));
 ---
 
 <Layout title="Kingdom 1516 — Apply to transfer">
