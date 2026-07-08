@@ -238,17 +238,35 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 ### `transfer-viewer` (Transfer · Read)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| `candidates` | read | `["*"]` | — | ⏳ Epic 5.1 · ✅ free (collection-level) |
-| `transfer_groups` | read | `["*"]` | — | ⏳ Epic 5.6 · ✅ free |
-| `transfer_period` | read | `["*"]` | — | ⏳ Epic 5.1 · ✅ free |
+| `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ⏳ wired **5.4** · ✅ free (collection-level) |
+| `transfer_groups` | read | `["*"]` | — | collection ✅ **created Story 5.1** (shell); read grant ⏳ wired **5.6** · ✅ free |
+| `transfer_period` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ⏳ wired **5.4 / 5.7** (counter denominators) · ✅ free |
 
 ### `transfer-curator` (Transfer · Work) — Viewer + writes
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| `candidates` | read | `["*"]` | — | ⏳ Epic 5.1 · ✅ free |
-| `candidates` | update | `["status","planned_path","suggested_alliance","group"]` | — | ⏳ Epic 5.5 · 🔒 field-limited (else full-update is free but lets a Curator rewrite the public core/`desired_alliance`, violating AD-8/AD-9) |
+| `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ⏳ wired **5.5** (Curator = Viewer + writes) · ✅ free |
+| `candidates` | update | `["status","planned_path","suggested_alliance","group"]` | — | ⏳ Epic 5.5 · 🔒 field-limited (else full-update is free but lets a Curator rewrite the public core/`desired_alliance` **or re-stamp `period`**, violating AD-8/AD-9/AD-17) |
 | `candidates` | delete | — | — | ⏳ Epic 5.8 · ✅ free |
 | `transfer_groups` | create/update/delete | `["*"]` | — | ⏳ Epic 5.6 · ✅ free |
+
+> *Story-tag semantics (Transfer):* the **`candidates`, `transfer_period`, `settings` (singleton) and
+> `transfer_groups` (shell) collections were created in Story 5.1** (data model + config — `README.md` §10
+> + `directus-schema.yaml`, live-verified). The ⏳ tags above name the story that **wires each grant** onto
+> those collections — **5.2** Public create-only, **5.4** Viewer read (candidate list), **5.5** Curator
+> work-field update, **5.6** `transfer_groups` CRUD, **5.8** Curator delete. The **`settings` singleton** has
+> a *separate* read consumer, not a Transfer grant row: `settings.special_invite_power_threshold` is read by
+> the **5.3** `>130M` form-edge compare — its read **mechanism is a 5.3 decision** (a build-time static-token
+> read like §9.5 alliances, *or* a `transfer-viewer` read grant), tracked here + in §AD-9 so the path is not
+> silently dropped. **No grant was wired in 5.1**
+> (the 4.1 fence). **Under Option 3 (§0), the Curator's 5.5 update grant is full-collection** — so the
+> AD-8/AD-9 **distinct-writer** boundary (a Curator must not touch the public core / `desired_alliance`)
+> and the AD-17 **`period` never-re-stamped** immutability are **UX/convention, NOT server-enforced**
+> (each is a 🔒 field/validation rule — re-proven **`403 RESOURCE_RESTRICTED`** on `candidates`, README
+> §"Candidates … Story 5.1"). ⚠ The `period` re-stamp is a **silent** carry-over corruption vector (not the
+> reparable, backup-caught edit Option 3 assumed) — the decision-needed **AD-17** item deferred to Epic-5
+> start (`deferred-work.md`); flip the 🔒 field/validation rule on under Option 1 (license) or split-out
+> under Option 2 to close it.
 
 ### `guides-viewer` (Guides · Read)
 | Collection | Action | Fields | Row filter | Status |
@@ -337,11 +355,17 @@ The **`users / roles / policies → Owner`** row is the **enforceable-now** one 
 collection needed) — it is exactly what Story 3.3 proved: a non-admin leader gets **403** on
 any write to `directus_users` / `directus_roles` / `directus_policies`; the Owner overrides.
 
-Likewise **`transfer_period`** (caps, active flag) receives **no** policy grant in any per-area
-policy — **deny-by-default is the Owner-only guard** (Owner writes it via the admin bypass, per
-AD-9). Do **not** hand a Curator a `transfer_period` grant "for counters": a Curator reads
-counters through the `candidates` / `transfer_groups` grants and **never** writes caps or the
-active flag. (Epic 5.1 lands the collection; it attaches **no** non-Owner grant.)
+Likewise **`transfer_period`** and the **`settings` singleton** (caps, active flag, kingdom-wide
+thresholds) receive **no non-Owner *write* grant** in any per-area policy — **deny-by-default is the
+Owner-only guard** (the Owner writes them via the admin bypass, per AD-9). A **read** grant for the
+counter denominators (**caps on `transfer_period`**) is free and belongs to `transfer-viewer` (⏳ wired
+5.4/5.7). The **`settings` threshold has a *separate* reader**:
+`settings.special_invite_power_threshold` is consumed by the **5.3** `>130M` form-edge compare — its read
+**mechanism is a 5.3 decision** (a build-time static-token read like §9.5 alliances, *or* a
+`transfer-viewer` read grant), noted here so the read path is tracked, not silently dropped. Do **not**
+hand a Curator a `transfer_period`/`settings` *write* grant "for counters" — a Curator never writes
+caps, the active flag, or a threshold. (**Epic 5.1 created `transfer_period` + `settings`** —
+`README.md` §10; it attached **no** grant at all — every grant lands with its consuming story, §3.)
 
 ---
 

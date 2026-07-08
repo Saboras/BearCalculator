@@ -598,6 +598,126 @@ and needs no license) narrows the *accidental* surface in the Studio:
 > Data Studio, and the daily `data.db` backup. Flip the 🔒 row filter + field subset back on if Directus
 > is ever licensed (Option 1) — no spec change, just the grant.
 
+## 10. Candidates, transfer_period & settings (Story 5.1)
+
+Epic 5 (Transfer Pipeline) opens with the **data model + game-rule config** the whole pipeline
+reads. Like §9 (alliances), this is a **pure Directus + docs** slice: the collections live in
+`data.db` (daily backup, §3) and are captured in `infra/directus-schema.yaml` (the replayable
+snapshot — collections/fields/relations only, **no** permissions, **no** data, §6). **ZERO
+`site/` change** — the public apply form is Story 5.2, the leader read UI is 5.4, the status
+lifecycle UI is 5.5. Authored in the Data Studio (AD-3) or replayed with `schema apply` (§9 / §6).
+
+**Ordering (create the M2O targets first):** `transfer_period` → `settings` → `transfer_groups`
+→ `candidates` (which relates to `alliances` from §9 plus the three new collections). A
+`schema apply infra/directus-schema.yaml` orders it for you.
+
+### 10.1 `candidates` — the applicant record (FR-4)
+
+Core applicant fields + lifecycle + the two distinct-writer alliance relations + `group` + `period`.
+`snake_case`, integer PK. "Req" = the public form's required set (Story 5.2).
+
+| Field | Type | Req | Writer (AD-9) | Note |
+|---|---|---|---|---|
+| `character_name` | string | ✓ | public create-only | in-game character name |
+| `player_id` | string | ✓ | public create-only | **the in-game contact key** (FR-4) |
+| `kingdom_number` | integer | ✓ | public create-only | current kingdom # |
+| `timezone` | string | ✓ | public create-only | IANA tz / offset (new vs old form) |
+| `who_invited` | text | ✓ | public create-only | referral / social vetting |
+| `why_leaving` | text | ✓ | public create-only | |
+| `team_player_kvk` | boolean | ✓ | public create-only | KvK / save-troops willingness |
+| `others_transferring` | text | ✓ | public create-only | names — seeds group linking (5.6) |
+| `day4_fcfs` | boolean | ✓ | public create-only | Day-4 FCFS (Random-ask readiness) |
+| `needs_special_invite` | boolean | ✓ | public create-only | >130M flag (FR-5 / 5.3) |
+| `what_you_seek` | text | — | public create-only | optional |
+| `players_to_avoid` | text | — | public create-only | optional |
+| `desired_alliance` | M2O → `alliances` (SET NULL) | — | **public form only** | AD-8 — player's own choice |
+| `suggested_alliance` | M2O → `alliances` (SET NULL) | — | **Curator only** | AD-8 — leader's recommendation; separate relation |
+| `status` | dropdown | ✓ | Curator | `Applied\|Accepted\|Transferred\|Rejected`; default **`Applied`** |
+| `planned_path` | dropdown | — | Curator | `Invite\|Special\|Random-ask`; set on Accept (5.5) |
+| `group` | M2O → `transfer_groups` (SET NULL) | — | Curator | friend-group link (5.6) |
+| `period` | M2O → `transfer_period` (NO ACTION) | ✓ | public create-only | stamped to **active** period at create, **never re-stamped** (AD-17) |
+
+- **Two SEPARATE alliance relations (AD-8).** `desired_alliance` and `suggested_alliance` are
+  **distinct** M2O → `alliances`, **never auto-copied**. This two-relation shape *is* the
+  "distinct writers" invariant at the data-model level — the write-side enforcement is an Option-3
+  convention on Core (§10.6).
+- **`status`** default **`Applied`** (FR-4); the transition order is **UI-guided only** — **no**
+  Directus Flow/hook/state machine (AR-9/AD-7).
+- **`period`** required; **on-delete `NO ACTION`** — periods are long-lived (you delete terminal
+  *candidate* rows at window close, never the period).
+- **No `entry_route`, no random-entries counter, no stored per-path counter / divergent flag /
+  carry-over** — dropped (AR-19) or edge-computed by a later story (5.6/5.7/5.8).
+
+### 10.2 `transfer_period` — per-window caps + active flag (AD-11 / AD-17)
+
+**Multi-row**, exactly **one `active`** at a time; **Owner-written** (no non-Owner write grant —
+§7 / roles-and-policies AD-9). Fields: `name` (window label), `invited_cap`, `random_cap`,
+`special_cap`, `active` (bool). **The available-special-count this period lives ONLY on
+`special_cap`** — never in the settings singleton, never a second store (AD-11). **No counter/tally
+field** — counters are edge-computed (5.7) and are **planning aids, never a gate**.
+
+### 10.3 `settings` — kingdom-wide thresholds (singleton)
+
+A **singleton** collection (`singleton: true` — "Treat as single object") holding **only** the
+kingdom-wide game rules: `special_invite_power_threshold` (**130000000** — the 130M special-invite
+power, FR-5) and `transfer_cadence_weeks` (**8** — the ~8-week cadence). **Never a special count**
+(AD-11). Owner-written.
+
+### 10.4 `transfer_groups` — friend-group shell (5.6)
+
+Minimal shell so `candidates.group` has a target: integer PK + optional `name`. **No
+`suggested_alliance` column** — a group-level suggestion is a **UI fan-out** that writes each
+member's `candidates.suggested_alliance` in one transaction (AR-10). Grouping CRUD/UI is Story 5.6.
+
+### 10.5 Author the config rows (the "never hardcoded" numbers — NFR-17)
+
+The caps and thresholds are **editable data rows**, not code literals:
+
+- **`transfer_period`**: one row per window; for **2026-07-19** set `invited_cap = 35`,
+  `random_cap = 20`, `special_cap = 2`, `active = true`. (At window close, create the next row and
+  flip `active`.) The `special_cap` +1/event regen (cap 3) is **manual Owner guidance** when setting
+  the next cap — **not** stored live state.
+- **`settings`**: set `special_invite_power_threshold = 130000000`, `transfer_cadence_weeks = 8`.
+- **`candidates`** and **`transfer_groups`** start **empty** — candidates arrive via the 5.2 form.
+
+> **Preconditions after a `schema apply` rebuild (the snapshot carries no data, §6 / §10 intro).** A
+> from-scratch replay recreates the collections but **not** these config rows — re-author them before the
+> pipeline works:
+> - **Exactly one `transfer_period` with `active = true`.** With **zero** active, the required `period`
+>   stamp on a public create (5.2) has nothing to point at and intake fails (loud, but a cryptic NOT-NULL
+>   error); with **two or more** active, the stamp is ambiguous and the AD-17 carry-over query
+>   double-counts across windows. Exactly-one is **Owner discipline** — a uniqueness/validation guard is
+>   🔒 licensed on Core (§0), so it is not server-enforced.
+> - **`settings.special_invite_power_threshold` set.** Left null, the 5.3 `power > threshold` compare is
+>   fail-**silent** (evaluates falsy → >130M applicants misclassified as normal, no error) — unlike the
+>   required `period`, which fails loud.
+
+### 10.6 What's deferred, and what the Core license does NOT enforce
+
+Per the §9 (4.1) precedent, Story 5.1 lands the **shape + config only**. **No permission grants are
+wired here** — they attach as each consuming story lands (roles-and-policies §3):
+
+| Grant | Story |
+|---|---|
+| Public **create-only** on `candidates` (no read) | 5.2 |
+| `transfer-viewer` **read** `candidates` / `transfer_period` | consumed at 5.4 (counters 5.7) |
+| `transfer-curator` **update** work-fields on `candidates` | 5.5 |
+| `transfer-curator` **delete** `candidates` | 5.8 |
+| `transfer_groups` **CRUD** (Curator) | 5.6 |
+| `transfer_period` write | **never** to a non-Owner — Owner-only (AD-9) |
+
+**Licensing (Core tier — see roles-and-policies §0).** The *shape* above is all **free**. Enforcing
+the finer boundaries needs **custom permission rules**, which **403 `RESOURCE_RESTRICTED`** on Core
+(re-proven for `candidates` in the verification block below): the **distinct-writer** split (a field
+subset limiting the Curator to work-fields, AD-8/AD-9) and the **`period` never-re-stamped**
+immutability (a field exclusion / validation, AD-17) are **🔒 licensed**. Under the ratified
+**Option 3**, both ship as **UX + Owner-discipline conventions, NOT server-enforced** — a Curator's
+future full-collection update grant (5.5) *can* touch the public core / `desired_alliance` and *can*
+re-stamp `period` (the latter is **silent** carry-over corruption — the decision-needed AD-17 item
+in `deferred-work.md`). The collection **boundaries** stay server-enforced (a Viewer gets 403 on any
+write; Public is locked; Owner overrides). Flip the 🔒 rules on the moment Directus is licensed
+(Option 1) — no schema change, just the grant.
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
@@ -737,3 +857,57 @@ Official (assigned as one row's `official`) and a policy-less plain leader:
 The **production** grant is authored in the Data Studio per §9.4 and captured by the daily `data.db`
 backup — the local DB used for this proof is throwaway. **ZERO `site/` change** and **no
 `directus-schema.yaml` change** (permissions are not in a schema snapshot — §6).
+
+### Candidates, transfer_period & settings (Story 5.1) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API proof on the Windows/Docker dev box (disposable `directus:12.0.2` container, `LICENSE_KEY=""`,
+fresh DB on the container overlay FS, brought up **via PowerShell** to avoid the Git-Bash/MSYS
+`SQLITE_CANTOPEN` path-mangling wall; container torn down after). The proof first `schema apply`ed the
+committed `directus-schema.yaml` (recreating `alliances` — **"Snapshot applied successfully"**, proving it
+replays), then built the four new collections via the raw API, then re-snapshotted:
+
+- **AC1 — canonical `candidates` shape:** created with `id` (int auto PK) + the 12 core applicant fields
+  (`character_name`, `player_id`, `kingdom_number`, `timezone`, `who_invited`, `why_leaving`,
+  `team_player_kvk`, `others_transferring`, `day4_fcfs`, `needs_special_invite`, `what_you_seek`,
+  `players_to_avoid`) + `status` + `planned_path` + **two SEPARATE M2O → `alliances`**
+  (`desired_alliance`, `suggested_alliance`, both `ON DELETE SET NULL`) + `group` (M2O → `transfer_groups`,
+  SET NULL) + `period` (M2O → `transfer_period`, `NO ACTION`). A test candidate set
+  `desired_alliance = A` and `suggested_alliance = B` **independently** (A ≠ B round-tripped) — the two
+  distinct-writer relations are real, not one shared field. `status` **defaulted to `Applied`** (create
+  omitted it); `planned_path` null at create. ✅
+- **AC2 — no dropped fields:** the `candidates` schema has **19 fields, none named `entry_route`** and
+  **no** counter / `carry` / random-entries field (regex-checked). Counting is by `planned_path` only. ✅
+- **AC3 — `transfer_period`:** multi-row (`singleton=false`), Owner-written `invited_cap` / `random_cap` /
+  `special_cap` / `active`; the active row for **2026-07-19** = `35 / 20 / 2`, `active=true`. The
+  available-special-count lives **only** on `special_cap` — no special-count field exists on the settings
+  singleton or elsewhere. **No counter/tally field.** ✅
+- **AC4 — `settings` singleton:** created with `singleton: true`; holds `special_invite_power_threshold`
+  = **130000000** and `transfer_cadence_weeks` = **8** — kingdom-wide thresholds only, **no special
+  count** (AD-11). Editable data (not code literals) → NFR-17 satisfied. ✅
+- **AC5 — `period` stamped-on-create:** `candidates.period` is a **required** (`is_nullable: false`) M2O to
+  `transfer_period`, stamped to the **active** period (id 1) at create. The *shape* supports "stamped
+  once." **Immutability is not server-enforceable on Core** (Option-3): a re-stamp `PATCH` of
+  `period` (1 → a 2nd inactive period) returned **200** — recorded honestly as the documented limit
+  (§10.6); it is a **silent** carry-over corruption vector under a future Curator full-update grant, logged
+  as the decision-needed AD-17 item in `deferred-work.md`. ✅
+- **⛔ License gate re-proven on `candidates` (confirms the distinct-writer + immutability enforcement is
+  genuinely 🔒):** on the Core tier, creating a **field-subset** update grant
+  (`["status","planned_path","suggested_alliance","group"]` — the AD-8/AD-9 Curator work-field limit; the
+  **same field-exclusion is also the lever that would make `period` immutable**, by leaving it out of the
+  writable set), a **custom validation** rule (probed with a `period` `_nnull` — a *representative* custom
+  validation, **not itself an immutability rule**: `_nnull` only enforces presence, already covered by
+  `is_nullable: false`; a real immutability guard would compare to the stored value, likewise a custom
+  rule), and a **row filter** each returned **`403 RESOURCE_RESTRICTED`**
+  (`custom_permission_rules_enabled is a restricted resource`); a **full-collection read** `fields:["*"]`
+  returned **200**. So every finer rule is licensed — the distinct-writer field subset *and* the
+  `period`-immutability lever (field exclusion, or a real immutability validation) — and the Option-3
+  conventions (§10.6) are the only free path until Directus is licensed. ✅
+- **Snapshot fidelity:** after building the collections, `directus schema snapshot` wrote the regenerated
+  `infra/directus-schema.yaml` (now 5 collections — `alliances` + `candidates` + `settings` +
+  `transfer_groups` + `transfer_period`); `directus schema apply --dry-run` on it → **"No changes to
+  apply."** The committed snapshot is a faithful, replayable capture. ✅
+
+The **production** collections are created on the host per §10 (or `schema apply infra/directus-schema.yaml`)
+and captured by the daily `data.db` backup — the local DB used for this proof is throwaway. **ZERO `site/`
+change**; `infra/directus-schema.yaml` **is** updated (the data model, unlike permissions, lives in the
+snapshot — §6). No permission grants were wired (deferred to 5.2/5.4/5.5/5.6/5.8 — §10.6).

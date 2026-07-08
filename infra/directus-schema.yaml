@@ -30,6 +30,121 @@ collections:
       versioning: false
     schema:
       name: alliances
+  - collection: candidates
+    meta:
+      accountability: all
+      archive_app_filter: true
+      archive_field: null
+      archive_value: null
+      autosave_revision_interval: null
+      collapse: open
+      collection: candidates
+      color: null
+      display_template: null
+      group: null
+      hidden: false
+      icon: how_to_reg
+      item_duplication_fields: null
+      note: >-
+        Transfer applicants (FR-4). Core fields + status/planned_path +
+        desired/suggested alliance (distinct writers, AD-8) + group + period
+        (stamped-on-create, never re-stamped, AD-17). No entry_route / no stored
+        counters (AR-19).
+      preview_url: null
+      singleton: false
+      sort: null
+      sort_field: null
+      status: active
+      translations: null
+      unarchive_value: null
+      versioning: false
+    schema:
+      name: candidates
+  - collection: settings
+    meta:
+      accountability: all
+      archive_app_filter: true
+      archive_field: null
+      archive_value: null
+      autosave_revision_interval: null
+      collapse: open
+      collection: settings
+      color: null
+      display_template: null
+      group: null
+      hidden: false
+      icon: settings
+      item_duplication_fields: null
+      note: >-
+        Kingdom-wide game-rule thresholds (130M power, ~8-week cadence). Never a
+        special count (AD-11). Editable config, never hardcoded (NFR-17).
+      preview_url: null
+      singleton: true
+      sort: null
+      sort_field: null
+      status: active
+      translations: null
+      unarchive_value: null
+      versioning: false
+    schema:
+      name: settings
+  - collection: transfer_groups
+    meta:
+      accountability: all
+      archive_app_filter: true
+      archive_field: null
+      archive_value: null
+      autosave_revision_interval: null
+      collapse: open
+      collection: transfer_groups
+      color: null
+      display_template: null
+      group: null
+      hidden: false
+      icon: group_work
+      item_duplication_fields: null
+      note: >-
+        Friend-group linking (Story 5.6). Group-level suggestion is a UI fan-out
+        to each member's candidates.suggested_alliance (AR-10). NO
+        suggested_alliance column here.
+      preview_url: null
+      singleton: false
+      sort: null
+      sort_field: null
+      status: active
+      translations: null
+      unarchive_value: null
+      versioning: false
+    schema:
+      name: transfer_groups
+  - collection: transfer_period
+    meta:
+      accountability: all
+      archive_app_filter: true
+      archive_field: null
+      archive_value: null
+      autosave_revision_interval: null
+      collapse: open
+      collection: transfer_period
+      color: null
+      display_template: null
+      group: null
+      hidden: false
+      icon: event_repeat
+      item_duplication_fields: null
+      note: >-
+        One row per transfer window; exactly one active. Owner-written caps +
+        active flag (AD-11/AD-17). No stored counters.
+      preview_url: null
+      singleton: false
+      sort: null
+      sort_field: null
+      status: active
+      translations: null
+      unarchive_value: null
+      versioning: false
+    schema:
+      name: transfer_period
 fields:
   - collection: alliances
     field: id
@@ -352,6 +467,1230 @@ fields:
       has_auto_increment: false
       foreign_key_table: directus_users
       foreign_key_column: id
+  - collection: candidates
+    field: id
+    type: integer
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: id
+      group: null
+      hidden: true
+      interface: input
+      note: null
+      options: null
+      readonly: true
+      required: false
+      searchable: true
+      sort: 1
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: id
+      table: candidates
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: true
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: true
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: character_name
+    type: string
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: character_name
+      group: null
+      hidden: false
+      interface: input
+      note: In-game character name (required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 2
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: character_name
+      table: candidates
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: player_id
+    type: string
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: player_id
+      group: null
+      hidden: false
+      interface: input
+      note: In-game contact key (FR-4, required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 3
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: player_id
+      table: candidates
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: kingdom_number
+    type: integer
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: kingdom_number
+      group: null
+      hidden: false
+      interface: input
+      note: 'Current kingdom # (required).'
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 4
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: kingdom_number
+      table: candidates
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: timezone
+    type: string
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: timezone
+      group: null
+      hidden: false
+      interface: input
+      note: Local timezone IANA/offset (required; new vs old form).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 5
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: timezone
+      table: candidates
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: who_invited
+    type: text
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: who_invited
+      group: null
+      hidden: false
+      interface: input-multiline
+      note: Who invited / know someone (required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 6
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: who_invited
+      table: candidates
+      data_type: text
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: why_leaving
+    type: text
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: why_leaving
+      group: null
+      hidden: false
+      interface: input-multiline
+      note: Why leaving (required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 7
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: why_leaving
+      table: candidates
+      data_type: text
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: team_player_kvk
+    type: boolean
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: team_player_kvk
+      group: null
+      hidden: false
+      interface: boolean
+      note: KvK/save-troops willingness (required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 8
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: team_player_kvk
+      table: candidates
+      data_type: boolean
+      default_value: false
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: others_transferring
+    type: text
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: others_transferring
+      group: null
+      hidden: false
+      interface: input-multiline
+      note: Others transferring with; seeds group linking (required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 9
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: others_transferring
+      table: candidates
+      data_type: text
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: day4_fcfs
+    type: boolean
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: day4_fcfs
+      group: null
+      hidden: false
+      interface: boolean
+      note: Day-4 FCFS / Random-ask readiness (required).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 10
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: day4_fcfs
+      table: candidates
+      data_type: boolean
+      default_value: false
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: needs_special_invite
+    type: boolean
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: needs_special_invite
+      group: null
+      hidden: false
+      interface: boolean
+      note: '>130M special-invite flag (FR-5). Required.'
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 11
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: needs_special_invite
+      table: candidates
+      data_type: boolean
+      default_value: false
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: what_you_seek
+    type: text
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: what_you_seek
+      group: null
+      hidden: false
+      interface: input-multiline
+      note: Optional.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 12
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: what_you_seek
+      table: candidates
+      data_type: text
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: players_to_avoid
+    type: text
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: players_to_avoid
+      group: null
+      hidden: false
+      interface: input-multiline
+      note: Optional.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 13
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: players_to_avoid
+      table: candidates
+      data_type: text
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: status
+    type: string
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: status
+      group: null
+      hidden: false
+      interface: select-dropdown
+      note: Lifecycle (UI-guided, AR-9). Default Applied.
+      options:
+        choices:
+          - text: Applied
+            value: Applied
+          - text: Accepted
+            value: Accepted
+          - text: Transferred
+            value: Transferred
+          - text: Rejected
+            value: Rejected
+      readonly: false
+      required: false
+      searchable: true
+      sort: 14
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: status
+      table: candidates
+      data_type: varchar
+      default_value: Applied
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: planned_path
+    type: string
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: planned_path
+      group: null
+      hidden: false
+      interface: select-dropdown
+      note: Set by Curator on Accept (5.5). Nullable.
+      options:
+        choices:
+          - text: Invite
+            value: Invite
+          - text: Special
+            value: Special
+          - text: Random-ask
+            value: Random-ask
+      readonly: false
+      required: false
+      searchable: true
+      sort: 15
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: planned_path
+      table: candidates
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: candidates
+    field: desired_alliance
+    type: integer
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: desired_alliance
+      group: null
+      hidden: false
+      interface: select-dropdown-m2o
+      note: Player's choice (public form only, AD-8).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 16
+      special:
+        - m2o
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: desired_alliance
+      table: candidates
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: alliances
+      foreign_key_column: id
+  - collection: candidates
+    field: suggested_alliance
+    type: integer
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: suggested_alliance
+      group: null
+      hidden: false
+      interface: select-dropdown-m2o
+      note: Leader recommendation (Curator only, AD-8). Separate relation.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 17
+      special:
+        - m2o
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: suggested_alliance
+      table: candidates
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: alliances
+      foreign_key_column: id
+  - collection: candidates
+    field: group
+    type: integer
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: group
+      group: null
+      hidden: false
+      interface: select-dropdown-m2o
+      note: Friend-group link (Curator, 5.6).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 18
+      special:
+        - m2o
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: group
+      table: candidates
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: transfer_groups
+      foreign_key_column: id
+  - collection: candidates
+    field: period
+    type: integer
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: period
+      group: null
+      hidden: false
+      interface: select-dropdown-m2o
+      note: Stamped to active period at create; never re-stamped (AD-17). Required.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 19
+      special:
+        - m2o
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: period
+      table: candidates
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: transfer_period
+      foreign_key_column: id
+  - collection: settings
+    field: id
+    type: integer
+    meta:
+      collection: settings
+      conditions: null
+      display: null
+      display_options: null
+      field: id
+      group: null
+      hidden: true
+      interface: input
+      note: null
+      options: null
+      readonly: true
+      required: false
+      searchable: true
+      sort: 1
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: id
+      table: settings
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: true
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: true
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: settings
+    field: special_invite_power_threshold
+    type: integer
+    meta:
+      collection: settings
+      conditions: null
+      display: null
+      display_options: null
+      field: special_invite_power_threshold
+      group: null
+      hidden: false
+      interface: input
+      note: 130M special-invite power threshold (FR-5). Never hardcoded (NFR-17).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 2
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: special_invite_power_threshold
+      table: settings
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: settings
+    field: transfer_cadence_weeks
+    type: integer
+    meta:
+      collection: settings
+      conditions: null
+      display: null
+      display_options: null
+      field: transfer_cadence_weeks
+      group: null
+      hidden: false
+      interface: input
+      note: ~8-week transfer cadence. Never hardcoded (NFR-17).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 3
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: transfer_cadence_weeks
+      table: settings
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_groups
+    field: id
+    type: integer
+    meta:
+      collection: transfer_groups
+      conditions: null
+      display: null
+      display_options: null
+      field: id
+      group: null
+      hidden: true
+      interface: input
+      note: null
+      options: null
+      readonly: true
+      required: false
+      searchable: true
+      sort: 1
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: id
+      table: transfer_groups
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: true
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: true
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_groups
+    field: name
+    type: string
+    meta:
+      collection: transfer_groups
+      conditions: null
+      display: null
+      display_options: null
+      field: name
+      group: null
+      hidden: false
+      interface: input
+      note: Optional group label.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 2
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: name
+      table: transfer_groups
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_period
+    field: id
+    type: integer
+    meta:
+      collection: transfer_period
+      conditions: null
+      display: null
+      display_options: null
+      field: id
+      group: null
+      hidden: true
+      interface: input
+      note: null
+      options: null
+      readonly: true
+      required: false
+      searchable: true
+      sort: 1
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: id
+      table: transfer_period
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: false
+      is_unique: false
+      is_indexed: false
+      is_primary_key: true
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: true
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_period
+    field: name
+    type: string
+    meta:
+      collection: transfer_period
+      conditions: null
+      display: null
+      display_options: null
+      field: name
+      group: null
+      hidden: false
+      interface: input
+      note: Window label, e.g. 2026-07-19
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 2
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: name
+      table: transfer_period
+      data_type: varchar
+      default_value: null
+      max_length: 255
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_period
+    field: invited_cap
+    type: integer
+    meta:
+      collection: transfer_period
+      conditions: null
+      display: null
+      display_options: null
+      field: invited_cap
+      group: null
+      hidden: false
+      interface: input
+      note: >-
+        Invite-planned denominator (currently 35). Owner-written config
+        (NFR-17).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 3
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: invited_cap
+      table: transfer_period
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_period
+    field: random_cap
+    type: integer
+    meta:
+      collection: transfer_period
+      conditions: null
+      display: null
+      display_options: null
+      field: random_cap
+      group: null
+      hidden: false
+      interface: input
+      note: Random denominator (currently 20, kingdom-wide).
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 4
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: random_cap
+      table: transfer_period
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_period
+    field: special_cap
+    type: integer
+    meta:
+      collection: transfer_period
+      conditions: null
+      display: null
+      display_options: null
+      field: special_cap
+      group: null
+      hidden: false
+      interface: input
+      note: >-
+        THE ONLY home of available-special-count this period (currently 2).
+        AD-11.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 5
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: special_cap
+      table: transfer_period
+      data_type: integer
+      default_value: null
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
+  - collection: transfer_period
+    field: active
+    type: boolean
+    meta:
+      collection: transfer_period
+      conditions: null
+      display: null
+      display_options: null
+      field: active
+      group: null
+      hidden: false
+      interface: boolean
+      note: Exactly one row true at a time (AD-17). Owner-written.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 6
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: active
+      table: transfer_period
+      data_type: boolean
+      default_value: false
+      max_length: null
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
 systemFields:
   - collection: directus_activity
     field: timestamp
@@ -423,3 +1762,87 @@ relations:
       constraint_name: null
       on_update: NO ACTION
       on_delete: SET NULL
+  - collection: candidates
+    field: desired_alliance
+    related_collection: alliances
+    meta:
+      junction_field: null
+      many_collection: candidates
+      many_field: desired_alliance
+      one_allowed_collections: null
+      one_collection: alliances
+      one_collection_field: null
+      one_deselect_action: nullify
+      one_field: null
+      sort_field: null
+    schema:
+      table: candidates
+      column: desired_alliance
+      foreign_key_table: alliances
+      foreign_key_column: id
+      constraint_name: null
+      on_update: NO ACTION
+      on_delete: SET NULL
+  - collection: candidates
+    field: suggested_alliance
+    related_collection: alliances
+    meta:
+      junction_field: null
+      many_collection: candidates
+      many_field: suggested_alliance
+      one_allowed_collections: null
+      one_collection: alliances
+      one_collection_field: null
+      one_deselect_action: nullify
+      one_field: null
+      sort_field: null
+    schema:
+      table: candidates
+      column: suggested_alliance
+      foreign_key_table: alliances
+      foreign_key_column: id
+      constraint_name: null
+      on_update: NO ACTION
+      on_delete: SET NULL
+  - collection: candidates
+    field: group
+    related_collection: transfer_groups
+    meta:
+      junction_field: null
+      many_collection: candidates
+      many_field: group
+      one_allowed_collections: null
+      one_collection: transfer_groups
+      one_collection_field: null
+      one_deselect_action: nullify
+      one_field: null
+      sort_field: null
+    schema:
+      table: candidates
+      column: group
+      foreign_key_table: transfer_groups
+      foreign_key_column: id
+      constraint_name: null
+      on_update: NO ACTION
+      on_delete: SET NULL
+  - collection: candidates
+    field: period
+    related_collection: transfer_period
+    meta:
+      junction_field: null
+      many_collection: candidates
+      many_field: period
+      one_allowed_collections: null
+      one_collection: transfer_period
+      one_collection_field: null
+      one_deselect_action: nullify
+      one_field: null
+      sort_field: null
+    schema:
+      table: candidates
+      column: period
+      foreign_key_table: transfer_period
+      foreign_key_column: id
+      constraint_name: null
+      on_update: NO ACTION
+      on_delete: NO ACTION
