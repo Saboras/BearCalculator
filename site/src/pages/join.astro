@@ -27,6 +27,15 @@ const JOIN_FORM_ALLIANCE_ENTRY = 'entry.REPLACE_WITH_DESIRED_ALLIANCE_FIELD_ID';
   (XSS / spoofing boundary, see the client script).
 */
 const allianceNames = Object.fromEntries(alliances.map((a) => [a.slug, a.name]));
+
+/*
+  Serialize trusted build-time data for an inline <script> tag. JSON.stringify does NOT
+  escape `<`, so a value containing `</script>` would close the tag early and let markup
+  after it run (an HTML breakout). `name` is now CMS-editable (Directus, Story 4.3), so
+  escape every `<` to a JSON unicode escape — round-trip-safe (JSON.parse reads it back
+  identically) and it neutralizes the </script> breakout at the sink.
+*/
+const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/</g, '\\u003c');
 ---
 
 <Layout title="Kingdom 1516 — Apply to transfer">
@@ -75,8 +84,8 @@ const allianceNames = Object.fromEntries(alliances.map((a) => [a.slug, a.name]))
     </section>
 
     {/* Trusted build-time data the bundled module below reads (no runtime fetch). */}
-    <script id="alliance-names" type="application/json" set:html={JSON.stringify(allianceNames)} />
-    <script id="join-form-config" type="application/json" set:html={JSON.stringify({ url: JOIN_FORM_URL, entry: JOIN_FORM_ALLIANCE_ENTRY })} />
+    <script id="alliance-names" type="application/json" set:html={jsonForScript(allianceNames)} />
+    <script id="join-form-config" type="application/json" set:html={jsonForScript({ url: JOIN_FORM_URL, entry: JOIN_FORM_ALLIANCE_ENTRY })} />
   </main>
 </Layout>
 

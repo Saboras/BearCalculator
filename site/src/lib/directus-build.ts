@@ -18,9 +18,12 @@ import { createDirectus, staticToken, rest, readItems } from '@directus/sdk';
   inlining the secret.
 */
 
-const DIRECTUS_URL =
-  import.meta.env.PUBLIC_DIRECTUS_URL || 'https://admin.kingdom1516.example';
-const DIRECTUS_TOKEN = process.env.DIRECTUS_TOKEN ?? '';
+const DIRECTUS_URL_PLACEHOLDER = 'https://admin.kingdom1516.example';
+const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL || DIRECTUS_URL_PLACEHOLDER;
+// Trim so a stray trailing space/newline (a common secret-paste artifact) is not
+// treated as "configured" — that would send a malformed Bearer and fail the build
+// instead of falling back to the seed.
+const DIRECTUS_TOKEN = (process.env.DIRECTUS_TOKEN ?? '').trim();
 
 // Matches the obviously-fake default in site/.env.example — treated as "unset".
 const TOKEN_PLACEHOLDER = 'REPLACE_WITH_READ_ONLY_BUILD_TOKEN';
@@ -57,6 +60,11 @@ const ALLIANCE_FIELDS = ['name', 'slug', 'bear_trap_1', 'bear_trap_2', 'peak', '
   legitimate empty-collection zero-state. limit: -1 returns all rows.
 */
 export async function fetchAlliancesRaw(): Promise<DirectusAllianceRow[]> {
+  if (DIRECTUS_URL === DIRECTUS_URL_PLACEHOLDER) {
+    throw new Error(
+      'DIRECTUS_TOKEN is set but PUBLIC_DIRECTUS_URL is not — set the live Directus base URL (see site/.env.example) so the build reads from the real host, not the placeholder.'
+    );
+  }
   const client = createDirectus(DIRECTUS_URL).with(staticToken(DIRECTUS_TOKEN)).with(rest());
   const rows = await client.request(
     readItems('alliances', { fields: ALLIANCE_FIELDS, limit: -1, sort: ['name'] })
