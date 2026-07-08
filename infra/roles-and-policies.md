@@ -168,9 +168,9 @@ Accounts**.
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
 | Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
-| Alliances | `finder-build-read` (service) | no | **read `alliances`** only — the SSG build token (Story 4.3); no write, no other collection | collection **read** grant ✅ free — **delivered Story 4.3** (keeps Public locked; §3) |
+| Alliances / Transfer | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2** (keeps Public locked; §3) |
 | all | **Owner** = built-in **Administrator** role (`admin_access: true`) | — | **everything** (universal override) | admin bypass — **no per-collection rules** ✅ free |
-| public | built-in **Public** policy | — | **nothing** now; Epic 5.2 adds **create-only** on `candidates`, **no read** | locked baseline (AD-12) ✅ free (basic create-only; the AD-12/AR-14 field/validation/rate-limit **hardening** is 🔒 — §3/§0) |
+| public | built-in **Public** policy | — | **create-only** on `candidates`, **no read** — **wired Story 5.2** | AD-12 ✅ free (whole-collection create); the AD-12/AR-14 **hardening** = Directus IP rate limiter + form honeypot at the **edge** (a `preset`/`validation` on the grant stays 🔒/Option-3 — §3/§4/§0) |
 
 🔒 = relies on a **custom permission rule** → requires a Directus license on the Core tier
 (see §0). The **collection-level** grants (plain read/write on a whole collection) are free.
@@ -330,7 +330,16 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 ### `Public` (built-in, unauthenticated)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| — | — | — | — | **no access now** (verified via unauthenticated `GET /users`/`/roles`/`/policies` → 403 — 3 system endpoints, not an exhaustive public-surface audit). Confirmed **no `alliances` read** — the build reads via the `finder-build-read` token above, not Public. ⏳ Epic 5.2 adds **`candidates` create-only, no read** (AD-12) · basic create-only ✅ free, the field/validation/rate-limit **hardening** 🔒 |
+| `candidates` | **create** | `["*"]` | none (`permissions: {}`) | **wired Story 5.2** — the whole-collection create grant (the only free create shape, §0 line proof). The `/join` form posts here as the anonymous role. |
+| `candidates` | ~~read~~ | — | — | **NOT granted** — deny-by-default keeps it write-only; an unauthenticated `GET`/list of `candidates` → 403 (AD-12: create-only, no read). |
+| (everything else) | — | — | — | **no access** (verified via unauthenticated `GET /users`/`/roles`/`/policies` → 403). Confirmed **no `alliances` / `transfer_period` / `settings` read** — the build reads those via the `finder-build-read` token, not Public. |
+
+> **Hardening is at the edge, not in the grant (Option 3, §0/§4).** The create grant is `fields:["*"]`,
+> so a hostile client *could* send Curator-only fields (`status`, `suggested_alliance`); locking the
+> payload with a `preset`/field-subset/`validation` is 🔒 licensed. Instead: `status` rides its schema
+> **default `Applied`** (client omits it); `period` is **client-sent** (the build-time-baked active id,
+> README §11); abuse floor = the Directus **IP rate limiter** (`RATE_LIMITER_*`, docker-compose) **+ a
+> form honeypot**. The residual (a raw poster setting an unexpected field) is the accepted Option-3 limit.
 
 ### Owner (Administrator)
 No per-collection rows — the `admin_access` bypass **is** the override (§4). Adding Owner
@@ -359,7 +368,10 @@ Likewise **`transfer_period`** and the **`settings` singleton** (caps, active fl
 thresholds) receive **no non-Owner *write* grant** in any per-area policy — **deny-by-default is the
 Owner-only guard** (the Owner writes them via the admin bypass, per AD-9). A **read** grant for the
 counter denominators (**caps on `transfer_period`**) is free and belongs to `transfer-viewer` (⏳ wired
-5.4/5.7). The **`settings` threshold has a *separate* reader**:
+5.4/5.7). Separately, the **build token** (`finder-build-read`) gets a free **read** on `transfer_period`
+(**wired Story 5.2** — the `/join` build bakes the single active period id it stamps into
+`candidates.period`; §2 / README §11) — a *read* only, still no write. The **`settings` threshold has a
+*separate* reader**:
 `settings.special_invite_power_threshold` is consumed by the **5.3** `>130M` form-edge compare — its read
 **mechanism is a 5.3 decision** (a build-time static-token read like §9.5 alliances, *or* a
 `transfer-viewer` read grant), noted here so the read path is tracked, not silently dropped. Do **not**
@@ -416,6 +428,20 @@ caps, the active flag, or a threshold. (**Epic 5.1 created `transfer_period` + `
    (a `preset` forcing `period`, field validation, rate-limit) is a 🔒 custom rule that inherits
    the same Option-3 license limit (logged for Epic 5.2). This locked baseline is the secure
    default before Epic 5 opens the single create-only grant.
+   > **Per Owner decision (§0, Option 3): wired in Story 5.2 as the free whole-collection create grant.**
+   > Public gets `candidates` **create**, `fields:["*"]`, `permissions:{}`, **no read** — the only free
+   > shape (§0). The AD-12/AR-14 hardening that WOULD be a 🔒 custom rule is **not** wired on the grant;
+   > instead:
+   > - **`status`** rides the schema **default `Applied`** — the client omits it (free, no preset).
+   > - **`period`** is sent by the **client** — the active-period id baked into `/join` at build time via
+   >   the `finder-build-read` token's new `transfer_period` read (README §11 / §9.5). A `preset` forcing
+   >   it would 🔒. A hostile client could send a wrong/extra field; that residual is the accepted Option-3
+   >   limit (create-only-no-read + ~10-leader trust). The `period` FK (NO ACTION) rejects a nonexistent id.
+   > - **Abuse floor** = Directus's built-in **IP rate limiter** (`RATE_LIMITER_*`, docker-compose — the
+   >   server-side floor, effective even against direct API posts) **+ a form honeypot** (best-effort).
+   >   Captcha stays deferred until real abuse appears (AD-12). The Caddy-scoped `rate_limit` (AD-12's
+   >   letter) needs a non-stock plugin + custom image, so the native limiter is the KISS choice that keeps
+   >   the pinned official images (Sabo, 2026-07-08). Runbook: README §11.
 
 **Owner override (AD-9 / AR-11).** Owner = the built-in **Administrator** role
 (`admin_access: true`), which **bypasses all permission checks by design** — the no-code

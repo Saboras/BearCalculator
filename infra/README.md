@@ -498,7 +498,9 @@ bakes the rows into static HTML; a Directus edit fires a **Flow → `repository_
 
 1. **Settings → Access Policies → +**: create a policy `finder-build-read`. Add **one permission**:
    collection `alliances`, action **read**, **no filter, all fields** — a whole-collection read grant
-   (**free on Core**; only row/field-filtered rules are 🔒 licensed, §0). Do **not** grant it anything else.
+   (**free on Core**; only row/field-filtered rules are 🔒 licensed, §0). **Story 5.2 adds one more read
+   to this same policy** — `transfer_period` (whole-collection read, for the active period id the apply
+   form bakes; see §11). It gets no write and no other collection.
 2. **Settings → Users → +**: create a service user `finder-build` (no app/admin access), attach **only**
    the `finder-build-read` policy. Under its **Token** field, generate a **static access token** and copy it.
 3. Store the token as the **`DIRECTUS_TOKEN`** GitHub Actions **secret** (Settings → Secrets → Actions) and
@@ -718,6 +720,81 @@ in `deferred-work.md`). The collection **boundaries** stay server-enforced (a Vi
 write; Public is locked; Owner overrides). Flip the 🔒 rules on the moment Directus is licensed
 (Option 1) — no schema change, just the grant.
 
+## 11. Public transfer application form + create-only grant (Story 5.2)
+
+The public **on-site apply form** at `/join` (`site/src/pages/join.astro`) **replaces** the MVP-1
+Google-Form hand-off (AR-3's one permitted additive public-flow change). It posts a new `candidates`
+row **directly** to the Directus API as the **create-only unauthenticated role** (AD-12) — no custom
+backend, no runtime read. `status` defaults to `Applied`; the submitter sees a confirmation naming the
+next window + the in-game Player-ID contact.
+
+### 11.1 The Public create-only grant (mint once; lives in `data.db`, backed up §3)
+
+**Settings → Access Policies → `Public` (built-in) → Permissions**, on `candidates`:
+
+| Action | Fields | Filter (`permissions`) | Note |
+|---|---|---|---|
+| **create** | `["*"]` | none (`permissions: {}`) | ✅ free — the only free create shape (§0) |
+| **read** | — | — | **NOT granted** — deny-by-default → write-only (AD-12) |
+
+- **Do NOT** author a `preset` forcing `period`/`status`, a field subset, or a validation rule — each is
+  a 🔒 custom permission rule → `403 RESOURCE_RESTRICTED` on Core (§0). Payload discipline lives at the
+  form edge instead (below). The grant lives only in `data.db` (backup §3), **not** in
+  `directus-schema.yaml`. Source of truth: `roles-and-policies.md` §3 (Public) / §4 mechanism 3.
+
+### 11.2 What the form bakes at build time (why it needs no runtime read)
+
+The public role has **no read**, and no public page fetches Directus at runtime (NFR-3). Two values a
+`candidates` row needs are therefore **baked into `/join` at build time** (SSG), via the same
+`finder-build-read` token the Finder uses (§9.5):
+
+- **the alliance `slug → id` map** — `desired_alliance` is an M2O → `alliances.id`; the form resolves the
+  Finder's `?alliance=<slug>` to an id at submit. `site/src/lib/transfer-build.ts` reads
+  `alliances{id,slug,name}` in its **own** build read, so the Finder's idless reader
+  (`directus-build.ts`) stays byte-for-byte untouched.
+- **the active `transfer_period` id** — stamped into `candidates.period` (AD-17). This requires the
+  **new read grant** on the `finder-build-read` policy: **`transfer_period`, action read, all fields, no
+  filter** (whole-collection, ✅ free — §0). Add it alongside the existing `alliances` read (§9.5 A.1).
+
+> **Rebuild-on-period-flip precondition.** The active period id is only as fresh as the last **site
+> build**. Candidates do **not** trigger a rebuild (client-fetched, never SSG — §10), and there is **no
+> Flow on `transfer_period`**. So after the Owner flips the active period (§10.5), the **site must be
+> rebuilt** before `/join` stamps the new period. Cross-ref §10.5 (exactly-one-active).
+
+> **Build toggle (mirrors §9.5).** No token → `/join` builds from the seed alliance list with no ids and
+> no active period (CI/local stay green); the form renders but cannot POST — expected pre-launch. A
+> configured-but-failing read, or ≠1 active period, **fails the build loud** (never ships a broken form).
+
+### 11.3 Required-field backstop (`meta.required` + re-snapshot)
+
+The `candidates` NOT-NULL fields carried `meta.required: false` (5.1), so a create omitting one returned
+a raw DB NOT-NULL error, not a clean 400. Story 5.2 sets **`meta.required: true`** on the NOT-NULL set
+(`character_name`, `player_id`, `kingdom_number`, `timezone`, `who_invited`, `why_leaving`,
+`team_player_kvk`, `others_transferring`, `day4_fcfs`, `needs_special_invite`, `status`, `period`) in the
+Studio, then **re-snapshots** `directus-schema.yaml` (§6). This is a schema **field** property (free —
+NOT a permission rule); it is the clean-400 server backstop to the form's own required-field UX.
+
+### 11.4 Abuse floor (AD-12 / NFR-11) — rate limiter + honeypot, no captcha
+
+- **Directus IP rate limiter** — `RATE_LIMITER_ENABLED/STORE/POINTS/DURATION` in `docker-compose.yml`
+  (50 req/s per IP, in-memory). The server-side floor, effective even against direct API posts. Global
+  per-IP — generous for ~10 leaders + the Studio's many calls, throttles a single-IP flood.
+- **Honeypot** — a hidden decoy field on the form; a filled decoy is silently dropped client-side
+  (best-effort; a direct API poster bypasses it — the rate limiter is the real floor).
+- **No captcha** — deferred until real abuse appears (AD-12). The **Caddy-scoped `rate_limit`** (AD-12's
+  letter, `POST /items/candidates`) is the documented upgrade if the global limiter proves too blunt — it
+  needs the `caddy-ratelimit` plugin + a custom `xcaddy` image (replacing the pinned official image), so
+  the native limiter is the KISS choice (Sabo, 2026-07-08 / Q1).
+
+### 11.5 CORS + transport
+
+The browser POSTs cross-origin from the apex (`SITE_DOMAIN`) to the admin subdomain (`DIRECTUS_DOMAIN`).
+`docker-compose.yml` already sets `CORS_ORIGIN=https://${SITE_DOMAIN}` (§Auth model) — the anonymous POST
+is allowed; **no compose change for the origin**. The POST carries **no cookie/token** (create-only
+role), so the session-cookie / `CORS_CREDENTIALS` settings are irrelevant to it. Submission is JS-driven
+`fetch` (`output: 'static'` — no server endpoint); a no-JS visitor sees the form but a "needs JavaScript"
+note (progressive enhancement, like `/leader`).
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
@@ -911,3 +988,56 @@ The **production** collections are created on the host per §10 (or `schema appl
 and captured by the daily `data.db` backup — the local DB used for this proof is throwaway. **ZERO `site/`
 change**; `infra/directus-schema.yaml` **is** updated (the data model, unlike permissions, lives in the
 snapshot — §6). No permission grants were wired (deferred to 5.2/5.4/5.5/5.6/5.8 — §10.6).
+
+### Public transfer form + create-only grant (Story 5.2) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API + build proof on the Windows/Docker dev box (disposable `directus:12.0.2` container,
+`LICENSE_KEY=""`, fresh overlay-FS DB, **via PowerShell**; production rate-limiter values
+`RATE_LIMITER_POINTS=50/DURATION=1`; torn down after). The committed `directus-schema.yaml` was
+`schema apply`ed (all 5 collections — **"Snapshot applied successfully"**; note: a CLI apply needs a
+**container restart** to reload the server schema cache — §6), then seeded (2 alliances; one active
+`transfer_period` id 1 = `2026-07-19`; the `settings` thresholds), then the grants + `meta.required` wired
+via the API.
+
+- **AC1 — anonymous create-only POST:** an **unauthenticated** `POST /items/candidates` with the full form
+  body → **HTTP 204** (create-only-no-read returns an empty body — the client treats any 2xx as success, no
+  custom backend). Read back (admin): **`status = "Applied"`** (schema default — the client omits `status`),
+  **`period = 1`** (the build-baked active period, stamped once — AD-17), **`desired_alliance = 1`**
+  (resolved slug→id), and **`suggested_alliance` / `group` / `planned_path` all null** (Curator-only,
+  correctly never sent — AD-8/AD-9). ✅
+- **AC1 — no read (write-only):** an **unauthenticated `GET /items/candidates` → 403.** The Public grant is
+  `create` only; deny-by-default keeps the collection unreadable to the public (AD-12). ✅
+- **AC2 / AC3 — fields + Player ID:** the built `/join` renders the **13 fields** (10 required / 3 optional)
+  + the honeypot; **`player_id` is required and stored** as the in-game contact key (round-tripped as
+  `900123456` above). Required-field UX is client-side; the **`meta.required` backstop** returns a clean
+  server **400 `FAILED_VALIDATION` — "Value is required"** when a required field is omitted (not a raw DB
+  NOT-NULL error) — resolving the 5.1-review deferred item. ✅
+- **AC4 — confirmation:** the built `/join/index.html` contains the verbatim climax copy **"You're set.
+  Next window: 19 July. A leader will reach you in-game via your Player ID."** ✅
+- **AC5 — abuse floor:** the **Directus IP rate limiter** honored the `RATE_LIMITER_*` env — a burst of 9
+  requests under a demo `POINTS=5/DURATION=60` limit returned `200 200 200 200 200` then **`429`** for the
+  rest (production uses 50/1). The **honeypot** decoy ships hidden in the form; a filled decoy is silently
+  dropped client-side before any POST. No captcha (deferred, AD-12). ✅
+- **AC6 — inline validation:** the form validates all 10 required fields client-side with per-field,
+  plain-language `role="alert"` messages (never the raw Directus envelope); the `meta.required` 400 is the
+  server backstop (above). ✅
+- **⛔ License gate re-proven (why the hardening is at the edge, not in the grant):** adding a **field
+  subset** OR a **validation rule** to the Public `candidates` grant each returned **`403
+  RESOURCE_RESTRICTED`** (`custom_permission_rules_enabled is a restricted resource`); the free
+  whole-collection `create` (`fields:["*"]`, `permissions:{}`) was accepted (**200**). So a `preset` forcing
+  `period`/`status` or a field-lock is 🔒 licensed — the client-sends-`period` + `status`-default +
+  honeypot/rate-limiter edge approach is the only free path (Option 3, §11 / roles-and-policies §4). ✅
+- **Build-time reads (AC1 prerequisites):** the `finder-build-read` token reads **`alliances` {id,slug,name}
+  → 200** (2 rows) and **`transfer_period` active → 200** (id 1); an **anonymous** `alliances` read → **403**
+  (Public stays locked). A Node-22 `astro build` against the live Directus baked
+  `activePeriodId: 1` + `slugToId: {"516":2,"frostborne":1}` into `/join`, emitted CSS (`rel="stylesheet"`
+  present — the Node-22 no-CSS hazard check), and **leaked no token** into `dist/`. ✅
+- **Snapshot fidelity:** `directus schema snapshot` after the `meta.required` edit produced a **clean 12-line
+  diff** vs the committed `directus-schema.yaml` (the 12 NOT-NULL `candidates` fields flipped
+  `required: false → true`), no drift; committed. ✅
+
+The **production** Public create-only grant + the `finder-build-read` `transfer_period` read live only in
+`data.db` (Studio-authored, daily backup — §3), not the schema snapshot; the `RATE_LIMITER_*` env is in
+`docker-compose.yml`; `meta.required` is captured in `directus-schema.yaml`. The `/join` form + the two new
+build seams live in `site/` (the first Epic-5 `site/` change — AR-3's permitted apply-step swap). Local DB
+throwaway.

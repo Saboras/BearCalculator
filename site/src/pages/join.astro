@@ -1,40 +1,54 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
-import { alliances } from '../data/alliances';
+import { loadApplyFormData } from '../lib/transfer-build';
 
 /*
-  Apply-step config — Owner-provided, like the alliances data and the domain.
-  The Google Form is a public link (no secret), but it lives here in named
-  constants rather than scattered in markup. Both ship with obviously-fake
-  REPLACE_WITH_… placeholders so an un-filled deploy fails loudly (dev defaults
-  must be obviously fake). Sabo must replace them before a live launch:
-    (a) JOIN_FORM_URL          — the form's published `viewform` URL
-    (b) JOIN_FORM_ALLIANCE_ENTRY — the `entry.<id>` of the desired-alliance
-        field, from the form's "Get pre-filled link" feature
-  Everything else on this page works with the placeholders in place — the page
-  builds, renders, and shows the correct copy; only the outbound link is a stub.
+  /join — the public on-site transfer application (Story 5.2). It REPLACES the
+  MVP-1 Google-Form hand-off: the form posts a new `candidates` row directly to
+  the Directus API as the create-only unauthenticated role (AD-12), no custom
+  backend. This is AR-3's one permitted additive public-flow change (swap the
+  apply step); the Finder's outbound /join?alliance=<slug> contract is unchanged.
+
+  Two things a candidate row needs — the desired-alliance id (M2O → alliances.id)
+  and the active period id (M2O → transfer_period.id, NOT NULL) — cannot be read
+  at runtime (the public role has no read; no public page fetches Directus, NFR-3).
+  Both are baked here at BUILD time via loadApplyFormData() and embedded as trusted
+  JSON, resolved client-side at submit — the same "embed trusted data at build,
+  resolve client-side" pattern the old page used for the slug→name map.
+
+  Seed/pre-launch (no token): the form renders from the seed alliance list with no
+  ids and no active period, so it cannot POST — expected (there are no public users
+  before the domain + Directus go live).
 */
-const JOIN_FORM_URL = 'https://docs.google.com/forms/d/e/REPLACE_WITH_REAL_GOOGLE_FORM_ID/viewform';
-const JOIN_FORM_ALLIANCE_ENTRY = 'entry.REPLACE_WITH_DESIRED_ALLIANCE_FIELD_ID';
+const { alliances, activePeriodId } = await loadApplyFormData();
 
 /*
-  Trusted slug → name map, built at build time from the canonical alliances loader
-  (Directus-backed in MVP-2, Story 4.3), so a newly-created alliance the Finder links
-  to resolves its name here too. The loader validates the data (same build run), so it
-  is NOT re-validated here (DRY/KISS). The client resolves the shown alliance name from
-  THIS map keyed by the ?alliance slug — never from the untrusted ?name URL param
-  (XSS / spoofing boundary, see the client script).
+  Curated IANA timezone list (mirrors TimezoneRow.astro — a native <select>, no tz
+  library, KISS). The client pre-selects the visitor's detected zone; a no-JS
+  visitor sees UTC (the neutral default) but cannot submit anyway (JS-driven POST).
 */
-const allianceNames = Object.fromEntries(alliances.map((a) => [a.slug, a.name]));
+const TZ_OPTIONS = [
+  'Pacific/Honolulu', 'America/Anchorage', 'America/Los_Angeles', 'America/Denver',
+  'America/Chicago', 'America/New_York', 'America/Halifax', 'America/Sao_Paulo',
+  'Atlantic/Azores', 'UTC', 'Europe/London', 'Europe/Berlin', 'Europe/Athens',
+  'Europe/Moscow', 'Asia/Dubai', 'Asia/Karachi', 'Asia/Kolkata', 'Asia/Kathmandu',
+  'Asia/Dhaka', 'Asia/Yangon', 'Asia/Bangkok', 'Asia/Shanghai', 'Asia/Tokyo',
+  'Australia/Adelaide', 'Australia/Sydney', 'Pacific/Auckland',
+];
 
 /*
-  Serialize trusted build-time data for an inline <script> tag. JSON.stringify does NOT
-  escape `<`, so a value containing `</script>` would close the tag early and let markup
-  after it run (an HTML breakout). `name` is now CMS-editable (Directus, Story 4.3), so
-  escape every `<` to a JSON unicode escape — round-trip-safe (JSON.parse reads it back
-  identically) and it neutralizes the </script> breakout at the sink.
+  Trusted build-time config for the client: the active period id (stamped into
+  candidates.period, AD-17) and the slug → alliance-id map (resolves the desired
+  <select> to an M2O id at submit). Only alliances that actually have an id (i.e.
+  sourced from Directus, not the idless seed) go into the map.
 */
+const slugToId: Record<string, number> = Object.fromEntries(
+  alliances.filter((a) => a.id !== null).map((a) => [a.slug, a.id as number])
+);
+
+// Escape `<` so a CMS-editable value containing </script> cannot break out of the
+// inline JSON <script> sink (the same guard the old page used for editable names).
 const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/</g, '\\u003c');
 ---
 
@@ -43,60 +57,157 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     <header class="join-head">
       <div class="ribbon"><span class="ribbon-band">Join 1516</span></div>
       <h1>Apply to transfer</h1>
-      <p class="lead">One last step to join Kingdom 1516.</p>
+      <p class="lead">Tell the leaders a little about you — they'll reach you in-game.</p>
     </header>
 
     <section class="apply-card">
-      {/*
-        Pre-filled block — hidden on the server default (no-JS-safe generic apply
-        step). The client reveals it only when ?alliance resolves to a known slug,
-        setting #join-alliance via textContent from the trusted map.
-      */}
-      <div class="chosen" id="join-chosen" hidden>
-        <p class="chosen-line">Your desired alliance: <b id="join-alliance"></b></p>
-        <p class="reassure">
-          <span class="reassure-ic" aria-hidden="true"><Icon name="check" /></span>Pre-fills this alliance — you can change it.
-        </p>
-      </div>
-
       <p class="reassure">
-        <span class="reassure-ic" aria-hidden="true"><Icon name="check" /></span>These are recommendations.
+        <span class="reassure-ic" aria-hidden="true"><Icon name="check" /></span>These are recommendations — you choose your own alliance.
       </p>
-
-      <div class="apply-foot">
-        {/*
-          Server default href = the bare JOIN_FORM_URL (generic, no pre-fill) so a
-          no-JS visitor still reaches the form and never dead-ends; the client
-          upgrades it to the pre-filled URL when an alliance is known.
-        */}
-        <a id="join-cta" class="btn-gold" href={JOIN_FORM_URL}>Apply to transfer</a>
-        <a class="change-link" id="join-change" href="/finder" hidden>Not this one? Change your alliance →</a>
-      </div>
 
       {/*
-        Generic / no-alliance forward path (UJ-1): reaching /join from the Nav or a
-        direct visit still leads back to step 1 of the journey. Visible by default;
-        the client hides it once an alliance is pre-filled.
+        The form is visible + fully rendered without JS (semantic labels, real
+        controls — the i18n + a11y floor), but the real submit is a JS-driven fetch
+        to Directus (a static site has no server endpoint): see .js-note.
+        method="post" novalidate so an accidental no-JS submit never leaks fields to
+        the URL. The client hides this and reveals #apply-confirm on success.
       */}
-      <p class="find-first" id="join-find-first">
-        <a href="/finder">Find the alliance that fits your timezone →</a>
-      </p>
+      <form class="apply-form" id="apply-form" method="post" novalidate>
+        <div class="field">
+          <label for="f-character_name">Character name</label>
+          <input type="text" id="f-character_name" name="character_name" autocomplete="off" required />
+          <p class="field-error" id="err-character_name" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="f-player_id">Player ID</label>
+          <input type="text" id="f-player_id" name="player_id" class="tabular" inputmode="numeric" autocomplete="off" required />
+          <p class="field-hint">How leaders reach you in-game — required.</p>
+          <p class="field-error" id="err-player_id" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="f-kingdom_number">Current kingdom number</label>
+          <input type="number" id="f-kingdom_number" name="kingdom_number" min="1" step="1" inputmode="numeric" autocomplete="off" required />
+          <p class="field-error" id="err-kingdom_number" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="f-timezone">Your timezone</label>
+          <select id="f-timezone" name="timezone" required>
+            {TZ_OPTIONS.map((tz) => <option value={tz} selected={tz === 'UTC'}>{tz}</option>)}
+          </select>
+          <p class="field-error" id="err-timezone" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="f-desired_alliance">Desired 1516 alliance <span class="opt">(optional)</span></label>
+          <select id="f-desired_alliance" name="desired_alliance">
+            <option value="">No preference / not sure yet</option>
+            {alliances.map((a) => <option value={a.slug}>{a.name}</option>)}
+          </select>
+          <p class="field-hint">Pre-fills this alliance — you can change it.</p>
+        </div>
+
+        <div class="field">
+          <label for="f-who_invited">Who invited you / do you know someone in 1516?</label>
+          <textarea id="f-who_invited" name="who_invited" rows="2" required></textarea>
+          <p class="field-error" id="err-who_invited" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="f-why_leaving">Why are you leaving your kingdom?</label>
+          <textarea id="f-why_leaving" name="why_leaving" rows="2" required></textarea>
+          <p class="field-error" id="err-why_leaving" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="f-what_you_seek">What are you looking for? <span class="opt">(optional)</span></label>
+          <textarea id="f-what_you_seek" name="what_you_seek" rows="2"></textarea>
+        </div>
+
+        <fieldset class="field yn">
+          <legend>Team player? Willing to save for KvK and change alliance on battle day if strategy requires?</legend>
+          <div class="yn-opts">
+            <label class="yn-opt"><input type="radio" name="team_player_kvk" value="yes" /><span>Yes</span></label>
+            <label class="yn-opt"><input type="radio" name="team_player_kvk" value="no" /><span>No</span></label>
+          </div>
+          <p class="field-error" id="err-team_player_kvk" role="alert" hidden></p>
+        </fieldset>
+
+        <div class="field">
+          <label for="f-players_to_avoid">Any players you'd like to avoid? <span class="opt">(optional)</span></label>
+          <input type="text" id="f-players_to_avoid" name="players_to_avoid" autocomplete="off" />
+        </div>
+
+        <div class="field">
+          <label for="f-others_transferring">Others transferring with you — names (they must fill the form too)</label>
+          <textarea id="f-others_transferring" name="others_transferring" rows="2" required></textarea>
+          <p class="field-error" id="err-others_transferring" role="alert" hidden></p>
+        </div>
+
+        <fieldset class="field yn">
+          <legend>Available for first-come-first-served spots at the Day-4 reset?</legend>
+          <div class="yn-opts">
+            <label class="yn-opt"><input type="radio" name="day4_fcfs" value="yes" /><span>Yes</span></label>
+            <label class="yn-opt"><input type="radio" name="day4_fcfs" value="no" /><span>No</span></label>
+          </div>
+          <p class="field-error" id="err-day4_fcfs" role="alert" hidden></p>
+        </fieldset>
+
+        <fieldset class="field yn">
+          <legend>Need a special invitation? (too high-powered to kill troops under 130M)</legend>
+          <div class="yn-opts">
+            <label class="yn-opt"><input type="radio" name="needs_special_invite" value="yes" /><span>Yes</span></label>
+            <label class="yn-opt"><input type="radio" name="needs_special_invite" value="no" /><span>No</span></label>
+          </div>
+          <p class="field-error" id="err-needs_special_invite" role="alert" hidden></p>
+        </fieldset>
+
+        {/*
+          Honeypot — a real bot fills every field, a human never sees this one. If it
+          arrives non-empty the client silently drops the submit (best-effort; a
+          direct API poster bypasses it — the server-side rate limit is the real
+          floor, AD-12). Hidden from sight, tab order, and assistive tech.
+        */}
+        <div class="hp" aria-hidden="true">
+          <label for="f-website">Website</label>
+          <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <p class="form-error" id="apply-error" role="alert" hidden></p>
+
+        <button type="submit" class="btn-gold" id="apply-submit">
+          <Icon name="check" />Apply to transfer
+        </button>
+
+        <p class="js-note" id="apply-js-note">Submitting your application needs JavaScript enabled.</p>
+      </form>
+
+      {/*
+        Confirmation climax — hidden until a successful create. Copy is fixed per the
+        UX spec (names the next window + the in-game contact via Player ID). Never
+        the banned bare "submitted successfully".
+      */}
+      <div class="confirm" id="apply-confirm" hidden>
+        <p class="confirm-line">
+          <span class="confirm-ic" aria-hidden="true"><Icon name="check" /></span>
+          You're set. Next window: 19 July. A leader will reach you in-game via your Player ID.
+        </p>
+        <p class="confirm-sub">You applied as <b>Applied</b> — the leaders take it from here.</p>
+      </div>
     </section>
 
-    {/* Trusted build-time data the bundled module below reads (no runtime fetch). */}
-    <script id="alliance-names" type="application/json" set:html={jsonForScript(allianceNames)} />
-    <script id="join-form-config" type="application/json" set:html={jsonForScript({ url: JOIN_FORM_URL, entry: JOIN_FORM_ALLIANCE_ENTRY })} />
+    {/* Trusted build-time config the bundled module reads (no runtime fetch). */}
+    <script id="apply-config" type="application/json" set:html={jsonForScript({ activePeriodId, slugToId })} />
   </main>
 </Layout>
 
 <style>
   /*
-    Join-only recipes. This is consumer #3 of the gold-button recipe (Home #1,
-    Finder #2) — Rule of Three is met, but the three copies still diverge per
-    surface, so KISS keeps them copied rather than extracted (Open Q #5, default).
-    Tokens are role-named; the only literal hex are the DESIGN gold gradient stops
-    the others use verbatim, and every light-baked gradient gets a dark variant
-    (the Story 1.3/1.4 wash-out guard).
+    Join-only recipes. The gold-button + parchment-card idioms mirror Finder / Leader
+    (each surface diverges, so KISS keeps them copied per the established default).
+    Every light-baked gradient gets a dark "Royal Court" variant (the 1.3/1.4 wash-out guard).
   */
   .join {
     max-width: 640px;
@@ -104,7 +215,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     padding: var(--space-7) var(--space-5) var(--space-9);
   }
 
-  /* ===== Heading + ribbon (recipe mirrors Home / Finder) ===== */
+  /* ===== Heading + ribbon (recipe mirrors Home / Finder / Leader) ===== */
   .join-head {
     position: relative;
     text-align: center;
@@ -125,7 +236,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     background: var(--color-primary);
     transform: translateY(-50%);
     box-shadow: 0 2px 4px rgba(44, 38, 34, .2);
-    display: none; /* desktop-only ornament; shown at 768px (see breakpoint) */
+    display: none; /* desktop-only ornament; shown at 768px */
   }
   .ribbon::before {
     left: -66px;
@@ -159,7 +270,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     margin: 0;
   }
 
-  /* ===== Apply card — gold-framed parchment (mirrors the Finder cards) ===== */
+  /* ===== Apply card — gold-framed parchment ===== */
   .apply-card {
     margin-top: var(--space-6);
     background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
@@ -172,32 +283,12 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       inset 0 0 22px rgba(224, 138, 43, .06);
   }
 
-  .chosen {
-    margin-bottom: var(--space-4);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--color-border);
-  }
-  .chosen[hidden] {
-    display: none;
-  }
-  .chosen-line {
-    font-size: 15px;
-    color: var(--color-ink);
-    margin: 0 0 var(--space-2);
-  }
-  .chosen-line b {
-    font-family: var(--font-display);
-    font-size: 19px;
-    font-weight: 400;
-    color: var(--color-primary-hover);
-  }
-
   /* ===== Reassurance (reuses the Finder's .reassure idiom) ===== */
   .reassure {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    margin: 0 0 var(--space-3);
+    margin: 0 0 var(--space-5);
     font-size: 13px;
     color: var(--color-muted);
   }
@@ -206,19 +297,130 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     display: inline-flex;
   }
 
-  /* ===== Apply button + change link ===== */
-  .apply-foot {
+  /* ===== Form fields ===== */
+  .field {
+    margin: 0 0 var(--space-5);
+    border: 0;
+    padding: 0;
+  }
+  .field label,
+  .yn legend {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin-bottom: var(--space-2);
+    padding: 0;
+  }
+  .field .opt {
+    color: var(--color-muted);
+    font-weight: 400;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--space-3) var(--space-4);
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--color-ink);
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 44px;
+  }
+  .field input.tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  /* Gold focus ring (DESIGN input spec: border → primary + soft gold glow). */
+  .field input:focus-visible,
+  .field textarea:focus-visible,
+  .field select:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(224, 138, 43, .18);
+  }
+  .field-hint {
+    margin: var(--space-2) 0 0;
+    font-size: 12.5px;
+    color: var(--color-muted);
+  }
+  .field-error {
+    margin: var(--space-2) 0 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-danger);
+  }
+  .field-error[hidden] {
+    display: none;
+  }
+
+  /* ===== Yes/No segmented control ===== */
+  .yn-opts {
+    display: flex;
+    gap: var(--space-3);
+  }
+  .yn-opt {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-    margin-top: var(--space-5);
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    font-size: 14.5px;
+    color: var(--color-ink);
+    background: #FFFFFF;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
   }
+  .yn-opt input {
+    accent-color: var(--color-accent);
+    margin: 0;
+  }
+  .yn-opt:has(input:checked) {
+    border-color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  }
+  .yn-opt:has(input:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* ===== Honeypot — visually + assistively hidden, still in the DOM ===== */
+  .hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  /* ===== Inline, plain-language form-level error (never the raw Directus envelope) ===== */
+  .form-error {
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    font-size: 13.5px;
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-sm);
+  }
+  .form-error[hidden] {
+    display: none;
+  }
+
+  /* ===== Apply button (local recipe + :disabled, mirrors Leader) ===== */
   .btn-gold {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
+    width: 100%;
     background: linear-gradient(#EDA44E, #E08A2B);
     color: var(--color-primary-foreground);
     font-family: var(--font-body);
@@ -227,6 +429,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     padding: var(--space-4) var(--space-6);
     border: 1px solid var(--color-primary-hover);
     border-radius: var(--radius-button);
+    cursor: pointer;
     text-decoration: none;
     box-shadow:
       0 6px 14px rgba(224, 138, 43, .35),
@@ -236,33 +439,52 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   }
   .btn-gold:hover {
     background: linear-gradient(#E08A2B, #C9781F);
-    text-decoration: none;
   }
   .btn-gold:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 3px;
   }
-  .change-link {
+  .btn-gold:disabled {
+    opacity: .6;
+    cursor: progress;
+  }
+
+  .js-note {
+    margin: var(--space-3) 0 0;
+    font-size: 12.5px;
+    color: var(--color-muted);
+  }
+  .js-note[hidden] {
+    display: none;
+  }
+
+  /* ===== Confirmation climax ===== */
+  .confirm[hidden] {
+    display: none;
+  }
+  .confirm-line {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: 16px;
+    color: var(--color-ink);
+    margin: 0 0 var(--space-2);
+  }
+  .confirm-ic {
+    color: var(--color-success);
+    display: inline-flex;
+    margin-top: 2px;
+  }
+  .confirm-sub {
     font-size: 13.5px;
-    font-weight: 600;
+    color: var(--color-muted);
+    margin: 0;
   }
-  .change-link[hidden] {
-    display: none;
-  }
-
-  /* ===== Generic forward path back to the Finder ===== */
-  .find-first {
-    margin: var(--space-5) 0 0;
-    font-size: 14px;
-  }
-  .find-first[hidden] {
-    display: none;
-  }
-  .find-first a {
-    font-weight: 600;
+  .confirm-sub b {
+    color: var(--color-ink);
   }
 
-  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
+  /* ===== Desktop enhancement (single 768px breakpoint) ===== */
   @media (min-width: 768px) {
     .ribbon::before,
     .ribbon::after {
@@ -270,19 +492,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     }
   }
 
-  /* ===== Mobile: full-width tap target ===== */
-  @media (max-width: 767.98px) {
-    .btn-gold {
-      width: 100%;
-    }
-    .change-link {
-      width: 100%;
-      text-align: center;
-    }
-  }
-
-  /* ===== Dark "Royal Court" — every light-baked gradient/emboss needs a dark
-     variant (the Story 1.3/1.4 wash-out guard). ===== */
+  /* ===== Dark "Royal Court" — every light-baked gradient needs a dark variant ===== */
   :global(:root[data-theme="dark"]) .ribbon-band {
     background: linear-gradient(#F2A93B, #E0962A);
     text-shadow: none;
@@ -293,6 +503,14 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       0 8px 20px rgba(0, 0, 0, .35),
       inset 0 0 0 1px rgba(255, 255, 255, .04),
       inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+  /* Inputs use a white fill in light mode (DESIGN); in dark, use the surface token
+     so fields don't glare white on the dark card. */
+  :global(:root[data-theme="dark"]) .field input,
+  :global(:root[data-theme="dark"]) .field textarea,
+  :global(:root[data-theme="dark"]) .field select,
+  :global(:root[data-theme="dark"]) .yn-opt {
+    background: var(--color-surface);
   }
   :global(:root[data-theme="dark"]) .btn-gold {
     background: linear-gradient(#F2A93B, #E0962A);
@@ -309,41 +527,205 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
 
 <script>
   /*
-    /join client logic — resolve the desired alliance from the URL and upgrade the
-    Apply CTA to a pre-filled Google-Form link. A bundled module (not is:inline):
-    no render-timing dependency, and the trusted data it needs is embedded in JSON
-    script tags (the same "embed trusted data at build, resolve client-side"
-    pattern the Finder uses), so no define:vars / no runtime fetch.
+    /join client logic — a bundled module (imports the create-only Directus client).
+    It: (1) auto-detects the timezone, (2) pre-fills the desired alliance from the
+    Finder's ?alliance=<slug>, (3) validates required fields inline, (4) POSTs a new
+    candidate as the unauthenticated create-only role, (5) shows the confirmation.
 
-    Security: the URL query is attacker-controllable. The shown alliance name comes
-    ONLY from the trusted build-time slug → name map keyed by ?alliance — the raw
-    ?name param is never rendered. An unknown slug → the generic apply step.
+    Security: the ?alliance param is attacker-controllable, but it is only ever
+    matched against the trusted baked <option> slugs to pick a select value — no
+    URL text is ever rendered. The desired alliance is resolved slug→id from the
+    trusted baked map, never from user input.
   */
-  function readJson(id: string): Record<string, string> {
-    const el = document.getElementById(id);
-    if (!el || !el.textContent) return {};
-    try { return JSON.parse(el.textContent); } catch { return {}; }
+  import { createCandidate, type CandidatePayload } from '../lib/directus-public';
+
+  interface ApplyConfig {
+    activePeriodId: number | null;
+    slugToId: Record<string, number>;
   }
 
-  const names = readJson('alliance-names');
-  const slug = new URLSearchParams(location.search).get('alliance');
-  const display = slug && Object.prototype.hasOwnProperty.call(names, slug) ? names[slug] : null;
-
-  if (display) {
-    const allianceEl = document.getElementById('join-alliance');
-    if (allianceEl) allianceEl.textContent = display; // textContent, never innerHTML
-
-    document.getElementById('join-chosen')?.removeAttribute('hidden');
-    document.getElementById('join-change')?.removeAttribute('hidden');
-    document.getElementById('join-find-first')?.setAttribute('hidden', '');
-
-    const cfg = readJson('join-form-config');
-    const cta = document.getElementById('join-cta');
-    if (cta && cfg.url && cfg.entry) {
-      cta.setAttribute(
-        'href',
-        cfg.url + '?usp=pp_url&' + cfg.entry + '=' + encodeURIComponent(display),
-      );
+  function readConfig(): ApplyConfig {
+    const el = document.getElementById('apply-config');
+    if (!el || !el.textContent) return { activePeriodId: null, slugToId: {} };
+    try {
+      return JSON.parse(el.textContent) as ApplyConfig;
+    } catch {
+      return { activePeriodId: null, slugToId: {} };
     }
   }
+
+  const config = readConfig();
+  const form = document.getElementById('apply-form') as HTMLFormElement | null;
+  const submitBtn = document.getElementById('apply-submit') as HTMLButtonElement | null;
+  const formError = document.getElementById('apply-error');
+  const jsNote = document.getElementById('apply-js-note');
+  const confirmPanel = document.getElementById('apply-confirm');
+
+  // JS is on → the real submit works, so the "needs JavaScript" note is no longer true.
+  jsNote?.setAttribute('hidden', '');
+
+  // --- (1) Auto-detect timezone: select the visitor's zone, prepending it if the
+  //     curated list doesn't include it (so the stored value is always accurate).
+  const tzSelect = document.getElementById('f-timezone') as HTMLSelectElement | null;
+  try {
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tzSelect && detected) {
+      const known = Array.from(tzSelect.options).some((o) => o.value === detected);
+      if (!known) {
+        const opt = document.createElement('option');
+        opt.value = detected;
+        opt.textContent = detected;
+        tzSelect.insertBefore(opt, tzSelect.firstChild);
+      }
+      tzSelect.value = detected;
+    }
+  } catch {
+    /* Intl unavailable — keep the UTC default */
+  }
+
+  // --- (2) Pre-fill desired alliance from ?alliance=<slug> (only if it's a known option).
+  const desiredSelect = document.getElementById('f-desired_alliance') as HTMLSelectElement | null;
+  const slugParam = new URLSearchParams(location.search).get('alliance');
+  if (desiredSelect && slugParam && Array.from(desiredSelect.options).some((o) => o.value === slugParam)) {
+    desiredSelect.value = slugParam; // matched against trusted baked options, never rendered from the URL
+  }
+
+  // --- Inline field-level errors (AC6) ---
+  function setFieldError(name: string, message: string) {
+    const el = document.getElementById(`err-${name}`);
+    if (!el) return;
+    el.textContent = message;
+    el.removeAttribute('hidden');
+  }
+  function clearFieldError(name: string) {
+    const el = document.getElementById(`err-${name}`);
+    if (!el) return;
+    el.textContent = '';
+    el.setAttribute('hidden', '');
+  }
+  function showFormError(message: string) {
+    if (!formError) return;
+    formError.textContent = message;
+    formError.removeAttribute('hidden');
+  }
+  function clearFormError() {
+    if (!formError) return;
+    formError.textContent = '';
+    formError.setAttribute('hidden', '');
+  }
+
+  const REQUIRED_TEXT = [
+    'character_name', 'player_id', 'kingdom_number', 'timezone',
+    'who_invited', 'why_leaving', 'others_transferring',
+  ];
+  const REQUIRED_YESNO = ['team_player_kvk', 'day4_fcfs', 'needs_special_invite'];
+
+  // Returns the first invalid field name, or null when everything is valid.
+  function validate(fd: FormData): string | null {
+    let firstInvalid: string | null = null;
+    const flag = (name: string, bad: boolean, msg: string) => {
+      if (bad) {
+        setFieldError(name, msg);
+        if (!firstInvalid) firstInvalid = name;
+      } else {
+        clearFieldError(name);
+      }
+    };
+    for (const name of REQUIRED_TEXT) {
+      flag(name, String(fd.get(name) ?? '').trim() === '', 'This field is required.');
+    }
+    // kingdom_number must be a positive whole number
+    const kn = String(fd.get('kingdom_number') ?? '').trim();
+    if (kn !== '' && !/^\d+$/.test(kn)) flag('kingdom_number', true, 'Enter your kingdom number (digits only).');
+    for (const name of REQUIRED_YESNO) {
+      flag(name, fd.get(name) === null, 'Please choose Yes or No.');
+    }
+    return firstInvalid;
+  }
+
+  function focusField(name: string) {
+    const el = document.querySelector(`[name="${name}"]`) as HTMLElement | null;
+    el?.focus();
+  }
+
+  function showConfirmation() {
+    form?.setAttribute('hidden', '');
+    confirmPanel?.removeAttribute('hidden');
+    confirmPanel?.scrollIntoView({ block: 'nearest' });
+  }
+
+  // A 4xx is a validation/data problem; anything else (network / CORS / 5xx) rejects
+  // with no useful status. Never surface the raw Directus envelope.
+  function statusOf(err: unknown): number | undefined {
+    return (err as { response?: { status?: number } }).response?.status;
+  }
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!submitBtn || submitBtn.disabled) return; // double-submit guard
+    clearFormError();
+
+    const fd = new FormData(form);
+
+    // Honeypot: a filled decoy means a bot. Silently show success without posting
+    // (don't reveal the trap). Best-effort — the rate limit is the real floor.
+    if (String(fd.get('website') ?? '').trim() !== '') {
+      showConfirmation();
+      return;
+    }
+
+    const firstInvalid = validate(fd);
+    if (firstInvalid) {
+      focusField(firstInvalid);
+      return;
+    }
+
+    if (config.activePeriodId === null) {
+      // Seed / pre-launch build, or no active period — the form cannot stamp period.
+      showFormError('Applications are not open yet. Please check back once the transfer window is live.');
+      return;
+    }
+
+    // Build the payload with correct JSON types (a string "35" for an integer M2O or
+    // "true" for a boolean would 400 or mis-store). Omit blank optionals.
+    const text = (n: string) => String(fd.get(n) ?? '').trim();
+    const yesno = (n: string) => fd.get(n) === 'yes';
+    const desiredSlug = text('desired_alliance');
+    const desiredId = desiredSlug ? config.slugToId[desiredSlug] : undefined;
+
+    const payload: CandidatePayload = {
+      character_name: text('character_name'),
+      player_id: text('player_id'),
+      kingdom_number: Number(text('kingdom_number')),
+      timezone: text('timezone'),
+      who_invited: text('who_invited'),
+      why_leaving: text('why_leaving'),
+      team_player_kvk: yesno('team_player_kvk'),
+      others_transferring: text('others_transferring'),
+      day4_fcfs: yesno('day4_fcfs'),
+      needs_special_invite: yesno('needs_special_invite'),
+      period: config.activePeriodId,
+    };
+    if (text('what_you_seek')) payload.what_you_seek = text('what_you_seek');
+    if (text('players_to_avoid')) payload.players_to_avoid = text('players_to_avoid');
+    if (desiredId !== undefined) payload.desired_alliance = desiredId;
+
+    submitBtn.disabled = true;
+    const label = submitBtn.textContent;
+    submitBtn.textContent = 'Submitting…';
+    try {
+      await createCandidate(payload);
+      showConfirmation();
+    } catch (err) {
+      const status = statusOf(err);
+      showFormError(
+        status && status >= 400 && status < 500
+          ? 'Please check your entries and try again.'
+          : 'Couldn’t reach the server. Please try again in a moment.'
+      );
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = label;
+    }
+  });
 </script>

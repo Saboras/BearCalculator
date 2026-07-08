@@ -522,7 +522,7 @@ fields:
       note: In-game character name (required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 2
       special: null
@@ -562,7 +562,7 @@ fields:
       note: In-game contact key (FR-4, required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 3
       special: null
@@ -602,7 +602,7 @@ fields:
       note: 'Current kingdom # (required).'
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 4
       special: null
@@ -642,7 +642,7 @@ fields:
       note: Local timezone IANA/offset (required; new vs old form).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 5
       special: null
@@ -682,7 +682,7 @@ fields:
       note: Who invited / know someone (required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 6
       special: null
@@ -722,7 +722,7 @@ fields:
       note: Why leaving (required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 7
       special: null
@@ -762,7 +762,7 @@ fields:
       note: KvK/save-troops willingness (required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 8
       special: null
@@ -802,7 +802,7 @@ fields:
       note: Others transferring with; seeds group linking (required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 9
       special: null
@@ -842,7 +842,7 @@ fields:
       note: Day-4 FCFS / Random-ask readiness (required).
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 10
       special: null
@@ -882,7 +882,7 @@ fields:
       note: '>130M special-invite flag (FR-5). Required.'
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 11
       special: null
@@ -1011,7 +1011,7 @@ fields:
           - text: Rejected
             value: Rejected
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 14
       special: null
@@ -1221,7 +1221,7 @@ fields:
       note: Stamped to active period at create; never re-stamped (AD-17). Required.
       options: null
       readonly: false
-      required: false
+      required: true
       searchable: true
       sort: 19
       special:

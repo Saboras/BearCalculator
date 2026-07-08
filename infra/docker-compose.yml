@@ -37,6 +37,18 @@ services:
       SESSION_COOKIE_SECURE: "true"  # HTTPS-only cookie (AC4)
       SESSION_COOKIE_SAME_SITE: "lax"  # apex + admin subdomain are same-site — lax suffices and is stronger than None
       SESSION_COOKIE_DOMAIN: ".${SITE_DOMAIN:-kingdom1516.example}"  # parent-domain cookie, shared across apex + subdomain
+      # --- Public transfer form abuse floor (Story 5.2 / AD-12, NFR-11) ---
+      # /join posts create-only to /items/candidates as the unauthenticated role.
+      # Directus's built-in IP rate limiter is the server-side floor — effective even
+      # against direct API posts (a Caddy-scoped rate_limit would need a non-stock
+      # plugin + custom xcaddy image; the native limiter keeps the pinned official
+      # images, the KISS choice — Sabo, Q1). Global per-IP; 50 req/s is generous for
+      # ~10 leaders + the Studio's many calls yet throttles a single-IP flood. Paired
+      # with the form-level honeypot; captcha stays deferred until real abuse appears.
+      RATE_LIMITER_ENABLED: "true"
+      RATE_LIMITER_STORE: "memory"
+      RATE_LIMITER_POINTS: "50"     # max hits per IP per window (Directus default)
+      RATE_LIMITER_DURATION: "1"    # window seconds → 50 req/s/IP
     volumes:
       - directus_db:/directus/database          # holds data.db
       - directus_uploads:/directus/uploads
