@@ -1,4 +1,4 @@
-import { createDirectus, authentication, rest, readMe, readItems } from '@directus/sdk';
+import { createDirectus, authentication, rest, readMe, readItems, updateItem } from '@directus/sdk';
 
 /*
   Directus client — leader session auth for the /leader gate (Story 3.2).
@@ -143,4 +143,28 @@ export function getCandidates() {
       sort: ['-id'], // newest first; active-window scoping + carry-over ordering is Story 5.7
     })
   ) as Promise<Candidate[]>;
+}
+
+/*
+  --- Curator candidate write (Story 5.5) ---
+  The FIRST Curator WRITE from the admin shell: advance status (Applied → Accepted →
+  Transferred / Rejected, plus the Random exception Applied → Transferred) and set
+  planned_path on Accept. Same session client, same httpOnly cookie (credentials:'include')
+  — the write authenticates automatically. The list stays LIVE: after a write the shell
+  re-renders the row in place, no rebuild.
+
+  ⚠️ Enforcement reality (Option 3, Core tier): the `transfer-curator` update grant is a
+  FREE whole-collection `fields:["*"]` (a field-subset/row-filter/validation is 🔒 403
+  RESOURCE_RESTRICTED). So the SERVER enforces only WHO may write (Curator: 200; Viewer:
+  403 — deny-by-default); the transition ORDER is UI-guided only (AR-9/AD-7 — no Directus
+  Flow/hook). The field boundary is convention, NOT server-enforced: callers MUST send only
+  { status } and/or { planned_path } — NEVER `period` (a re-stamp is silent carry-over
+  corruption, AD-17), never the public-core / desired_alliance fields (AD-8/AD-9).
+  Returns the echoed row (the Curator holds the read grant) — used only to confirm success;
+  the caller applies the patch it sent to its local row.
+*/
+export type CandidatePatch = { status?: string; planned_path?: string | null };
+
+export function updateCandidate(id: number, patch: CandidatePatch) {
+  return client.request(updateItem('candidates', id, patch)) as Promise<Candidate>;
 }

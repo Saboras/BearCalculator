@@ -450,6 +450,99 @@ import Icon from '../../components/Icon.astro';
     }
   }
 
+  /* ===== Curator status-lifecycle controls (Story 5.5) — inside the per-row detail ===== */
+  .cand-actions {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--color-border);
+  }
+  .cand-actions-head {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--color-muted);
+    margin-bottom: var(--space-2);
+  }
+  .cand-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .cand-action-row:last-of-type {
+    margin-bottom: 0;
+  }
+  .cand-action-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-muted);
+    margin-right: var(--space-1);
+  }
+  .cand-btn {
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: var(--radius-button);
+    border: 1px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cand-btn:disabled {
+    opacity: .55;
+    cursor: default;
+  }
+  .cand-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  /* Gold primary = Accept / Mark Transferred / the chosen path (DESIGN "advance status"). */
+  .cand-btn--gold,
+  .cand-btn--path-active {
+    background: linear-gradient(#EDA44E, #E08A2B);
+    border-color: var(--color-primary-hover);
+    color: var(--color-primary-foreground);
+    text-shadow: 0 1px 1px rgba(44, 38, 34, .25);
+  }
+  .cand-btn--gold:hover:not(:disabled),
+  .cand-btn--path-active:hover:not(:disabled) {
+    background: linear-gradient(#E08A2B, #C9781F);
+  }
+  /* Quiet outline = the not-yet-chosen planned-path options. */
+  .cand-btn--path {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    color: var(--color-ink);
+  }
+  .cand-btn--path:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
+  }
+  /* Danger outline = Reject (reserved semantic colour, UX-DR-21). */
+  .cand-btn--danger {
+    background: transparent;
+    border-color: rgba(216, 53, 42, .5);
+    color: var(--color-danger);
+  }
+  .cand-btn--danger:hover:not(:disabled) {
+    background: rgba(216, 53, 42, .1);
+  }
+  .cand-actions-note {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .cand-action-msg {
+    margin: var(--space-1) 0 0;
+    font-size: 12.5px;
+    color: var(--color-danger);
+  }
+  .cand-action-msg[hidden] {
+    display: none;
+  }
+
   /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
   :global(:root[data-theme='dark']) .shell-head,
   :global(:root[data-theme='dark']) .tabs {
@@ -483,6 +576,24 @@ import Icon from '../../components/Icon.astro';
   :global(:root[data-theme='dark']) .cand-detail > td {
     background: rgba(242, 169, 59, .05);
   }
+  /* Curator controls — the light gold gradient washes out on the dark card (btn-gold guard).
+     --color-primary-foreground / --color-danger are already theme-aware, so only the
+     literal gradients + rgba borders need a dark override. */
+  :global(:root[data-theme='dark']) .cand-btn--gold,
+  :global(:root[data-theme='dark']) .cand-btn--path-active {
+    background: linear-gradient(#F2A93B, #E0962A);
+    text-shadow: none;
+  }
+  :global(:root[data-theme='dark']) .cand-btn--gold:hover:not(:disabled),
+  :global(:root[data-theme='dark']) .cand-btn--path-active:hover:not(:disabled) {
+    background: linear-gradient(#E0962A, #C9781F);
+  }
+  :global(:root[data-theme='dark']) .cand-btn--danger {
+    border-color: rgba(242, 88, 77, .5);
+  }
+  :global(:root[data-theme='dark']) .cand-btn--danger:hover:not(:disabled) {
+    background: rgba(242, 88, 77, .12);
+  }
 
   /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
   @media (max-width: 767.98px) {
@@ -509,10 +620,11 @@ import Icon from '../../components/Icon.astro';
     getAdminAccess,
     getMyPermissions,
     getCandidates,
+    updateCandidate,
     logout,
     DATA_STUDIO_URL,
   } from '../../lib/directus';
-  import type { Candidate } from '../../lib/directus';
+  import type { Candidate, CandidatePatch } from '../../lib/directus';
 
   type Kind = 'custom' | 'studio';
   interface AreaDef {
@@ -688,6 +800,8 @@ import Icon from '../../components/Icon.astro';
   // ===== Candidates panel (Story 5.4) — lazy-loaded, read-only calm table =====
   // Runtime session-authenticated read; a Viewer sees ALL fields (whole-collection read).
   // All candidate data enters the DOM via textContent/createElement (XSS: untrusted PII).
+  // Story 5.5: a Curator (Transfer·Work) or the Owner also gets per-row status/path controls.
+  let canWriteCandidates = false; // set in boot() from the resolved Transfer mode / Owner
   const STATUS_MOD: Record<string, string> = {
     Applied: 'applied',
     Accepted: 'accepted',
@@ -753,6 +867,154 @@ import Icon from '../../components/Icon.astro';
     return out;
   }
 
+  // ===== Curator status-lifecycle controls (Story 5.5) — Work-mode only =====
+  // The legal transition graph is CLIENT-GUIDED only (AR-9/AD-7): no Directus Flow/hook
+  // encodes it. The server enforces only WHO may write (Curator 200 / Viewer 403). Every
+  // payload carries ONLY { status } / { planned_path } — never `period` (a re-stamp is
+  // silent carry-over corruption, AD-17), never the public-core / desired_alliance fields.
+
+  // planned_path: [stored enum value, display label]. Value 'Special' shows as 'Special invite'.
+  const PLANNED_PATHS: [string, string][] = [
+    ['Invite', 'Invite'],
+    ['Special', 'Special invite'],
+    ['Random-ask', 'Random-ask'],
+  ];
+
+  type CandAction = 'accept' | 'editPath' | 'transfer' | 'reject';
+  // Applied → Accept (requires a path) · Mark Transferred (the Random exception) · Reject.
+  // Accepted → edit path · Mark Transferred · Reject. Transferred / Rejected are terminal.
+  function allowedActions(status: string): CandAction[] {
+    switch (status) {
+      case 'Applied':
+        return ['accept', 'transfer', 'reject'];
+      case 'Accepted':
+        return ['editPath', 'transfer', 'reject'];
+      default:
+        return [];
+    }
+  }
+
+  function candButton(label: string, variant: string): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `cand-btn cand-btn--${variant}`;
+    b.textContent = label; // trusted constant labels (plain verbs, UX-DR-21)
+    return b;
+  }
+
+  // A labelled row of the three planned-path buttons; `current` marks the active one when
+  // editing an already-Accepted candidate.
+  function pathGroup(label: string, current: string | null, onPick: (value: string) => void): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'cand-action-row';
+    const lab = document.createElement('span');
+    lab.className = 'cand-action-label';
+    lab.textContent = label;
+    row.append(lab);
+    for (const [value, text] of PLANNED_PATHS) {
+      const active = current === value;
+      const b = candButton(text, active ? 'path-active' : 'path');
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (active) {
+        b.disabled = true; // already the current path — clicking it would be a redundant no-op write
+      } else {
+        b.addEventListener('click', () => onPick(value));
+      }
+      row.append(b);
+    }
+    return row;
+  }
+
+  // Build the action controls for one candidate row; `onDone` re-renders the row in place
+  // (status chip + planned-path cell + these controls) after a successful write.
+  function buildActions(r: Candidate, onDone: () => void): HTMLElement {
+    const box = document.createElement('div');
+    box.className = 'cand-actions';
+    const head = document.createElement('div');
+    head.className = 'cand-actions-head';
+    head.textContent = 'Actions';
+    box.append(head);
+
+    const actions = allowedActions(r.status);
+    if (actions.length === 0) {
+      const note = document.createElement('p');
+      note.className = 'cand-actions-note';
+      note.textContent = `This candidate is ${r.status} — no further status changes here.`;
+      box.append(note);
+      return box;
+    }
+
+    const msg = document.createElement('p');
+    msg.className = 'cand-action-msg';
+    msg.setAttribute('role', 'alert');
+    msg.hidden = true;
+
+    let busy = false;
+    const run = (patch: CandidatePatch) => {
+      if (busy) return; // guard the double-click window before the buttons disable
+      busy = true;
+      writeCandidate(r, patch, box, msg, onDone).finally(() => {
+        busy = false;
+      });
+    };
+
+    // Accept (Applied): choosing a path both accepts AND sets the path in one write — an
+    // Accept can never leave planned_path null (closes the "Accepted + null path" gap).
+    if (actions.includes('accept')) {
+      box.append(pathGroup('Accept as', null, (value) => run({ status: 'Accepted', planned_path: value })));
+    }
+    if (actions.includes('editPath')) {
+      box.append(pathGroup('Planned path', r.planned_path, (value) => run({ planned_path: value })));
+    }
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cand-action-row';
+    if (actions.includes('transfer')) {
+      // Accepted → Transferred, and Applied → Transferred (the Random exception). Status
+      // ONLY — no entry route to record (AR-19).
+      const b = candButton('Mark Transferred', 'gold');
+      b.addEventListener('click', () => run({ status: 'Transferred' }));
+      btnRow.append(b);
+    }
+    if (actions.includes('reject')) {
+      const b = candButton('Reject', 'danger');
+      b.addEventListener('click', () => run({ status: 'Rejected' }));
+      btnRow.append(b);
+    }
+    box.append(btnRow, msg);
+    return box;
+  }
+
+  // The write: session-authenticated PATCH; disable the row's buttons in-flight; on success
+  // apply the patch to the local row and re-render in place (the load-once cache blocks a
+  // refetch); 401/403 → the session lapsed → /leader; any other error → inline message + re-enable.
+  async function writeCandidate(
+    r: Candidate,
+    patch: CandidatePatch,
+    box: HTMLElement,
+    msg: HTMLElement,
+    onDone: () => void,
+  ): Promise<void> {
+    const btns = Array.from(box.querySelectorAll('button')) as HTMLButtonElement[];
+    btns.forEach((b) => (b.disabled = true));
+    msg.hidden = true;
+    msg.textContent = '';
+    try {
+      await updateCandidate(r.id, patch); // echoes the row — used only to confirm success
+      if ('status' in patch) r.status = patch.status as string;
+      if ('planned_path' in patch) r.planned_path = (patch.planned_path ?? null) as string | null;
+      onDone(); // re-render chip + path cell + actions from the mutated row
+    } catch (err) {
+      if (authRejected(err)) {
+        window.location.replace('/leader'); // a granted Curator never 403s → session lapsed
+        return;
+      }
+      msg.hidden = false; // reveal the role="alert" region BEFORE writing text so it reliably announces
+      msg.textContent = 'Couldn’t save that change. Please try again.';
+      btns.forEach((b) => (b.disabled = false));
+    }
+  }
+
   function renderCandidateTable(rows: Candidate[]) {
     const wrap = document.getElementById('cand-table-wrap');
     if (!wrap) return;
@@ -815,7 +1077,8 @@ import Icon from '../../components/Icon.astro';
       statusCell.append(statusChip(r.status));
       tr.append(statusCell);
 
-      tr.append(td(dash(r.planned_path)));
+      const pathCell = td(dash(r.planned_path));
+      tr.append(pathCell);
       tbody.append(tr);
 
       // Detail row — the remaining stored fields (FR-6 "all their fields"), read-only
@@ -846,6 +1109,26 @@ import Icon from '../../components/Icon.astro';
         dl.append(div);
       }
       dtd.append(dl);
+
+      // Curator status-lifecycle controls (Story 5.5) — only when the leader can write
+      // (Owner or Transfer·Work). A Viewer sees the read-only detail exactly as in 5.4.
+      // refreshRow re-renders the compact-row chip + path cell + these controls in place
+      // after a successful write (no refetch — the load-once cache would block it anyway).
+      const actionsHost = document.createElement('div');
+      const refreshRow = () => {
+        statusCell.textContent = '';
+        statusCell.append(statusChip(r.status));
+        pathCell.textContent = dash(r.planned_path);
+        if (canWriteCandidates) {
+          actionsHost.textContent = '';
+          actionsHost.append(buildActions(r, refreshRow));
+        }
+      };
+      if (canWriteCandidates) {
+        actionsHost.append(buildActions(r, refreshRow));
+        dtd.append(actionsHost);
+      }
+
       dtr.append(dtd);
       tbody.append(dtr);
 
@@ -939,6 +1222,9 @@ import Icon from '../../components/Icon.astro';
     }
 
     renderChips(accessible, isOwner);
+    // Story 5.5: gate the per-row status/path controls on write capability. Owner (admin
+    // bypass) or a Curator whose Transfer area resolved to 'Work' (holds the update grant).
+    canWriteCandidates = isOwner || accessible.some((a) => a.key === 'candidates' && a.mode === 'Work');
 
     if (accessible.length === 0) {
       showOnly(emptyEl); // signed in, no area granted yet

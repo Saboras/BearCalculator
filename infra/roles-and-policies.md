@@ -163,7 +163,7 @@ Accounts**.
 |---|---|---|---|---|
 | — (base) | **Leader** (role) | — | login + read-own-profile; the container every leader shares | base role |
 | Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` + `transfer_period` (+ `alliances` for M2O names) — no writes; `transfer_groups` read ⏳ 5.6 | collection **read** grant ✅ free — **candidate list delivered Story 5.4** |
-| Transfer | `transfer-curator` | ⏳ see §5 | Viewer + **create/update/delete** `candidates` work-fields (status / planned_path / suggested_alliance / group); read counters | collection **write** grant ✅ free; *field-limited to work-fields* 🔒 |
+| Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6**); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` CRUD ⏳ 5.6; delete ⏳ 5.8 | collection **read + update** grant ✅ free — **update delivered Story 5.5**; *field-limited to work-fields* is the 🔒 Option-1 target |
 | Guides | `guides-viewer` | yes | **read** drafts (`guides` non-published, leader-visible) | collection **read** grant ✅ free |
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
@@ -246,8 +246,10 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 ### `transfer-curator` (Transfer · Work) — Viewer + writes
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ⏳ wired **5.5** (Curator = Viewer + writes) · ✅ free |
-| `candidates` | update | `["status","planned_path","suggested_alliance","group"]` | — | ⏳ Epic 5.5 · 🔒 field-limited (else full-update is free but lets a Curator rewrite the public core/`desired_alliance` **or re-stamp `period`**, violating AD-8/AD-9/AD-17) |
+| `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ✅ **wired Story 5.5** (Curator = Viewer + writes) · ✅ free |
+| `candidates` | update | `["*"]` **as-built (Option 3)** | — | ✅ **wired Story 5.5** · whole-collection ✅ free — the field-limited `["status","planned_path","suggested_alliance","group"]` is the 🔒 **Option-1 target** (a full update lets a Curator rewrite the public core/`desired_alliance` **or re-stamp `period`**, violating AD-8/AD-9/AD-17 — UX/convention only, see note) |
+| `transfer_period` | read | `["*"]` | — | ✅ **wired Story 5.5** · free — window context (a Curator holds `transfer-curator` *instead of* `transfer-viewer`, so this policy carries its own reads; 5.7 counter denominators) |
+| `alliances` | read | `["*"]` | — | ✅ **wired Story 5.5** · free — resolve `desired_alliance`/`suggested_alliance` **names** live (same M2O deep-expand as the 5.4 Viewer list; alliance data is already public via the Finder) |
 | `candidates` | delete | — | — | ⏳ Epic 5.8 · ✅ free |
 | `transfer_groups` | create/update/delete | `["*"]` | — | ⏳ Epic 5.6 · ✅ free |
 
@@ -271,7 +273,7 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > §"Candidates … Story 5.1"). ⚠ The `period` re-stamp is a **silent** carry-over corruption vector (not the
 > reparable, backup-caught edit Option 3 assumed) — the decision-needed **AD-17** item deferred to Epic-5
 > start (`deferred-work.md`); flip the 🔒 field/validation rule on under Option 1 (license) or split-out
-> under Option 2 to close it.
+> under Option 2 to close it. **Decision (Sabo, Story 5.5, 2026-07-09): proceed under Option 3** — the free whole-collection grant is wired; the **5.5 admin UI sends only `{status, planned_path}`, never `period`** (`admin/index.astro` `writeCandidate`; the shell exposes no `period` control), so a re-stamp cannot happen on the normal work path (only a hand-crafted raw-API call or a bug could — proportionate for the ≤2-trusted-Curator scope + daily backups). The Option-1 upgrade path stays clean.
 
 ### `guides-viewer` (Guides · Read)
 | Collection | Action | Fields | Row filter | Status |

@@ -890,6 +890,83 @@ Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the
   read is runtime-only. `grep` of `dist/` finds only field-name identifiers + the SDK's session
   token-storage code (both inert; no candidate data, no real token).
 
+## 13. Status lifecycle — Curator grants + admin controls (Story 5.5)
+
+The **first Curator WRITE** from the admin shell. On the `/admin` Candidates tab, a Curator (or the
+Owner) advances a candidate's status — `Applied → Accepted → Transferred / Rejected`, plus the
+**Random exception** `Applied → Transferred` — and sets a **planned path** (`Invite` / `Special` /
+`Random-ask`) on Accept. The write is a **runtime, client-side, session-cookie PATCH**
+(`site/src/lib/directus.ts` → `updateCandidate()`), so the list stays **live** — the row re-renders in
+place, **no rebuild**, no static-HTML data. **No schema change** (`status` / `planned_path` exist since
+Story 5.1); the whole story is two `site/` edits + these grants (in `data.db`, backed up §3).
+
+**The order is UI-guided only (AR-9/AD-7).** Directus enforces only **who** may write; the legal
+transition graph lives in the admin client (`admin/index.astro` `allowedActions`). **No Directus Flow,
+hook, validation, or state machine** encodes it — do not add one.
+
+### 13.1 The `transfer-curator` grants (mint once; `data.db`, not the schema snapshot)
+
+On the **`transfer-curator`** policy (roles-and-policies §3), add **whole-collection** grants
+(`fields:["*"]`, no filter — the only **free** shape on Core; a field subset / row filter / validation is
+🔒 `403 RESOURCE_RESTRICTED`). A Curator holds `transfer-curator` **instead of** `transfer-viewer`
+(don't stack both), so this policy carries its own reads:
+
+| Collection | Action | Why |
+|---|---|---|
+| `candidates` | **read** `["*"]` | Curator = Viewer + writes (sees all fields, like a Viewer) |
+| `candidates` | **update** `["*"]` | the write grant — **AC2** (Curator 200 / Viewer 403). Whole-collection is the only free shape → a Curator *can* technically write the public core / `desired_alliance` / re-stamp `period`; the UI sends only `{status, planned_path}` (Option 3 — §13.3) |
+| `transfer_period` | **read** `["*"]` | window context / 5.7 counter denominators |
+| `alliances` | **read** `["*"]` | resolve `desired_alliance` / `suggested_alliance` M2O → **name** live (same deep-expand as the 5.4 Viewer list) |
+
+Do **not** grant `candidates` **delete** (Story 5.8) or `transfer_groups` CRUD (Story 5.6). `app_access`
+is **not** needed — the custom `/admin` shell uses the session REST API, not the Data Studio (§8.7 / §5).
+
+### 13.2 The gate is server-enforced; the order is not
+
+`Directus enforces WHO` (the collection-level update grant): a Curator's PATCH → **200**, a Viewer's (no
+update grant) → **403**, anonymous → **403**, Owner (admin bypass) → **200**. The **transition order** and
+"set a path on Accept" are **client guidance only** — a determined Curator could PATCH an illegal jump via
+the raw API and Directus would allow it (AR-9). That is accepted: the ≤2 Curators are trusted, the shell
+guides the legal path, and nothing security-relevant rests on the order.
+
+### 13.3 The `period` re-stamp — Option 3, and why the UI never sends `period`
+
+The whole-collection update grant (§13.1) exposes `candidates.period`, which AD-17 marks **never
+re-stamped**. A re-stamp is **silent carry-over corruption** (it erases the "from a prior period" identity
+that the 5.7 carry-over query derives; nothing detects or repairs it). **Decision (Sabo, Story 5.5,
+2026-07-09): Option 3** — accept the free whole-collection grant, keep `period` immutability as discipline,
+and the **admin UI sends only `{status, planned_path}`, never `period`** (`writeCandidate`; the shell
+exposes no `period` control). So a re-stamp cannot happen on the normal work path — only a hand-crafted
+raw-API call or a bug could, which is proportionate for the ≤2-trusted-Curator scope + daily backups. The
+Option-1 upgrade (license → the field-subset grant + `period`-immutable validation work server-side) stays
+a clean, spec-unchanged flip if trust assumptions ever change.
+
+### 13.4 Local verification status (Story 5.5)
+
+Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the Windows/Docker box
+(disposable container via PowerShell; committed `directus-schema.yaml` applied — "Snapshot applied
+successfully"; torn down after). All `transfer-curator` grants created **200** (free whole-collection):
+
+- **AC1 / AC3** — Curator PATCH `{status:'Accepted', planned_path:'Invite'}` → **200**, echoes
+  `status=Accepted`, `planned_path=Invite` (Accept sets both in one write — never leaves a null path).
+- **AC4** — Curator PATCH `{status:'Transferred'}` on the Accepted row → **200**, `status=Transferred`,
+  `planned_path` **unchanged** (`Invite`) — status only, no entry route (AR-19).
+- **AC1 (Random exception)** — Curator PATCH `{status:'Transferred'}` on an `Applied` candidate → **200**
+  (direct `Applied → Transferred`).
+- **AC2** — a **Viewer** (`transfer-viewer`, no update grant) PATCH → **403**; **anonymous** PATCH →
+  **403**. **Owner** PATCH → **200** (admin bypass).
+- **License wall (re-proven, confound-free)** — on a fresh policy, a whole-collection read grant → **200**
+  but a **field-subset** read grant → **403** (`RESOURCE_RESTRICTED`, §0); a field-subset + validation
+  **update** grant on `transfer-curator` → **403**. So the free whole-collection update is the only shape.
+- **Honest Option-3 limit (§13.3)** — a Curator PATCH `{period:<other id>}` under the full grant → **200**
+  (the silent re-stamp vector — exactly why the UI never sends `period`).
+- **Build hygiene (Node 22)** — `dist/admin/index.html` has a linked stylesheet (CSS emitted — the Node-24
+  no-CSS hazard); the control code (`Mark Transferred`, `.cand-btn--*`) is in the admin bundle + CSS; the
+  candidate write is runtime-only, **zero** candidate data / session token baked into the static HTML.
+- **Transition legality (pure-logic unit test)** — 26/26: the per-status action sets, the Random
+  exception, Accept-always-carries-a-path, Mark-Transferred-is-status-only (no `entry_route`), the
+  `Special` value ↔ "Special invite" label mapping, and "no emitted patch ever writes `period`".
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
