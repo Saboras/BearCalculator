@@ -162,7 +162,7 @@ Accounts**.
 | Area | Policy / role | `app_access` | Grants (primary writer per AD-9) | Enforcement mechanism |
 |---|---|---|---|---|
 | — (base) | **Leader** (role) | — | login + read-own-profile; the container every leader shares | base role |
-| Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` (+ groups, period) — no writes | collection **read** grant ✅ free |
+| Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` + `transfer_period` (+ `alliances` for M2O names) — no writes; `transfer_groups` read ⏳ 5.6 | collection **read** grant ✅ free — **candidate list delivered Story 5.4** |
 | Transfer | `transfer-curator` | ⏳ see §5 | Viewer + **create/update/delete** `candidates` work-fields (status / planned_path / suggested_alliance / group); read counters | collection **write** grant ✅ free; *field-limited to work-fields* 🔒 |
 | Guides | `guides-viewer` | yes | **read** drafts (`guides` non-published, leader-visible) | collection **read** grant ✅ free |
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
@@ -238,9 +238,10 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 ### `transfer-viewer` (Transfer · Read)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ⏳ wired **5.4** · ✅ free (collection-level) |
+| `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ✅ **wired Story 5.4** · ✅ free (collection-level — a Viewer sees all fields; a field subset / row filter is 🔒 §0, re-proven 403 `RESOURCE_RESTRICTED`) |
 | `transfer_groups` | read | `["*"]` | — | collection ✅ **created Story 5.1** (shell); read grant ⏳ wired **5.6** · ✅ free |
-| `transfer_period` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ⏳ wired **5.4 / 5.7** (counter denominators) · ✅ free |
+| `transfer_period` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ✅ **wired Story 5.4** (also serves 5.7 counter denominators) · ✅ free |
+| `alliances` | read | `["*"]` | — | read grant ✅ **wired Story 5.4** — lets the candidate list resolve `desired_alliance` / `suggested_alliance` M2O → **name** live at runtime (Option B, Sabo 2026-07-09); whole-collection read ✅ free, alliance data is already public (Finder). **Grant surface (be honest):** the candidate-list *query* expands only `id`+`name`, so the list never **surfaces** `official`; but the Core-forced `["*"]` grant does let a Viewer **read** the `official` FK directly via the API — an opaque `directus_users` id only, no user PII (Viewers have no `directus_users` read grant) |
 
 ### `transfer-curator` (Transfer · Work) — Viewer + writes
 | Collection | Action | Fields | Row filter | Status |
@@ -253,7 +254,9 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > *Story-tag semantics (Transfer):* the **`candidates`, `transfer_period`, `settings` (singleton) and
 > `transfer_groups` (shell) collections were created in Story 5.1** (data model + config — `README.md` §10
 > + `directus-schema.yaml`, live-verified). The ⏳ tags above name the story that **wires each grant** onto
-> those collections — **5.2** Public create-only, **5.4** Viewer read (candidate list), **5.5** Curator
+> those collections — **5.2** Public create-only, **5.4** Viewer read (candidate list — ✅ **delivered**:
+> `candidates` + `transfer_period` reads, plus a free `alliances` read so the list resolves M2O alliance
+> **names** live at runtime, Option B), **5.5** Curator
 > work-field update, **5.6** `transfer_groups` CRUD, **5.8** Curator delete. The **`settings` singleton** has
 > a *separate* read consumer, not a Transfer grant row: `settings.special_invite_power_threshold` is read by
 > the **5.3** `>130M` form-edge compare. **Mechanism decided + delivered (Story 5.3): a build-time

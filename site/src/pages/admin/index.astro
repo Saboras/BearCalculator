@@ -282,6 +282,174 @@ import Icon from '../../components/Icon.astro';
     height: 16px;
   }
 
+  /* ===== Candidates table (Story 5.4) — calm data table (UX-DR-11) ===== */
+  .cand-intro {
+    color: var(--color-muted);
+    font-size: 13.5px;
+    margin: 0 0 var(--space-4);
+    max-width: 64ch;
+  }
+  .cand-state {
+    margin: var(--space-5) 0;
+  }
+  .cand-state[hidden] {
+    display: none;
+  }
+  .cand-state .muted {
+    color: var(--color-muted);
+    font-size: 14px;
+  }
+
+  .cand-table-wrap {
+    overflow-x: auto; /* wide table scrolls in its own box, never the page body */
+    -webkit-overflow-scrolling: touch;
+  }
+  .cand-table-wrap[hidden] {
+    display: none;
+  }
+
+  .cand-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+    font-size: 13.5px;
+  }
+  /* Uppercase tracked header + 1.5px bottom rule; no per-row frame, no zebra (UX-DR-11). */
+  .cand-table thead th {
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-muted);
+    padding: 0 var(--space-3) var(--space-2);
+    border-bottom: 1.5px solid var(--color-primary);
+    white-space: nowrap;
+  }
+  .cand-table th.num,
+  .cand-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .cand-table tbody td {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border); /* hairline separators only */
+    color: var(--color-ink);
+    vertical-align: top;
+  }
+  .cand-row td:first-child {
+    border-left: 3px solid transparent; /* left-rail accent slot */
+  }
+  .cand-row--group td:first-child {
+    border-left-color: var(--color-primary); /* gold: linked transfer group */
+  }
+  .cand-row--divergent td:first-child {
+    border-left-color: var(--color-danger); /* danger: group has mixed suggestions */
+  }
+
+  .cand-name {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .cand-expand {
+    background: transparent;
+    border: 0;
+    color: var(--color-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 4px 0 0;
+    line-height: 1;
+    display: inline-block;
+    transition: transform .15s ease;
+  }
+  .cand-expand--open {
+    transform: rotate(90deg);
+  }
+  .cand-expand:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Status chip — Applied muted / Accepted+Transferred success / Rejected danger. */
+  .badge-status {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+  }
+  .badge-status--applied {
+    color: var(--color-muted);
+    background: rgba(138, 126, 107, .16);
+  }
+  .badge-status--accepted,
+  .badge-status--transferred {
+    color: #2f8f52; /* darker green than the #46D17A token for readable text on a light tint */
+    background: rgba(70, 209, 122, .16);
+  }
+  .badge-status--rejected {
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .14);
+  }
+
+  /* Special-invite chip — compact inline variant of DESIGN badge-special (reserved danger). */
+  .badge-special-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: var(--space-2);
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .14);
+    border: 1px solid rgba(216, 53, 42, .4);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .badge-special-chip :global(.icon) {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Expandable per-row detail (FR-6 "all their fields"). */
+  .cand-detail[hidden] {
+    display: none;
+  }
+  .cand-detail > td {
+    background: rgba(224, 138, 43, .04);
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .cand-detail-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-2) var(--space-5);
+    margin: 0;
+  }
+  .cand-detail-list dt {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--color-muted);
+    margin-bottom: 1px;
+  }
+  .cand-detail-list dd {
+    margin: 0 0 var(--space-2);
+    font-size: 13px;
+    color: var(--color-ink);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cand-expand {
+      transition: none;
+    }
+  }
+
   /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
   :global(:root[data-theme='dark']) .shell-head,
   :global(:root[data-theme='dark']) .tabs {
@@ -296,6 +464,24 @@ import Icon from '../../components/Icon.astro';
       0 8px 20px rgba(0, 0, 0, .35),
       inset 0 0 0 1px rgba(255, 255, 255, .04),
       inset 0 0 22px rgba(242, 169, 59, .05);
+  }
+  /* Candidate chips — the light-baked tints wash out on the dark card. */
+  :global(:root[data-theme='dark']) .badge-status--applied {
+    background: rgba(154, 163, 178, .18);
+  }
+  :global(:root[data-theme='dark']) .badge-status--accepted,
+  :global(:root[data-theme='dark']) .badge-status--transferred {
+    color: var(--color-success);
+    background: rgba(95, 227, 148, .14);
+  }
+  :global(:root[data-theme='dark']) .badge-status--rejected,
+  :global(:root[data-theme='dark']) .badge-special-chip {
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .2);
+    border-color: rgba(216, 53, 42, .5);
+  }
+  :global(:root[data-theme='dark']) .cand-detail > td {
+    background: rgba(242, 169, 59, .05);
   }
 
   /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
@@ -322,9 +508,11 @@ import Icon from '../../components/Icon.astro';
     getCurrentUser,
     getAdminAccess,
     getMyPermissions,
+    getCandidates,
     logout,
     DATA_STUDIO_URL,
   } from '../../lib/directus';
+  import type { Candidate } from '../../lib/directus';
 
   type Kind = 'custom' | 'studio';
   interface AreaDef {
@@ -379,6 +567,8 @@ import Icon from '../../components/Icon.astro';
       crown:
         '<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" /><path d="M5 21h14" />',
       'arrow-up-right': '<path d="M7 7h10v10" /><path d="M7 17 17 7" />',
+      'triangle-alert':
+        '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />',
     };
     return `<svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths[name] ?? ''}</svg>`;
   };
@@ -428,7 +618,14 @@ import Icon from '../../components/Icon.astro';
 
   function panelBody(area: AreaDef): string {
     if (area.kind === 'custom') {
-      return `<h2>${area.label}</h2><p>The transfer-candidate pipeline is built here in a later update. There is nothing to manage yet.</p>`;
+      // Trusted CONSTANTS only (frame + states). Candidate ROWS are built later with
+      // textContent/createElement in renderCandidateTable — never innerHTML with user data.
+      return `<h2>Candidates</h2>
+<p class="cand-intro">Every transfer applicant, read-only. Curators change status, suggestions and groups; all leaders see the same list here for transparency.</p>
+<div class="cand-state" id="cand-loading" role="status"><p class="muted">Loading candidates…</p></div>
+<div class="cand-state" id="cand-error" hidden><p class="admin-msg" role="alert">Couldn’t load the candidate list. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="cand-retry">Retry</button></div>
+<div class="cand-state" id="cand-empty" hidden><p class="muted">No candidates yet — applications will appear here as they come in.</p></div>
+<div class="cand-table-wrap" id="cand-table-wrap" hidden></div>`;
     }
     const owner = area.ownerOnly ? ' (Owner only)' : '';
     return `<h2>${area.label}</h2><p>${area.area}${owner} is managed in the Directus Data Studio — the ready-made admin, not a screen built here.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a>`;
@@ -468,11 +665,13 @@ import Icon from '../../components/Icon.astro';
       panel.innerHTML = panelBody(a); // trusted constants only (no user data)
 
       tab.addEventListener('click', () => selectTab(i, tabs, panels));
+      if (a.key === 'candidates') tab.addEventListener('click', () => maybeLoadCandidates());
       tab.addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         e.preventDefault();
         const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
         selectTab(next, tabs, panels);
+        if (areas[next]?.key === 'candidates') maybeLoadCandidates(); // keyboard activation must load too (mirrors the click + boot triggers)
         tabs[next].focus();
       });
 
@@ -483,6 +682,213 @@ import Icon from '../../components/Icon.astro';
     });
 
     selectTab(0, tabs, panels); // default to the first accessible tab (Candidates if present)
+    if (areas[0]?.key === 'candidates') maybeLoadCandidates(); // lazy-load if Candidates is initial
+  }
+
+  // ===== Candidates panel (Story 5.4) — lazy-loaded, read-only calm table =====
+  // Runtime session-authenticated read; a Viewer sees ALL fields (whole-collection read).
+  // All candidate data enters the DOM via textContent/createElement (XSS: untrusted PII).
+  const STATUS_MOD: Record<string, string> = {
+    Applied: 'applied',
+    Accepted: 'accepted',
+    Transferred: 'transferred',
+    Rejected: 'rejected',
+  };
+
+  function showCandState(which: 'loading' | 'error' | 'empty' | 'table') {
+    const map: Record<string, string> = {
+      loading: 'cand-loading',
+      error: 'cand-error',
+      empty: 'cand-empty',
+      table: 'cand-table-wrap',
+    };
+    for (const [key, elId] of Object.entries(map)) {
+      const el = document.getElementById(elId);
+      if (el) el.hidden = key !== which;
+    }
+  }
+
+  const yesNo = (v: boolean): string => (v ? 'Yes' : 'No');
+  const dash = (v: string | null | undefined): string => {
+    const s = (v ?? '').trim();
+    return s === '' ? '—' : s;
+  };
+
+  function td(text: string, className?: string): HTMLTableCellElement {
+    const cell = document.createElement('td');
+    if (className) cell.className = className;
+    cell.textContent = text; // user data → textContent, never innerHTML
+    return cell;
+  }
+
+  function statusChip(status: string): HTMLElement {
+    const chip = document.createElement('span');
+    chip.className = `badge-status badge-status--${STATUS_MOD[status] ?? 'applied'}`;
+    chip.textContent = status || '—'; // the word carries meaning beyond colour (a11y)
+    return chip;
+  }
+
+  function specialBadge(): HTMLElement {
+    const b = document.createElement('span');
+    b.className = 'badge-special-chip';
+    b.innerHTML = svg('triangle-alert'); // trusted constant SVG
+    b.append(document.createTextNode('Special invitation')); // verbatim jargon
+    return b;
+  }
+
+  // Divergent group = a group with ≥2 distinct non-null suggested alliances, derived at the
+  // edge over the single fetch (AR-6; no transfer_groups read needed — group id + suggested
+  // id are both on the candidate rows). Inert until Story 5.6 populates groups/suggestions.
+  function computeDivergentGroups(rows: Candidate[]): Set<number> {
+    const byGroup = new Map<number, Set<number>>();
+    for (const r of rows) {
+      const gid = r.group;
+      const sid = r.suggested_alliance?.id ?? null;
+      if (gid == null || sid == null) continue;
+      if (!byGroup.has(gid)) byGroup.set(gid, new Set());
+      byGroup.get(gid)!.add(sid);
+    }
+    const out = new Set<number>();
+    for (const [gid, set] of byGroup) if (set.size >= 2) out.add(gid);
+    return out;
+  }
+
+  function renderCandidateTable(rows: Candidate[]) {
+    const wrap = document.getElementById('cand-table-wrap');
+    if (!wrap) return;
+    wrap.textContent = '';
+    const divergent = computeDivergentGroups(rows);
+
+    const table = document.createElement('table');
+    table.className = 'cand-table';
+
+    const cols = ['Name', 'Player ID', 'Kingdom', 'Timezone', 'Desired', 'Suggested', 'Status', 'Planned path'];
+    const numCol = new Set([1, 2]); // Player ID, Kingdom → tabular, right-aligned
+    const thead = document.createElement('thead');
+    const htr = document.createElement('tr');
+    cols.forEach((c, i) => {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      if (numCol.has(i)) th.className = 'num';
+      th.textContent = c;
+      htr.append(th);
+    });
+    thead.append(htr);
+    table.append(thead);
+
+    const tbody = document.createElement('tbody');
+    rows.forEach((r) => {
+      const tr = document.createElement('tr');
+      tr.className = 'cand-row';
+      const inGroup = r.group != null;
+      const isDivergent = inGroup && divergent.has(r.group as number);
+      if (isDivergent) {
+        tr.classList.add('cand-row--divergent');
+        tr.title = 'Group has mixed suggestions — set one'; // non-colour affordance
+      } else if (inGroup) {
+        tr.classList.add('cand-row--group');
+        tr.title = 'Linked transfer group';
+      }
+
+      // Name cell: expand toggle + name + optional special-invite badge
+      const detailId = `cand-detail-${r.id}`;
+      const nameCell = document.createElement('td');
+      nameCell.className = 'cand-name';
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'cand-expand';
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-controls', detailId);
+      toggle.setAttribute('aria-label', `Show details for ${r.character_name}`);
+      toggle.textContent = '▸';
+      nameCell.append(toggle, document.createTextNode(' ' + dash(r.character_name)));
+      if (r.needs_special_invite) nameCell.append(specialBadge());
+      tr.append(nameCell);
+
+      tr.append(td(dash(r.player_id), 'num'));
+      tr.append(td(r.kingdom_number == null ? '—' : String(r.kingdom_number), 'num'));
+      tr.append(td(dash(r.timezone)));
+      tr.append(td(dash(r.desired_alliance?.name ?? null)));
+      tr.append(td(dash(r.suggested_alliance?.name ?? null)));
+
+      const statusCell = document.createElement('td');
+      statusCell.append(statusChip(r.status));
+      tr.append(statusCell);
+
+      tr.append(td(dash(r.planned_path)));
+      tbody.append(tr);
+
+      // Detail row — the remaining stored fields (FR-6 "all their fields"), read-only
+      const dtr = document.createElement('tr');
+      dtr.className = 'cand-detail';
+      dtr.id = detailId;
+      dtr.hidden = true;
+      const dtd = document.createElement('td');
+      dtd.colSpan = cols.length;
+      const dl = document.createElement('dl');
+      dl.className = 'cand-detail-list';
+      const pairs: [string, string][] = [
+        ['Who invited / knows them', dash(r.who_invited)],
+        ['Why leaving', dash(r.why_leaving)],
+        ['Team-player / KvK willing', yesNo(r.team_player_kvk)],
+        ['Others transferring with', dash(r.others_transferring)],
+        ['Day-4 FCFS ready', yesNo(r.day4_fcfs)],
+        ['What they seek', dash(r.what_you_seek)],
+        ['Players to avoid', dash(r.players_to_avoid)],
+      ];
+      for (const [k, v] of pairs) {
+        const div = document.createElement('div');
+        const dt = document.createElement('dt');
+        dt.textContent = k;
+        const dd = document.createElement('dd');
+        dd.textContent = v;
+        div.append(dt, dd);
+        dl.append(div);
+      }
+      dtd.append(dl);
+      dtr.append(dtd);
+      tbody.append(dtr);
+
+      toggle.addEventListener('click', () => {
+        const open = dtr.hidden;
+        dtr.hidden = !open;
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.classList.toggle('cand-expand--open', open);
+      });
+    });
+
+    table.append(tbody);
+    wrap.append(table);
+  }
+
+  let candFetching = false;
+  let candidatesLoaded = false;
+  async function loadCandidates() {
+    if (candFetching) return;
+    candFetching = true;
+    showCandState('loading');
+    try {
+      const rows = await getCandidates();
+      if (!rows || rows.length === 0) {
+        showCandState('empty');
+      } else {
+        renderCandidateTable(rows);
+        showCandState('table');
+      }
+      candidatesLoaded = true; // success — don't auto-refetch on tab re-activation
+    } catch (err) {
+      if (authRejected(err)) {
+        window.location.replace('/leader'); // session lapsed (a granted viewer never 403s here)
+        return;
+      }
+      showCandState('error'); // reachability failure — Retry offered
+    } finally {
+      candFetching = false;
+    }
+  }
+  function maybeLoadCandidates() {
+    if (candidatesLoaded || candFetching) return;
+    loadCandidates();
   }
 
   async function doLogout(btn: HTMLButtonElement) {
@@ -560,6 +966,11 @@ import Icon from '../../components/Icon.astro';
   document
     .getElementById('admin-empty-logout')
     ?.addEventListener('click', (e) => doLogout(e.currentTarget as HTMLButtonElement));
+
+  // Candidates Retry — delegated on the static #admin-panels (the button is built per-render).
+  panelsEl?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement)?.closest?.('#cand-retry')) loadCandidates();
+  });
 
   runBoot();
 </script>

@@ -1,4 +1,4 @@
-import { createDirectus, authentication, rest, readMe } from '@directus/sdk';
+import { createDirectus, authentication, rest, readMe, readItems } from '@directus/sdk';
 
 /*
   Directus client — leader session auth for the /leader gate (Story 3.2).
@@ -88,4 +88,59 @@ export async function getAdminAccess(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/*
+  --- Candidate list read (Story 5.4) ---
+  The transfer candidate list — the FIRST feature that reads authenticated candidate
+  PII and renders it. Runtime, client-side, session-cookie authenticated (AD-2/AR-4):
+  candidate data is NEVER baked into static HTML. The `transfer-viewer` policy carries a
+  free whole-collection read on `candidates` (fields:["*"], no filter — the only free
+  shape on Core; a field subset or row filter is 🔒 403 RESOURCE_RESTRICTED), so a Viewer
+  sees ALL fields of ALL rows (transparency-by-design). A leader without the grant / the
+  Public get 403 server-side (AD-4/NFR-9) — the absent tab is only cosmetic.
+
+  desired_alliance / suggested_alliance are M2O → alliances; we deep-expand {id, name}
+  (Option B, Sabo 2026-07-09) so names resolve LIVE at runtime with no rebuild — this
+  needs the free whole-collection `alliances` read on the same policy. id is kept for the
+  divergent-group edge computation; the list QUERY expands only id+name, so the candidate
+  list never SURFACES `official`. Note the whole-collection grant itself (forced by Core — a
+  field subset is 🔒) does let a Viewer READ the `official` FK directly via the API, but that
+  is only an opaque directus_users id — no user PII without a `directus_users` read grant,
+  which Viewers do not have.
+*/
+export interface CandidateAlliance {
+  id: number;
+  name: string | null;
+}
+export interface Candidate {
+  id: number;
+  character_name: string;
+  player_id: string;
+  kingdom_number: number;
+  timezone: string;
+  who_invited: string;
+  why_leaving: string;
+  team_player_kvk: boolean;
+  others_transferring: string;
+  day4_fcfs: boolean;
+  needs_special_invite: boolean;
+  what_you_seek: string | null;
+  players_to_avoid: string | null;
+  status: string;
+  planned_path: string | null;
+  desired_alliance: CandidateAlliance | null;
+  suggested_alliance: CandidateAlliance | null;
+  group: number | null;
+  period: number | null;
+}
+
+export function getCandidates() {
+  return client.request(
+    readItems('candidates', {
+      fields: ['*', { desired_alliance: ['id', 'name'] }, { suggested_alliance: ['id', 'name'] }],
+      limit: -1, // the working list is bounded (~58/window); no pagination/infinite scroll (AC4)
+      sort: ['-id'], // newest first; active-window scoping + carry-over ordering is Story 5.7
+    })
+  ) as Promise<Candidate[]>;
 }
