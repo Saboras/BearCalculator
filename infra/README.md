@@ -690,9 +690,11 @@ The caps and thresholds are **editable data rows**, not code literals:
 >   error); with **two or more** active, the stamp is ambiguous and the AD-17 carry-over query
 >   double-counts across windows. Exactly-one is **Owner discipline** — a uniqueness/validation guard is
 >   🔒 licensed on Core (§0), so it is not server-enforced.
-> - **`settings.special_invite_power_threshold` set.** Left null, the 5.3 `power > threshold` compare is
->   fail-**silent** (evaluates falsy → >130M applicants misclassified as normal, no error) — unlike the
->   required `period`, which fails loud.
+> - **`settings.special_invite_power_threshold` set.** It feeds the 5.3 `/join` power-badge compare, baked
+>   at build (§11.6). Left null it *would* be fail-**silent** (a `power > null` compare misclassifies every
+>   applicant), so **Story 5.3 makes it fail-loud at build**: a configured build with a null / non-positive
+>   threshold **throws** in `transfer-build.ts` (mirroring the exactly-one-active-period throw) — a broken
+>   classifier never ships. Re-author the value here after a from-scratch replay before rebuilding.
 
 ### 10.6 What's deferred, and what the Core license does NOT enforce
 
@@ -744,17 +746,25 @@ next window + the in-game Player-ID contact.
 
 ### 11.2 What the form bakes at build time (why it needs no runtime read)
 
-The public role has **no read**, and no public page fetches Directus at runtime (NFR-3). Two values a
-`candidates` row needs are therefore **baked into `/join` at build time** (SSG), via the same
-`finder-build-read` token the Finder uses (§9.5):
+The public role has **no read**, and no public page fetches Directus at runtime (NFR-3). Everything `/join`
+needs is therefore **baked at build time** (SSG), via the same `finder-build-read` token the Finder uses
+(§9.5):
 
 - **the alliance `slug → id` map** — `desired_alliance` is an M2O → `alliances.id`; the form resolves the
   Finder's `?alliance=<slug>` to an id at submit. `site/src/lib/transfer-build.ts` reads
   `alliances{id,slug,name}` in its **own** build read, so the Finder's idless reader
   (`directus-build.ts`) stays byte-for-byte untouched.
 - **the active `transfer_period` id** — stamped into `candidates.period` (AD-17). This requires the
-  **new read grant** on the `finder-build-read` policy: **`transfer_period`, action read, all fields, no
+  **read grant** on the `finder-build-read` policy: **`transfer_period`, action read, all fields, no
   filter** (whole-collection, ✅ free — §0). Add it alongside the existing `alliances` read (§9.5 A.1).
+- **the `special_invite_power_threshold`** (Story 5.3) — read from the `settings` singleton so `/join` can
+  classify the applicant's power at the edge (badge + the recorded `needs_special_invite` boolean; §11.6).
+  Not a value the row stores — a client-side compare only. This requires a **read grant** on the
+  `finder-build-read` policy: **`settings`, action read, all fields, no filter** (whole-collection, ✅ free
+  — a field-subset read would be 🔒, §0). Add it alongside the `alliances` + `transfer_period` reads.
+  **Rebuild-to-change:** the threshold is baked at build, so raising it in the Studio needs a **site
+  rebuild** before `/join` reflects the new value — the same build-time staleness as the active period
+  (cross-ref §10.5 / §11.6).
 
 > **Rebuild-on-period-flip precondition.** The active period id is only as fresh as the last **site
 > build**. Candidates do **not** trigger a rebuild (client-fetched, never SSG — §10), and there is **no
@@ -773,6 +783,16 @@ a raw DB NOT-NULL error, not a clean 400. Story 5.2 sets **`meta.required: true`
 `team_player_kvk`, `others_transferring`, `day4_fcfs`, `needs_special_invite`, `status`, `period`) in the
 Studio, then **re-snapshots** `directus-schema.yaml` (§6). This is a schema **field** property (free —
 NOT a permission rule); it is the clean-400 server backstop to the form's own required-field UX.
+
+> **Caveat — the backstop only fires for the eight default-null fields.** `status` (`default_value: Applied`)
+> and the three Yes/No booleans (`team_player_kvk` / `day4_fcfs` / `needs_special_invite`, each
+> `default_value: false`) carry a DB default, so a create that *omits* one is silently defaulted
+> (`status → Applied`, booleans → `false` = "No"), **not** rejected — the `required` check is satisfied by
+> the default. The clean-400 therefore covers only the eight default-null fields (`character_name`,
+> `player_id`, `kingdom_number`, `timezone`, `who_invited`, `why_leaving`, `others_transferring`, `period`).
+> Inert for the form (it always sends the three booleans and deliberately omits `status`); it matters only
+> for a direct API poster, where an omitted `needs_special_invite` silently stores as "No" (feeding the 5.3
+> special-invite routing).
 
 ### 11.4 Abuse floor (AD-12 / NFR-11) — rate limiter + honeypot, no captcha
 
@@ -794,6 +814,27 @@ is allowed; **no compose change for the origin**. The POST carries **no cookie/t
 role), so the session-cookie / `CORS_CREDENTIALS` settings are irrelevant to it. Submission is JS-driven
 `fetch` (`output: 'static'` — no server endpoint); a no-JS visitor sees the form but a "needs JavaScript"
 note (progressive enhancement, like `/leader`).
+
+### 11.6 Special-invite flag — power > threshold (Story 5.3)
+
+The old self-declared "Need a special invitation? Yes/No" field is **replaced** by a **power** input: the
+applicant enters power **in millions** (e.g. `145`), the client multiplies ×1,000,000 and compares to the
+**build-baked** `special_invite_power_threshold` (raw units). Over the limit → the danger-tinted
+special-invite **badge** shows live and the create posts `needs_special_invite: true`; at/under → no badge,
+`false`. **Strictly `>`** (exactly at the limit does not flag). Power is a **client-side classifier only** —
+never sent, never stored (there is no `power` column). The threshold reads from **editable config**, never a
+literal (NFR-17 / AR-13); the badge copy names the **live** baked value so it never rots as the limit rises.
+
+- **Read path:** the `finder-build-read` token's whole-collection `settings` read (§11.2), baked into the
+  `/join` `apply-config` JSON and resolved client-side. **Not** a Public read (AD-12 keeps Public
+  write-only) and **not** a runtime fetch (NFR-3).
+- **Null-threshold guard (fail-loud):** a configured build with a null / non-positive
+  `special_invite_power_threshold` **throws** in `transfer-build.ts` — never a silent misclassifier (§10.5).
+- **Rebuild-to-change (tracked open point).** The threshold is baked at build, so **raising it in the
+  Studio needs a site rebuild** before `/join` reflects it (same build-time staleness as the active period).
+  Because the Owner raises the limit over time, the "public form reads the threshold **live**, no rebuild"
+  idea is tracked as a correct-course candidate (`deferred-work.md`), grouped with the 5.2 live-window
+  question — **not** built here (a live public read would relax AD-12 + hit the Core field-subset wall).
 
 ## Local verification status (Story 3.1 / MIN-1)
 
@@ -1010,10 +1051,14 @@ via the API.
 - **AC2 / AC3 — fields + Player ID:** the built `/join` renders the **13 fields** (10 required / 3 optional)
   + the honeypot; **`player_id` is required and stored** as the in-game contact key (round-tripped as
   `900123456` above). Required-field UX is client-side; the **`meta.required` backstop** returns a clean
-  server **400 `FAILED_VALIDATION` — "Value is required"** when a required field is omitted (not a raw DB
-  NOT-NULL error) — resolving the 5.1-review deferred item. ✅
-- **AC4 — confirmation:** the built `/join/index.html` contains the verbatim climax copy **"You're set.
-  Next window: 19 July. A leader will reach you in-game via your Player ID."** ✅
+  server **400 `FAILED_VALIDATION` — "Value is required"** when a required **default-null** field is omitted
+  (not a raw DB NOT-NULL error) — resolving the 5.1-review deferred item. *(The four defaulted fields —
+  `status` + the three booleans — are satisfied by their DB default on omission, not 400'd; see §11.3.)* ✅
+- **AC4 — confirmation:** the built `/join/index.html` contains the confirmation climax copy **"You're set.
+  A leader will reach you in-game via your Player ID before the next transfer window."** *(The 5.2 code
+  review dropped the hard-coded "19 July" date — a static-site display value can't self-refresh without a
+  rebuild, and the Owner declined maintaining it; the "name the exact window live" option is a separate
+  correct-course. See the review findings in the 5.2 story.)* ✅
 - **AC5 — abuse floor:** the **Directus IP rate limiter** honored the `RATE_LIMITER_*` env — a burst of 9
   requests under a demo `POINTS=5/DURATION=60` limit returned `200 200 200 200 200` then **`429`** for the
   rest (production uses 50/1). The **honeypot** decoy ships hidden in the form; a filled decoy is silently
@@ -1041,3 +1086,50 @@ The **production** Public create-only grant + the `finder-build-read` `transfer_
 `docker-compose.yml`; `meta.required` is captured in `directus-schema.yaml`. The `/join` form + the two new
 build seams live in `site/` (the first Epic-5 `site/` change — AR-3's permitted apply-step swap). Local DB
 throwaway.
+
+### Special-invite flag — power > threshold (Story 5.3) — verified against real `directus/directus:12.0.2` (Core tier)
+
+Live raw-API + build proof on the Windows/Docker dev box (disposable `directus:12.0.2` container
+`k1516-53verify`, `LICENSE_KEY=""`, fresh overlay-FS DB, **via PowerShell**; torn down after). The committed
+`directus-schema.yaml` was `schema apply`ed (all 5 collections — restart to reload the cache), then seeded
+(1 alliance; one active `transfer_period` id 1; `settings.special_invite_power_threshold = 130000000`), then
+the Public create + `finder-build-read` reads (`alliances` + `transfer_period` + **`settings`**) wired via
+the API.
+
+- **AC2 — grant + read (the new `settings` read):** the `finder-build-read` **static token**
+  `GET /items/settings` → **200**, `special_invite_power_threshold = 130000000`; it also reads `alliances`
+  (1 row) + the active `transfer_period` (id 1). An **anonymous** `GET /items/settings` → **403** — Public
+  stays locked, the threshold is never publicly readable (AD-12). ✅
+- **AC2 — editable config, not a literal:** a Node-22 live build baked
+  **`specialInvitePowerThreshold: 130000000`** into `/join`'s `apply-config` JSON; **changing the singleton
+  to `140000000` + rebuilding** baked **`140000000`** (the badge names the live value — never hardcoded). ✅
+- **AC1 — the flag is recorded from the derived boolean:** an **anonymous** `POST /items/candidates` with
+  `needs_special_invite: true` (power > limit) and a second with `false` (≤ limit) each → **2xx**; read back
+  (admin): row #1 `= true`, row #2 `= false`, both `status = Applied` (default), `period = 1`, and
+  `suggested_alliance`/`group`/`planned_path` **null** (Curator-only, never sent). Anon `GET /items/candidates`
+  → **403** (create-only, no read). ✅
+- **AC1 — compare semantics (client, deterministic):** a faithful replica of the shipped `powerToRaw` +
+  `needsSpecialInvite` derivation asserts **12/12**: at `threshold = 130M`, power `145`→flag, `120`→no,
+  **exactly `130`→no** (strict `>`), `130.5`→flag, `129.999`→no, empty/`abc`/`-5`/`0`→no; at
+  `threshold = null`/`0` **every** input → no flag (the D3 client guard — never `power > null`). Power is
+  entered **in millions** (×1,000,000 before the compare) and is **never sent or stored** (no `power`
+  column). ✅
+- **D3 — null threshold fails the build LOUD:** setting the singleton threshold **null** and rebuilding
+  **failed the Node-22 build (exit 1)** with `Error: settings.special_invite_power_threshold is not a
+  positive number (got null)…` — a broken classifier never ships (contrast the pre-5.3 fail-silent
+  `power > null`). Restored to `130000000` after. ✅
+- **⛔ License gate re-proven for `settings`:** adding a **field-subset** read
+  (`fields: ['special_invite_power_threshold']`) to a policy → **403 `RESOURCE_RESTRICTED`**
+  (`custom_permission_rules_enabled is a restricted resource`); only the **whole-collection** read
+  (`fields: ['*']`) is free on Core — the shape the `finder-build-read` grant uses. ✅
+- **Build hygiene:** the final Node-22 live build emitted **CSS** (`rel="stylesheet"` present — the Node-24
+  no-CSS hazard check), **leaked no token** into `dist/`, rendered the **power input** (`type=number`,
+  `inputmode=decimal`, `required`) + the `badge-special` (`role="status"`, `triangle-alert` icon, hidden
+  until over the limit), and the old self-declared `needs_special_invite` Yes/No is **gone**. A **seed-mode**
+  build (no token) is green with `specialInvitePowerThreshold: null` (badge inert, form can't POST — expected
+  pre-launch). ✅
+
+The **production** `finder-build-read` `settings` read grant lives only in `data.db` (Studio-authored, daily
+backup — §3), **not** the schema snapshot; **no `directus-schema.yaml` change** in 5.3 (the `settings`
+collection + field already exist from 5.1). The power input + threshold-derivation live in `site/`
+(`join.astro` + `transfer-build.ts`). Local DB throwaway; `k1516db`/`k1516vdb` left for the Owner to prune.

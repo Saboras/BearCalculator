@@ -21,7 +21,7 @@ import { loadApplyFormData } from '../lib/transfer-build';
   ids and no active period, so it cannot POST — expected (there are no public users
   before the domain + Directus go live).
 */
-const { alliances, activePeriodId } = await loadApplyFormData();
+const { alliances, activePeriodId, specialInvitePowerThreshold } = await loadApplyFormData();
 
 /*
   Curated IANA timezone list (mirrors TimezoneRow.astro — a native <select>, no tz
@@ -88,7 +88,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
 
         <div class="field">
           <label for="f-kingdom_number">Current kingdom number</label>
-          <input type="number" id="f-kingdom_number" name="kingdom_number" min="1" step="1" inputmode="numeric" autocomplete="off" required />
+          <input type="number" id="f-kingdom_number" name="kingdom_number" class="tabular" min="1" step="1" inputmode="numeric" autocomplete="off" required />
           <p class="field-error" id="err-kingdom_number" role="alert" hidden></p>
         </div>
 
@@ -155,14 +155,21 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
           <p class="field-error" id="err-day4_fcfs" role="alert" hidden></p>
         </fieldset>
 
-        <fieldset class="field yn">
-          <legend>Need a special invitation? (too high-powered to kill troops under 130M)</legend>
-          <div class="yn-opts">
-            <label class="yn-opt"><input type="radio" name="needs_special_invite" value="yes" /><span>Yes</span></label>
-            <label class="yn-opt"><input type="radio" name="needs_special_invite" value="no" /><span>No</span></label>
-          </div>
-          <p class="field-error" id="err-needs_special_invite" role="alert" hidden></p>
-        </fieldset>
+        {/*
+          Power drives the special-invite flag (Story 5.3): entered IN MILLIONS, the
+          client multiplies ×1,000,000 and compares to the build-baked threshold — over
+          it, the badge shows and needs_special_invite is recorded true. Power itself is
+          a client-side classifier only: never sent, never stored (no `power` column).
+        */}
+        <div class="field">
+          <label for="f-power">Your power (in millions)</label>
+          <input type="number" id="f-power" name="power" class="tabular" min="0" step="any" inputmode="decimal" autocomplete="off" required />
+          <p class="field-hint">For example, 145 for 145M. We use this to check if you need a special invitation.</p>
+          <p class="badge-special" id="special-invite-badge" role="status" hidden>
+            <span class="badge-ic" aria-hidden="true"><Icon name="triangle-alert" /></span><span id="special-invite-text"></span>
+          </p>
+          <p class="field-error" id="err-power" role="alert" hidden></p>
+        </div>
 
         {/*
           Honeypot — a real bot fills every field, a human never sees this one. If it
@@ -171,8 +178,10 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
           floor, AD-12). Hidden from sight, tab order, and assistive tech.
         */}
         <div class="hp" aria-hidden="true">
-          <label for="f-website">Website</label>
-          <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off" />
+          {/* Non-semantic name + label: dodge the "website"/"url" autofill heuristics that would
+              fill this off-screen decoy for a real human and silently drop their application. */}
+          <label for="f-hp-leave-empty">Leave this field empty</label>
+          <input type="text" id="f-hp-leave-empty" name="hp_leave_empty" tabindex="-1" autocomplete="off" />
         </div>
 
         <p class="form-error" id="apply-error" role="alert" hidden></p>
@@ -186,20 +195,20 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
 
       {/*
         Confirmation climax — hidden until a successful create. Copy is fixed per the
-        UX spec (names the next window + the in-game contact via Player ID). Never
-        the banned bare "submitted successfully".
+        UX spec (references the next window + the in-game contact via Player ID, without
+        hardcoding a date). Never the banned bare "submitted successfully".
       */}
-      <div class="confirm" id="apply-confirm" hidden>
+      <div class="confirm" id="apply-confirm" role="status" tabindex="-1" hidden>
         <p class="confirm-line">
           <span class="confirm-ic" aria-hidden="true"><Icon name="check" /></span>
-          You're set. Next window: 19 July. A leader will reach you in-game via your Player ID.
+          You're set. A leader will reach you in-game via your Player ID before the next transfer window.
         </p>
         <p class="confirm-sub">You applied as <b>Applied</b> — the leaders take it from here.</p>
       </div>
     </section>
 
     {/* Trusted build-time config the bundled module reads (no runtime fetch). */}
-    <script id="apply-config" type="application/json" set:html={jsonForScript({ activePeriodId, slugToId })} />
+    <script id="apply-config" type="application/json" set:html={jsonForScript({ activePeriodId, slugToId, specialInvitePowerThreshold })} />
   </main>
 </Layout>
 
@@ -336,6 +345,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   .field input.tabular {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
+    text-align: right;
   }
   /* Gold focus ring (DESIGN input spec: border → primary + soft gold glow). */
   .field input:focus-visible,
@@ -358,6 +368,29 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   }
   .field-error[hidden] {
     display: none;
+  }
+
+  /* ===== Special-invite warning (DESIGN `badge-special` — reserved danger token) ===== */
+  .badge-special {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 0;
+    padding: var(--space-3) var(--space-4);
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .14);
+    border: 1px solid rgba(216, 53, 42, .4);
+    border-radius: var(--radius-sm);
+  }
+  .badge-special[hidden] {
+    display: none;
+  }
+  .badge-ic {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-top: 1px;
   }
 
   /* ===== Yes/No segmented control ===== */
@@ -512,6 +545,11 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   :global(:root[data-theme="dark"]) .yn-opt {
     background: var(--color-surface);
   }
+  /* Danger tint reads too faint over the dark card — lift the fill + border. */
+  :global(:root[data-theme="dark"]) .badge-special {
+    background: rgba(216, 53, 42, .2);
+    border-color: rgba(216, 53, 42, .5);
+  }
   :global(:root[data-theme="dark"]) .btn-gold {
     background: linear-gradient(#F2A93B, #E0962A);
     box-shadow:
@@ -542,15 +580,18 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   interface ApplyConfig {
     activePeriodId: number | null;
     slugToId: Record<string, number>;
+    // >130M special-invite threshold in RAW units (or null in seed / degenerate builds).
+    specialInvitePowerThreshold: number | null;
   }
 
   function readConfig(): ApplyConfig {
     const el = document.getElementById('apply-config');
-    if (!el || !el.textContent) return { activePeriodId: null, slugToId: {} };
+    const fallback: ApplyConfig = { activePeriodId: null, slugToId: {}, specialInvitePowerThreshold: null };
+    if (!el || !el.textContent) return fallback;
     try {
       return JSON.parse(el.textContent) as ApplyConfig;
     } catch {
-      return { activePeriodId: null, slugToId: {} };
+      return fallback;
     }
   }
 
@@ -590,6 +631,49 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     desiredSelect.value = slugParam; // matched against trusted baked options, never rendered from the URL
   }
 
+  // --- (3) Special-invite flag (Story 5.3): the applicant enters power IN MILLIONS;
+  //     the flag is derived by comparing (power × 1,000,000) to the build-baked
+  //     threshold (raw units). Power is a client-side classifier only — never sent.
+  const powerInput = document.getElementById('f-power') as HTMLInputElement | null;
+  const specialBadge = document.getElementById('special-invite-badge');
+  const specialText = document.getElementById('special-invite-text');
+
+  // Meaningful ONLY when the baked threshold is a positive finite number — a null /
+  // invalid threshold must never read as "power > null" (that would flag everyone).
+  // In a real submittable build transfer-build.ts guarantees a valid value (it throws
+  // otherwise); this guard protects the seed / degenerate case.
+  const threshold = config.specialInvitePowerThreshold;
+  const thresholdActive = typeof threshold === 'number' && Number.isFinite(threshold) && threshold > 0;
+
+  function powerToRaw(millions: string): number {
+    const n = Number(String(millions).trim());
+    return Number.isFinite(n) ? n * 1_000_000 : NaN;
+  }
+  function needsSpecialInvite(rawPower: number): boolean {
+    return thresholdActive && Number.isFinite(rawPower) && rawPower > (threshold as number);
+  }
+
+  // Name the LIVE threshold (in millions, trailing .0 dropped) so the copy never rots
+  // as the Owner raises the limit over time.
+  if (specialText && thresholdActive) {
+    const limitLabel = String((threshold as number) / 1_000_000);
+    specialText.textContent =
+      `Special invitation needed — you're over the ${limitLabel}M power limit for a regular slot. ` +
+      'You can still apply; only a small number of special invitations are available each window, ' +
+      'and a leader will sort it out with you in-game.';
+  }
+
+  function refreshSpecialBadge() {
+    if (!specialBadge) return;
+    if (needsSpecialInvite(powerToRaw(powerInput?.value ?? ''))) specialBadge.removeAttribute('hidden');
+    else specialBadge.setAttribute('hidden', '');
+  }
+  powerInput?.addEventListener('input', refreshSpecialBadge);
+  // Also reflect a value the browser restored without a keystroke (autofill on load,
+  // bfcache back/forward) so the badge never lags the recorded flag.
+  refreshSpecialBadge();
+  window.addEventListener('pageshow', refreshSpecialBadge);
+
   // --- Inline field-level errors (AC6) ---
   function setFieldError(name: string, message: string) {
     const el = document.getElementById(`err-${name}`);
@@ -618,7 +702,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     'character_name', 'player_id', 'kingdom_number', 'timezone',
     'who_invited', 'why_leaving', 'others_transferring',
   ];
-  const REQUIRED_YESNO = ['team_player_kvk', 'day4_fcfs', 'needs_special_invite'];
+  const REQUIRED_YESNO = ['team_player_kvk', 'day4_fcfs'];
 
   // Returns the first invalid field name, or null when everything is valid.
   function validate(fd: FormData): string | null {
@@ -634,9 +718,18 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     for (const name of REQUIRED_TEXT) {
       flag(name, String(fd.get(name) ?? '').trim() === '', 'This field is required.');
     }
-    // kingdom_number must be a positive whole number
+    // kingdom_number must be a positive whole number (novalidate makes the input's min="1" inert)
     const kn = String(fd.get('kingdom_number') ?? '').trim();
-    if (kn !== '' && !/^\d+$/.test(kn)) flag('kingdom_number', true, 'Enter your kingdom number (digits only).');
+    if (kn !== '' && (!/^\d+$/.test(kn) || Number(kn) < 1)) {
+      flag('kingdom_number', true, 'Enter a valid kingdom number.');
+    }
+    // power (in millions) is required and must be a positive number (decimals allowed)
+    const pw = String(fd.get('power') ?? '').trim();
+    if (pw === '') {
+      flag('power', true, 'This field is required.');
+    } else {
+      flag('power', !(Number(pw) > 0), 'Enter your power in millions (e.g. 145).');
+    }
     for (const name of REQUIRED_YESNO) {
       flag(name, fd.get(name) === null, 'Please choose Yes or No.');
     }
@@ -652,6 +745,9 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     form?.setAttribute('hidden', '');
     confirmPanel?.removeAttribute('hidden');
     confirmPanel?.scrollIntoView({ block: 'nearest' });
+    // Move focus into the confirmation so screen readers announce the success — role="status"
+    // alone is unreliable when a region goes from hidden→shown.
+    confirmPanel?.focus();
   }
 
   // A 4xx is a validation/data problem; anything else (network / CORS / 5xx) rejects
@@ -669,7 +765,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
 
     // Honeypot: a filled decoy means a bot. Silently show success without posting
     // (don't reveal the trap). Best-effort — the rate limit is the real floor.
-    if (String(fd.get('website') ?? '').trim() !== '') {
+    if (String(fd.get('hp_leave_empty') ?? '').trim() !== '') {
       showConfirmation();
       return;
     }
@@ -691,7 +787,10 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     const text = (n: string) => String(fd.get(n) ?? '').trim();
     const yesno = (n: string) => fd.get(n) === 'yes';
     const desiredSlug = text('desired_alliance');
-    const desiredId = desiredSlug ? config.slugToId[desiredSlug] : undefined;
+    const desiredId =
+      desiredSlug && Object.prototype.hasOwnProperty.call(config.slugToId, desiredSlug)
+        ? config.slugToId[desiredSlug]
+        : undefined;
 
     const payload: CandidatePayload = {
       character_name: text('character_name'),
@@ -703,7 +802,9 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       team_player_kvk: yesno('team_player_kvk'),
       others_transferring: text('others_transferring'),
       day4_fcfs: yesno('day4_fcfs'),
-      needs_special_invite: yesno('needs_special_invite'),
+      // Derived from power (millions → raw), not self-declared (Story 5.3). Power is
+      // never sent; only this boolean is recorded.
+      needs_special_invite: needsSpecialInvite(powerToRaw(text('power'))),
       period: config.activePeriodId,
     };
     if (text('what_you_seek')) payload.what_you_seek = text('what_you_seek');
@@ -711,7 +812,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     if (desiredId !== undefined) payload.desired_alliance = desiredId;
 
     submitBtn.disabled = true;
-    const label = submitBtn.textContent;
+    const label = submitBtn.innerHTML; // innerHTML, not textContent — preserve the <Icon> SVG on restore
     submitBtn.textContent = 'Submitting…';
     try {
       await createCandidate(payload);
@@ -725,7 +826,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       );
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = label;
+      submitBtn.innerHTML = label;
     }
   });
 </script>

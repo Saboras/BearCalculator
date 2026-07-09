@@ -168,7 +168,7 @@ Accounts**.
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
 | Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
-| Alliances / Transfer | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2** (keeps Public locked; §3) |
+| Alliances / Transfer | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`) **+ read `settings`** (Story 5.3 — the `special_invite_power_threshold` the `/join` power-badge compares against); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2 / 5.3** (keeps Public locked; §3) |
 | all | **Owner** = built-in **Administrator** role (`admin_access: true`) | — | **everything** (universal override) | admin bypass — **no per-collection rules** ✅ free |
 | public | built-in **Public** policy | — | **create-only** on `candidates`, **no read** — **wired Story 5.2** | AD-12 ✅ free (whole-collection create); the AD-12/AR-14 **hardening** = Directus IP rate limiter + form honeypot at the **edge** (a `preset`/`validation` on the grant stays 🔒/Option-3 — §3/§4/§0) |
 
@@ -256,9 +256,11 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > those collections — **5.2** Public create-only, **5.4** Viewer read (candidate list), **5.5** Curator
 > work-field update, **5.6** `transfer_groups` CRUD, **5.8** Curator delete. The **`settings` singleton** has
 > a *separate* read consumer, not a Transfer grant row: `settings.special_invite_power_threshold` is read by
-> the **5.3** `>130M` form-edge compare — its read **mechanism is a 5.3 decision** (a build-time static-token
-> read like §9.5 alliances, *or* a `transfer-viewer` read grant), tracked here + in §AD-9 so the path is not
-> silently dropped. **No grant was wired in 5.1**
+> the **5.3** `>130M` form-edge compare. **Mechanism decided + delivered (Story 5.3): a build-time
+> static-token read** on the `finder-build-read` policy (like §9.5 alliances) — **not** a `transfer-viewer`
+> grant (that leader-side read would not serve the public form) and **not** a Public read (AD-12 keeps Public
+> write-only). The threshold is baked into `/join` at build; a Public runtime read is forbidden and a
+> field-subset read is 🔒 (§0). **No grant was wired in 5.1**
 > (the 4.1 fence). **Under Option 3 (§0), the Curator's 5.5 update grant is full-collection** — so the
 > AD-8/AD-9 **distinct-writer** boundary (a Curator must not touch the public core / `desired_alliance`)
 > and the AD-17 **`period` never-re-stamped** immutability are **UX/convention, NOT server-enforced**
@@ -313,19 +315,22 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > field subset and the row filter the moment Directus is licensed. **Do NOT grant `create`/`delete`**
 > to this policy — the Owner creates/deletes alliances (AD-9 / FR-3).
 
-### `finder-build-read` (Build · Read) — the SSG read token (Story 4.3)
+### `finder-build-read` (Build · Read) — the SSG read token (Stories 4.3 / 5.2 / 5.3)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
 | `alliances` | read | `["*"]` (all fields) | — none | ✅ **delivered Story 4.3** · whole-collection read = free (§0) |
+| `transfer_period` | read | `["*"]` (all fields) | — none | ✅ **delivered Story 5.2** · the active period id `/join` stamps into `candidates.period` · whole-collection read = free |
+| `settings` (singleton) | read | `["*"]` (all fields) | — none | ✅ **delivered Story 5.3** · the `special_invite_power_threshold` the `/join` power-badge compares against · whole-collection read = free |
 
 > Not a leader role — a **service policy** attached to a dedicated `finder-build` user whose **static
-> token** the Astro build uses to pull `alliances` at build time (AR-18: "the build pulls with a
-> read-only token"). It grants **read on `alliances` only** — nothing else, no write, no other
-> collection. This is why **Public stays locked** (AD-12): the build authenticates with its own token
-> instead of opening the collection to the world. The token lives in the `DIRECTUS_TOKEN` build secret
-> (non-`PUBLIC_`, never in the client bundle); the grant lives only in `data.db` (backed up, §6), not in
-> `directus-schema.yaml`. Runbook: `README.md` §9.5. When Directus is licensed, this can tighten to
-> read-only-published, but on Core the whole-collection read is the free, correct shape.
+> token** the Astro build uses to pull build-time data (AR-18: "the build pulls with a read-only token").
+> It grants **read on `alliances`, `transfer_period`, and the `settings` singleton only** — nothing else, no
+> write, no other collection. This is why **Public stays locked** (AD-12): the build authenticates with its
+> own token instead of opening the collections to the world. The token lives in the `DIRECTUS_TOKEN` build
+> secret (non-`PUBLIC_`, never in the client bundle); the grant lives only in `data.db` (backed up, §6), not
+> in `directus-schema.yaml`. Runbook: `README.md` §9.5 (+ §11.2 for the `transfer_period`/`settings` reads).
+> When Directus is licensed, these can tighten to field-subsets / published-only, but on Core the
+> whole-collection read is the free, correct shape.
 
 ### `Public` (built-in, unauthenticated)
 | Collection | Action | Fields | Row filter | Status |
@@ -372,9 +377,10 @@ counter denominators (**caps on `transfer_period`**) is free and belongs to `tra
 (**wired Story 5.2** — the `/join` build bakes the single active period id it stamps into
 `candidates.period`; §2 / README §11) — a *read* only, still no write. The **`settings` threshold has a
 *separate* reader**:
-`settings.special_invite_power_threshold` is consumed by the **5.3** `>130M` form-edge compare — its read
-**mechanism is a 5.3 decision** (a build-time static-token read like §9.5 alliances, *or* a
-`transfer-viewer` read grant), noted here so the read path is tracked, not silently dropped. Do **not**
+`settings.special_invite_power_threshold` is consumed by the **5.3** `>130M` form-edge compare — read
+**mechanism decided + delivered (Story 5.3): a build-time static-token read** on this same
+`finder-build-read` policy (baked into `/join`, like §9.5 alliances), **not** a `transfer-viewer` grant and
+**not** a Public read. Do **not**
 hand a Curator a `transfer_period`/`settings` *write* grant "for counters" — a Curator never writes
 caps, the active flag, or a threshold. (**Epic 5.1 created `transfer_period` + `settings`** —
 `README.md` §10; it attached **no** grant at all — every grant lands with its consuming story, §3.)

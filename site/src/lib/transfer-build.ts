@@ -1,4 +1,4 @@
-import { createDirectus, staticToken, rest, readItems } from '@directus/sdk';
+import { createDirectus, staticToken, rest, readItems, readSingleton } from '@directus/sdk';
 import alliancesData from '../data/alliances.json';
 import { isDirectusConfigured } from './directus-build';
 
@@ -36,6 +36,11 @@ export interface ApplyFormData {
   alliances: ApplyAlliance[];
   // null in seed mode; the single active transfer_period id when configured.
   activePeriodId: number | null;
+  // The >130M special-invite power threshold in RAW units (settings singleton, e.g.
+  // 130000000) — Story 5.3. null ONLY in seed mode; a configured build with a
+  // null / non-positive value THROWS (a null threshold would silently misclassify
+  // every high-power applicant, so the classifier must fail loud at build).
+  specialInvitePowerThreshold: number | null;
 }
 
 interface DirectusAllianceIdRow {
@@ -45,6 +50,9 @@ interface DirectusAllianceIdRow {
 }
 interface DirectusPeriodRow {
   id: number;
+}
+interface DirectusSettingsRow {
+  special_invite_power_threshold: number | null;
 }
 
 /*
@@ -68,7 +76,7 @@ export async function loadApplyFormData(): Promise<ApplyFormData> {
       slug: a.slug,
       name: a.name,
     }));
-    return { alliances, activePeriodId: null };
+    return { alliances, activePeriodId: null, specialInvitePowerThreshold: null };
   }
 
   if (DIRECTUS_URL === DIRECTUS_URL_PLACEHOLDER) {
@@ -95,9 +103,30 @@ export async function loadApplyFormData(): Promise<ApplyFormData> {
     );
   }
 
+  // Story 5.3: the >130M special-invite threshold, baked so the /join form can
+  // classify power at the edge (the create-only public role has no runtime read).
+  // A whole-collection read on the finder-build-read token's `settings` grant is free
+  // on Core; the `fields` here is a client PROJECTION, not a 🔒 permission field-subset.
+  const settings = (await client.request(
+    readSingleton('settings', { fields: ['special_invite_power_threshold'] })
+  )) as DirectusSettingsRow;
+
+  const threshold = settings.special_invite_power_threshold;
+  if (typeof threshold !== 'number' || !Number.isFinite(threshold) || threshold <= 0) {
+    // Fail LOUD (deferred item D3): a null / non-positive threshold poisons the client
+    // compare `power > threshold` — `power > null` coerces null → 0, so every positive
+    // power reads as over the limit and is silently flagged special (a non-positive
+    // threshold is just as wrong). Either way it is a silent misclassifier: don't build.
+    throw new Error(
+      `settings.special_invite_power_threshold is not a positive number (got ${JSON.stringify(
+        threshold
+      )}). The /join form derives the special-invite flag by comparing power to it; a null/empty value would silently misclassify every high-power applicant. Set it in the Data Studio (README §10.3) and rebuild.`
+    );
+  }
+
   const alliances = allianceRows.map((r) => ({ id: r.id, slug: r.slug, name: r.name }));
   console.log(
-    `[apply-form] Sourced ${alliances.length} alliance(s) + active period ${periodRows[0].id} from Directus at build time.`
+    `[apply-form] Sourced ${alliances.length} alliance(s) + active period ${periodRows[0].id} + special-invite threshold ${threshold} from Directus at build time.`
   );
-  return { alliances, activePeriodId: periodRows[0].id };
+  return { alliances, activePeriodId: periodRows[0].id, specialInvitePowerThreshold: threshold };
 }
