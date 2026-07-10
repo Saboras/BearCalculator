@@ -1,4 +1,14 @@
-import { createDirectus, authentication, rest, readMe, readItems, updateItem } from '@directus/sdk';
+import {
+  createDirectus,
+  authentication,
+  rest,
+  readMe,
+  readItems,
+  updateItem,
+  updateItems,
+  createItem,
+  deleteItem,
+} from '@directus/sdk';
 
 /*
   Directus client — leader session auth for the /leader gate (Story 3.2).
@@ -163,8 +173,64 @@ export function getCandidates() {
   Returns the echoed row (the Curator holds the read grant) — used only to confirm success;
   the caller applies the patch it sent to its local row.
 */
-export type CandidatePatch = { status?: string; planned_path?: string | null };
+export type CandidatePatch = {
+  status?: string;
+  planned_path?: string | null;
+  suggested_alliance?: number | null; // M2O id (write side); read side is the expanded {id,name}
+  group?: number | null; // M2O id → transfer_groups (write side); read side is the raw id
+};
 
 export function updateCandidate(id: number, patch: CandidatePatch) {
   return client.request(updateItem('candidates', id, patch)) as Promise<Candidate>;
+}
+
+/*
+  --- Curator grouping + suggested-alliance writes (Story 5.6) ---
+  The remaining two Curator row actions: LINK a friend-group and set a SUGGESTED alliance
+  (a recommendation, never a placement — AD-8). Same session client, same httpOnly cookie.
+
+  updateCandidates() is the ATOMIC group-level fan-out (AC3): one PATCH /items/candidates
+  with { keys, data } sets every member's suggested_alliance to the SAME value in a single
+  server-side transaction — NOT a loop of N single-row PATCHes (which could half-fan-out and
+  leave a group flagged forever). Member ids come from the in-memory rows (rows.filter(group
+  === gid)); no transfer_groups read is needed for the fan-out or the divergent flag.
+
+  Grouping membership lives on candidates.group (M2O → transfer_groups). "Set at group level"
+  writes each member's candidates.suggested_alliance; transfer_groups carries NO suggested
+  column (AR-10). The divergent flag is edge-computed, never stored (AR-6).
+
+  ⚠️ Same Option-3 discipline as 5.5: callers send ONLY { suggested_alliance } and/or
+  { group } — never `period`, never the public-core / desired_alliance fields. The
+  whole-collection Curator update grant (Story 5.5) already authorizes these fields; the
+  field boundary is UI convention, not server-enforced on Core.
+*/
+export function updateCandidates(ids: number[], patch: CandidatePatch) {
+  return client.request(updateItems('candidates', ids, patch)) as Promise<Candidate[]>;
+}
+
+// Mint a new (empty) transfer group. name stays null — groups are labelled by their
+// membership (no name input in 5.6). The Curator holds transfer_groups READ, so the create
+// echoes the new row incl. its id — the linking flow needs that id to stamp candidates.group.
+export function createGroup() {
+  return client.request(createItem('transfer_groups', { name: null })) as Promise<{ id: number }>;
+}
+
+// Dissolve a transfer group once it drops below 2 members (a "group of one" is not a group).
+// on_delete: SET NULL on candidates.group means any lingering member is un-linked, not deleted.
+export function deleteGroup(id: number) {
+  return client.request(deleteItem('transfer_groups', id));
+}
+
+export interface AllianceOption {
+  id: number;
+  name: string | null;
+}
+
+// The suggested-alliance picker source. The Curator already holds a free whole-collection
+// `alliances` read (Story 5.5), so no new grant is needed. id is the M2O write value; name
+// renders in the picker + the Suggested cell.
+export function getAlliances() {
+  return client.request(
+    readItems('alliances', { fields: ['id', 'name'], limit: -1, sort: ['name'] })
+  ) as Promise<AllianceOption[]>;
 }

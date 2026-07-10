@@ -543,6 +543,108 @@ import Icon from '../../components/Icon.astro';
     display: none;
   }
 
+  /* ===== Grouping + suggested-alliance controls (Story 5.6) ===== */
+  /* Read-only group summary + the edge-computed divergent flag (both visible to all leaders). */
+  .cand-group-summary {
+    margin: 0 0 var(--space-2);
+    font-size: 12.5px;
+    color: var(--color-muted);
+  }
+  .cand-flag--divergent {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 var(--space-3);
+    padding: 6px 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .08);
+    border: 1px solid rgba(216, 53, 42, .4);
+    border-radius: var(--radius-sm);
+  }
+  .cand-flag--divergent .cand-flag-ic {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+  .cand-flag--divergent :global(.icon) {
+    width: 15px;
+    height: 15px;
+  }
+  /* Compact danger marker in the Suggested cell — mirrors the special-invite chip idiom. */
+  .cand-flag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: var(--space-2);
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .14);
+    border: 1px solid rgba(216, 53, 42, .4);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .cand-flag-chip :global(.icon) {
+    width: 12px;
+    height: 12px;
+  }
+  /* Suggested-alliance picker + the link-group checklist. */
+  .cand-select {
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    padding: 4px 8px;
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    max-width: 220px;
+  }
+  .cand-select:disabled {
+    opacity: .55;
+    cursor: default;
+  }
+  .cand-select:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .cand-linkpanel {
+    margin: var(--space-2) 0 0;
+    padding: var(--space-3);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    background: rgba(224, 138, 43, .04);
+  }
+  .cand-linkpanel[hidden] {
+    display: none;
+  }
+  .cand-linklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 4px var(--space-4);
+    margin: 0 0 var(--space-3);
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .cand-linkopt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .cand-linkopt .muted {
+    color: var(--color-muted);
+    font-size: 11px;
+  }
+  .cand-linkopt input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
   /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
   :global(:root[data-theme='dark']) .shell-head,
   :global(:root[data-theme='dark']) .tabs {
@@ -594,6 +696,19 @@ import Icon from '../../components/Icon.astro';
   :global(:root[data-theme='dark']) .cand-btn--danger:hover:not(:disabled) {
     background: rgba(242, 88, 77, .12);
   }
+  /* Story 5.6 — the light danger tints + parchment washes need dark overrides. */
+  :global(:root[data-theme='dark']) .cand-flag--divergent,
+  :global(:root[data-theme='dark']) .cand-flag-chip {
+    color: var(--color-danger);
+    background: rgba(216, 53, 42, .2);
+    border-color: rgba(216, 53, 42, .5);
+  }
+  :global(:root[data-theme='dark']) .cand-linkpanel {
+    background: rgba(242, 169, 59, .05);
+  }
+  :global(:root[data-theme='dark']) .cand-select {
+    background: var(--color-surface);
+  }
 
   /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
   @media (max-width: 767.98px) {
@@ -621,10 +736,14 @@ import Icon from '../../components/Icon.astro';
     getMyPermissions,
     getCandidates,
     updateCandidate,
+    updateCandidates,
+    createGroup,
+    deleteGroup,
+    getAlliances,
     logout,
     DATA_STUDIO_URL,
   } from '../../lib/directus';
-  import type { Candidate, CandidatePatch } from '../../lib/directus';
+  import type { Candidate, CandidatePatch, AllianceOption } from '../../lib/directus';
 
   type Kind = 'custom' | 'studio';
   interface AreaDef {
@@ -802,6 +921,17 @@ import Icon from '../../components/Icon.astro';
   // All candidate data enters the DOM via textContent/createElement (XSS: untrusted PII).
   // Story 5.5: a Curator (Transfer·Work) or the Owner also gets per-row status/path controls.
   let canWriteCandidates = false; // set in boot() from the resolved Transfer mode / Owner
+  // Story 5.6: the fetched rows are held module-wide so grouping/suggested writes can mutate
+  // them in place and trigger a table-wide recompute (the divergent flag + accents are a
+  // membership-wide derivation, not a single-row one). openDetails preserves which rows are
+  // expanded across a full re-render, so a Curator's working row stays open after a write.
+  let candidateRows: Candidate[] = [];
+  const openDetails = new Set<number>();
+  let alliancesCache: AllianceOption[] | null = null; // the suggested-alliance picker source (lazy)
+  // Story 5.6 (review P3): one guard for ALL candidate writes (5.5 per-row + 5.6 table-wide).
+  // A 5.6 write rebuilds the whole tbody, so writes must serialize — otherwise a rerender could
+  // detach another row's in-flight write (silent failure) or a rebuilt panel be re-clicked mid-write.
+  let writeInFlight = false;
   const STATUS_MOD: Record<string, string> = {
     Applied: 'applied',
     Accepted: 'accepted',
@@ -867,6 +997,134 @@ import Icon from '../../components/Icon.astro';
     return out;
   }
 
+  // ===== Grouping + suggested-alliance (Story 5.6) — Work-mode only =====
+  // Grouping links friends via candidates.group (M2O → transfer_groups); the suggested
+  // alliance is written on candidates.suggested_alliance (candidate-level, or a group-level
+  // ONE-TRANSACTION fan-out via updateCandidates). transfer_groups carries no suggested
+  // column and the divergent flag is edge-computed, never stored (AR-6/AR-10). Every write
+  // sends ONLY { group } / { suggested_alliance } — never `period`/public-core/desired (AD-8).
+
+  const groupMembers = (rows: Candidate[], gid: number): Candidate[] =>
+    rows.filter((r) => r.group === gid);
+
+  // The count of DISTINCT non-null suggested alliances in a group — the "N" in the flag copy.
+  function distinctSuggestionCount(rows: Candidate[], gid: number): number {
+    const s = new Set<number>();
+    for (const r of rows) {
+      if (r.group === gid && r.suggested_alliance?.id != null) s.add(r.suggested_alliance.id);
+    }
+    return s.size;
+  }
+
+  // Lazy-load the alliance list once; a Curator already holds the free `alliances` read.
+  async function ensureAlliances(): Promise<AllianceOption[]> {
+    if (alliancesCache) return alliancesCache;
+    try {
+      alliancesCache = await getAlliances();
+    } catch {
+      // Review P1: do NOT cache [] on a transient failure — an empty array is truthy, so it
+      // would poison the picker for the whole session (only a reload recovers). Leave the cache
+      // null and return a transient empty list; the next ensureAlliances() call retries.
+      return [];
+    }
+    return alliancesCache;
+  }
+  function allianceOptionFor(id: number): AllianceOption {
+    return (alliancesCache ?? []).find((a) => a.id === id) ?? { id, name: null };
+  }
+
+  // Link r with the selected candidates. Reuse an existing group if any selected member (or r)
+  // already belongs to one; otherwise mint a new transfer_groups row, then batch-stamp
+  // candidates.group. Local rows are mutated so the table-wide re-render reflects it.
+  async function linkGroup(r: Candidate, selectedIds: number[]): Promise<void> {
+    if (selectedIds.length === 0) return; // review P2: need ≥1 other — never mint a group of one
+    const memberIds = [r.id, ...selectedIds];
+    let gid: number | null = r.group;
+    if (gid == null) {
+      for (const id of selectedIds) {
+        const c = candidateRows.find((x) => x.id === id);
+        if (c?.group != null) {
+          gid = c.group;
+          break;
+        }
+      }
+    }
+    if (gid == null) {
+      const g = await createGroup();
+      gid = g.id;
+    }
+    const toSet = memberIds.filter((id) => {
+      const c = candidateRows.find((x) => x.id === id);
+      return c != null && c.group !== gid;
+    });
+    // Review P4/D1: capture the source groups moved members are LEAVING (before the local
+    // mutation) so we can dissolve any that drop below 2 — otherwise linking across groups
+    // strands a lone remainder with a gold accent (the "no group of one" invariant, elsewhere
+    // enforced by unlinkFromGroup, must hold here too).
+    const sourceGids = new Set<number>();
+    for (const id of toSet) {
+      const c = candidateRows.find((x) => x.id === id);
+      if (c?.group != null && c.group !== gid) sourceGids.add(c.group);
+    }
+    if (toSet.length > 0) {
+      await updateCandidates(toSet, { group: gid });
+      for (const id of toSet) {
+        const c = candidateRows.find((x) => x.id === id);
+        if (c) c.group = gid;
+      }
+    }
+    for (const sgid of sourceGids) {
+      const remaining = groupMembers(candidateRows, sgid);
+      if (remaining.length === 1) {
+        await updateCandidate(remaining[0].id, { group: null });
+        remaining[0].group = null;
+        await deleteGroup(sgid);
+      } else if (remaining.length === 0) {
+        await deleteGroup(sgid);
+      }
+    }
+  }
+
+  // Unlink r from its group. A group that drops below 2 members is dissolved (a lone member
+  // is not a group; on_delete SET NULL un-links, never deletes candidates).
+  async function unlinkFromGroup(r: Candidate): Promise<void> {
+    const gid = r.group;
+    if (gid == null) return;
+    const others = groupMembers(candidateRows, gid).filter((m) => m.id !== r.id);
+    await updateCandidate(r.id, { group: null });
+    r.group = null;
+    if (others.length === 1) {
+      await updateCandidate(others[0].id, { group: null });
+      others[0].group = null;
+      await deleteGroup(gid);
+    } else if (others.length === 0) {
+      await deleteGroup(gid);
+    }
+  }
+
+  // Write a suggested alliance to one candidate (candidate-level) or fan it out to a whole
+  // group in ONE transaction (AC3). allianceId null clears it. Local rows are mutated with the
+  // expanded {id,name} so the Suggested cell re-renders correctly.
+  async function setSuggested(ids: number[], allianceId: number | null): Promise<void> {
+    const expanded = allianceId == null ? null : allianceOptionFor(allianceId);
+    if (ids.length === 1) {
+      await updateCandidate(ids[0], { suggested_alliance: allianceId });
+    } else {
+      await updateCandidates(ids, { suggested_alliance: allianceId });
+    }
+    for (const id of ids) {
+      const c = candidateRows.find((x) => x.id === id);
+      if (c) c.suggested_alliance = expanded;
+    }
+  }
+
+  // Re-render the whole table from the mutated in-memory rows (recomputes divergence + accents
+  // + flags). openDetails keeps expanded rows open. No refetch — the load-once cache model.
+  function rerenderCandidates() {
+    renderCandidateTable(candidateRows);
+    showCandState('table');
+  }
+
   // ===== Curator status-lifecycle controls (Story 5.5) — Work-mode only =====
   // The legal transition graph is CLIENT-GUIDED only (AR-9/AD-7): no Directus Flow/hook
   // encodes it. The server enforces only WHO may write (Curator 200 / Viewer 403). Every
@@ -925,8 +1183,144 @@ import Icon from '../../components/Icon.astro';
     return row;
   }
 
-  // Build the action controls for one candidate row; `onDone` re-renders the row in place
-  // (status chip + planned-path cell + these controls) after a successful write.
+  // Compact danger marker for a divergent member's Suggested cell (the full sentence + count
+  // lives in the detail flag). Icon + text = meaning beyond colour.
+  function divergentChip(): HTMLElement {
+    const b = document.createElement('span');
+    b.className = 'cand-flag-chip';
+    b.innerHTML = svg('triangle-alert'); // trusted constant SVG
+    b.append(document.createTextNode('Set one'));
+    b.title = 'Group has different suggested alliances — set one';
+    return b;
+  }
+
+  // Suggested-alliance control (Story 5.6). Candidate-level for a lone row; for a grouped row
+  // the scope choice (this candidate vs whole group) honours FR-8 and drives the divergence
+  // resolution ("Set for whole group" is the atomic fan-out that clears the flag).
+  function buildSuggestSection(r: Candidate, runTable: (a: () => Promise<void>) => void): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'cand-suggest-section';
+
+    const row = document.createElement('div');
+    row.className = 'cand-action-row';
+    const lab = document.createElement('span');
+    lab.className = 'cand-action-label';
+    lab.textContent = 'Suggested alliance';
+    const select = document.createElement('select');
+    select.className = 'cand-select';
+    select.setAttribute('aria-label', `Suggested alliance for ${r.character_name}`);
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '— none —';
+    select.append(none);
+    for (const a of alliancesCache ?? []) {
+      const o = document.createElement('option');
+      o.value = String(a.id);
+      o.textContent = a.name ?? `#${a.id}`; // alliance name → textContent (XSS)
+      select.append(o);
+    }
+    select.value = r.suggested_alliance?.id != null ? String(r.suggested_alliance.id) : '';
+    row.append(lab, select);
+    container.append(row);
+
+    const parseSel = (): number | null => (select.value === '' ? null : Number(select.value));
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cand-action-row';
+    if (r.group != null) {
+      const n = groupMembers(candidateRows, r.group).length;
+      const thisBtn = candButton('Set for this candidate', 'path');
+      thisBtn.addEventListener('click', () => runTable(() => setSuggested([r.id], parseSel())));
+      const groupBtn = candButton(`Set for whole group (${n})`, 'gold');
+      groupBtn.addEventListener('click', () =>
+        runTable(() => setSuggested(groupMembers(candidateRows, r.group as number).map((m) => m.id), parseSel())),
+      );
+      btnRow.append(thisBtn, groupBtn);
+    } else {
+      const setBtn = candButton('Set suggested', 'gold');
+      setBtn.addEventListener('click', () => runTable(() => setSuggested([r.id], parseSel())));
+      btnRow.append(setBtn);
+    }
+    container.append(btnRow);
+    return container;
+  }
+
+  // Group-linking control (Story 5.6). Grouped → Unlink; ungrouped → a "Link group…" toggle
+  // revealing a checklist of the other candidates. Membership is shown read-only in the detail
+  // summary above, so this block is just the actions.
+  function buildGroupSection(r: Candidate, runTable: (a: () => Promise<void>) => void): HTMLElement {
+    const sec = document.createElement('div');
+    sec.className = 'cand-action-row';
+    const lab = document.createElement('span');
+    lab.className = 'cand-action-label';
+    lab.textContent = 'Group';
+    sec.append(lab);
+
+    if (r.group != null) {
+      const unlink = candButton('Unlink', 'path');
+      unlink.addEventListener('click', () => runTable(() => unlinkFromGroup(r)));
+      sec.append(unlink);
+      return sec;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'cand-group-section';
+    const linkBtn = candButton('Link group…', 'path');
+    sec.append(linkBtn);
+
+    const panel = document.createElement('div');
+    panel.className = 'cand-linkpanel';
+    panel.hidden = true;
+
+    const list = document.createElement('div');
+    list.className = 'cand-linklist';
+    const checked = new Set<number>();
+    const confirm = candButton('Link selected', 'gold');
+    confirm.disabled = true;
+    for (const c of candidateRows.filter((x) => x.id !== r.id)) {
+      const opt = document.createElement('label');
+      opt.className = 'cand-linkopt';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = String(c.id);
+      cb.addEventListener('change', () => {
+        if (cb.checked) checked.add(c.id);
+        else checked.delete(c.id);
+        confirm.disabled = checked.size === 0;
+      });
+      const name = document.createElement('span');
+      name.textContent = c.character_name; // candidate data → textContent (XSS)
+      opt.append(cb, name);
+      if (c.group != null) {
+        const note = document.createElement('span');
+        note.className = 'muted';
+        note.textContent = ' (in a group)';
+        opt.append(note);
+      }
+      list.append(opt);
+    }
+
+    const acts = document.createElement('div');
+    acts.className = 'cand-action-row';
+    const cancel = candButton('Cancel', 'path');
+    cancel.addEventListener('click', () => {
+      panel.hidden = true;
+    });
+    confirm.addEventListener('click', () => runTable(() => linkGroup(r, Array.from(checked))));
+    acts.append(confirm, cancel);
+    panel.append(list, acts);
+
+    linkBtn.addEventListener('click', () => {
+      panel.hidden = !panel.hidden;
+    });
+
+    container.append(sec, panel);
+    return container;
+  }
+
+  // Build the action controls for one candidate row. Status/path writes (5.5) re-render the row
+  // in place via `onDone`; grouping/suggested writes (5.6) re-render the whole table (the
+  // divergent flag + accents are a membership-wide derivation), preserving expanded rows.
   function buildActions(r: Candidate, onDone: () => void): HTMLElement {
     const box = document.createElement('div');
     box.className = 'cand-actions';
@@ -935,53 +1329,93 @@ import Icon from '../../components/Icon.astro';
     head.textContent = 'Actions';
     box.append(head);
 
+    const msg = document.createElement('p');
+    msg.className = 'cand-action-msg';
+    msg.setAttribute('role', 'alert');
+    msg.hidden = true;
+
+    // Status/path writes (5.5) — per-row in-place refresh. Shares the module-level writeInFlight
+    // guard with the 5.6 table-wide writes so no two candidate writes overlap (review P3).
+    const run = (patch: CandidatePatch) => {
+      if (writeInFlight) return; // guard the double-click window + cross-row concurrency
+      writeInFlight = true;
+      writeCandidate(r, patch, box, msg, onDone).finally(() => {
+        writeInFlight = false;
+      });
+    };
+    // Grouping/suggested writes (5.6) — table-wide recompute (divergence is membership-wide).
+    const runTable = (action: () => Promise<void>) => {
+      if (writeInFlight) return;
+      writeInFlight = true;
+      const controls = Array.from(box.querySelectorAll('button, select')) as (
+        | HTMLButtonElement
+        | HTMLSelectElement
+      )[];
+      // Review P2: snapshot each control's disabled state so the error path restores it EXACTLY.
+      // A blanket re-enable would revive the disabled-by-design active path button (no listener →
+      // a dead enabled button) and the 0-checked "Link selected" confirm (→ a group of one).
+      const prevDisabled = controls.map((c) => c.disabled);
+      controls.forEach((c) => (c.disabled = true));
+      msg.hidden = true;
+      msg.textContent = '';
+      // Review P1: recover a failed/empty alliance warm before the rerender rebuilds the pickers.
+      (async () => {
+        if (!alliancesCache) await ensureAlliances();
+        await action();
+      })()
+        .then(() => rerenderCandidates())
+        .catch((err) => {
+          if (authRejected(err)) {
+            window.location.replace('/leader'); // a granted Curator never 403s → session lapsed
+            return;
+          }
+          msg.hidden = false; // reveal the role="alert" region BEFORE writing text
+          msg.textContent = 'Couldn’t save that change. Please try again.';
+          controls.forEach((c, i) => (c.disabled = prevDisabled[i]));
+        })
+        .finally(() => {
+          writeInFlight = false;
+        });
+    };
+
+    // --- Status lifecycle (Story 5.5) ---
     const actions = allowedActions(r.status);
     if (actions.length === 0) {
       const note = document.createElement('p');
       note.className = 'cand-actions-note';
       note.textContent = `This candidate is ${r.status} — no further status changes here.`;
       box.append(note);
-      return box;
+    } else {
+      // Accept (Applied): choosing a path both accepts AND sets the path in one write — an
+      // Accept can never leave planned_path null (closes the "Accepted + null path" gap).
+      if (actions.includes('accept')) {
+        box.append(pathGroup('Accept as', null, (value) => run({ status: 'Accepted', planned_path: value })));
+      }
+      if (actions.includes('editPath')) {
+        box.append(pathGroup('Planned path', r.planned_path, (value) => run({ planned_path: value })));
+      }
+      const btnRow = document.createElement('div');
+      btnRow.className = 'cand-action-row';
+      if (actions.includes('transfer')) {
+        // Accepted → Transferred, and Applied → Transferred (the Random exception). Status
+        // ONLY — no entry route to record (AR-19).
+        const b = candButton('Mark Transferred', 'gold');
+        b.addEventListener('click', () => run({ status: 'Transferred' }));
+        btnRow.append(b);
+      }
+      if (actions.includes('reject')) {
+        const b = candButton('Reject', 'danger');
+        b.addEventListener('click', () => run({ status: 'Rejected' }));
+        btnRow.append(b);
+      }
+      box.append(btnRow);
     }
 
-    const msg = document.createElement('p');
-    msg.className = 'cand-action-msg';
-    msg.setAttribute('role', 'alert');
-    msg.hidden = true;
+    // --- Grouping + suggested alliance (Story 5.6) — orthogonal to status, always available ---
+    box.append(buildSuggestSection(r, runTable));
+    box.append(buildGroupSection(r, runTable));
 
-    let busy = false;
-    const run = (patch: CandidatePatch) => {
-      if (busy) return; // guard the double-click window before the buttons disable
-      busy = true;
-      writeCandidate(r, patch, box, msg, onDone).finally(() => {
-        busy = false;
-      });
-    };
-
-    // Accept (Applied): choosing a path both accepts AND sets the path in one write — an
-    // Accept can never leave planned_path null (closes the "Accepted + null path" gap).
-    if (actions.includes('accept')) {
-      box.append(pathGroup('Accept as', null, (value) => run({ status: 'Accepted', planned_path: value })));
-    }
-    if (actions.includes('editPath')) {
-      box.append(pathGroup('Planned path', r.planned_path, (value) => run({ planned_path: value })));
-    }
-
-    const btnRow = document.createElement('div');
-    btnRow.className = 'cand-action-row';
-    if (actions.includes('transfer')) {
-      // Accepted → Transferred, and Applied → Transferred (the Random exception). Status
-      // ONLY — no entry route to record (AR-19).
-      const b = candButton('Mark Transferred', 'gold');
-      b.addEventListener('click', () => run({ status: 'Transferred' }));
-      btnRow.append(b);
-    }
-    if (actions.includes('reject')) {
-      const b = candButton('Reject', 'danger');
-      b.addEventListener('click', () => run({ status: 'Rejected' }));
-      btnRow.append(b);
-    }
-    box.append(btnRow, msg);
+    box.append(msg);
     return box;
   }
 
@@ -1046,7 +1480,7 @@ import Icon from '../../components/Icon.astro';
       const isDivergent = inGroup && divergent.has(r.group as number);
       if (isDivergent) {
         tr.classList.add('cand-row--divergent');
-        tr.title = 'Group has mixed suggestions — set one'; // non-colour affordance
+        tr.title = 'Group has different suggested alliances — set one'; // non-colour affordance
       } else if (inGroup) {
         tr.classList.add('cand-row--group');
         tr.title = 'Linked transfer group';
@@ -1054,15 +1488,17 @@ import Icon from '../../components/Icon.astro';
 
       // Name cell: expand toggle + name + optional special-invite badge
       const detailId = `cand-detail-${r.id}`;
+      const isOpen = openDetails.has(r.id); // preserve expansion across a table-wide re-render
       const nameCell = document.createElement('td');
       nameCell.className = 'cand-name';
       const toggle = document.createElement('button');
       toggle.type = 'button';
       toggle.className = 'cand-expand';
-      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       toggle.setAttribute('aria-controls', detailId);
       toggle.setAttribute('aria-label', `Show details for ${r.character_name}`);
       toggle.textContent = '▸';
+      if (isOpen) toggle.classList.add('cand-expand--open');
       nameCell.append(toggle, document.createTextNode(' ' + dash(r.character_name)));
       if (r.needs_special_invite) nameCell.append(specialBadge());
       tr.append(nameCell);
@@ -1071,7 +1507,9 @@ import Icon from '../../components/Icon.astro';
       tr.append(td(r.kingdom_number == null ? '—' : String(r.kingdom_number), 'num'));
       tr.append(td(dash(r.timezone)));
       tr.append(td(dash(r.desired_alliance?.name ?? null)));
-      tr.append(td(dash(r.suggested_alliance?.name ?? null)));
+      const suggCell = td(dash(r.suggested_alliance?.name ?? null));
+      if (isDivergent) suggCell.append(divergentChip()); // compact danger marker (full copy in detail)
+      tr.append(suggCell);
 
       const statusCell = document.createElement('td');
       statusCell.append(statusChip(r.status));
@@ -1085,9 +1523,34 @@ import Icon from '../../components/Icon.astro';
       const dtr = document.createElement('tr');
       dtr.className = 'cand-detail';
       dtr.id = detailId;
-      dtr.hidden = true;
+      dtr.hidden = !isOpen;
       const dtd = document.createElement('td');
       dtd.colSpan = cols.length;
+
+      // Divergent-group flag (Story 5.6) — visible to ALL leaders, edge-computed (AR-6), the
+      // "N" recomputed on every render. Persists until one suggestion is chosen for the group.
+      if (isDivergent) {
+        const n = distinctSuggestionCount(rows, r.group as number);
+        const flag = document.createElement('p');
+        flag.className = 'cand-flag--divergent';
+        const ic = document.createElement('span');
+        ic.className = 'cand-flag-ic';
+        ic.innerHTML = svg('triangle-alert'); // trusted constant SVG
+        flag.append(ic, document.createTextNode(`Group has ${n} different suggested alliances — set one`));
+        dtd.append(flag);
+      }
+      // Read-only transfer-group summary (visible to all; membership derived from candidates —
+      // no transfer_groups read needed).
+      if (inGroup) {
+        const members = groupMembers(rows, r.group as number);
+        const gsum = document.createElement('p');
+        gsum.className = 'cand-group-summary';
+        gsum.textContent = `Transfer group · ${members.length} member${members.length === 1 ? '' : 's'}: ${members
+          .map((m) => m.character_name)
+          .join(', ')}`;
+        dtd.append(gsum);
+      }
+
       const dl = document.createElement('dl');
       dl.className = 'cand-detail-list';
       const pairs: [string, string][] = [
@@ -1137,6 +1600,8 @@ import Icon from '../../components/Icon.astro';
         dtr.hidden = !open;
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         toggle.classList.toggle('cand-expand--open', open);
+        if (open) openDetails.add(r.id);
+        else openDetails.delete(r.id); // remember expansion across a table-wide re-render
       });
     });
 
@@ -1152,10 +1617,14 @@ import Icon from '../../components/Icon.astro';
     showCandState('loading');
     try {
       const rows = await getCandidates();
-      if (!rows || rows.length === 0) {
+      candidateRows = rows ?? []; // held module-wide so 5.6 writes can recompute the table
+      // Warm the suggested-alliance picker so the per-row controls build synchronously (a
+      // Curator already holds the free alliances read; a Viewer builds no controls).
+      if (canWriteCandidates) await ensureAlliances();
+      if (candidateRows.length === 0) {
         showCandState('empty');
       } else {
-        renderCandidateTable(rows);
+        renderCandidateTable(candidateRows);
         showCandState('table');
       }
       candidatesLoaded = true; // success — don't auto-refetch on tab re-activation

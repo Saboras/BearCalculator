@@ -162,8 +162,8 @@ Accounts**.
 | Area | Policy / role | `app_access` | Grants (primary writer per AD-9) | Enforcement mechanism |
 |---|---|---|---|---|
 | — (base) | **Leader** (role) | — | login + read-own-profile; the container every leader shares | base role |
-| Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` + `transfer_period` (+ `alliances` for M2O names) — no writes; `transfer_groups` read ⏳ 5.6 | collection **read** grant ✅ free — **candidate list delivered Story 5.4** |
-| Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6**); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` CRUD ⏳ 5.6; delete ⏳ 5.8 | collection **read + update** grant ✅ free — **update delivered Story 5.5**; *field-limited to work-fields* is the 🔒 Option-1 target |
+| Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` + `transfer_period` (+ `alliances` for M2O names) — no writes; `transfer_groups` read ⏳ (re-deferred at 5.6 — not needed until group **names** are shown; §3) | collection **read** grant ✅ free — **candidate list delivered Story 5.4** |
+| Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6** ✅); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` **CRUD** (**5.6** ✅); delete ⏳ 5.8 | collection **read + update** grant ✅ free — update delivered **5.5**, grouping delivered **5.6**; *field-limited to work-fields* is the 🔒 Option-1 target |
 | Guides | `guides-viewer` | yes | **read** drafts (`guides` non-published, leader-visible) | collection **read** grant ✅ free |
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
@@ -239,7 +239,7 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
 | `candidates` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ✅ **wired Story 5.4** · ✅ free (collection-level — a Viewer sees all fields; a field subset / row filter is 🔒 §0, re-proven 403 `RESOURCE_RESTRICTED`) |
-| `transfer_groups` | read | `["*"]` | — | collection ✅ **created Story 5.1** (shell); read grant ⏳ wired **5.6** · ✅ free |
+| `transfer_groups` | read | `["*"]` | — | collection ✅ **created Story 5.1** (shell); read grant ⏳ **re-deferred at Story 5.6** · ✅ free when wired — 5.6's divergent flag, gold/danger accents and group summary all derive from `candidates.group` + `candidates.suggested_alliance` (which a Viewer already reads), so a `transfer_groups` read is **only** needed to display group **names/labels**, which 5.6 does not (groups are labelled by membership). Wire this when group names are surfaced |
 | `transfer_period` | read | `["*"]` | — | collection ✅ **created Story 5.1**; read grant ✅ **wired Story 5.4** (also serves 5.7 counter denominators) · ✅ free |
 | `alliances` | read | `["*"]` | — | read grant ✅ **wired Story 5.4** — lets the candidate list resolve `desired_alliance` / `suggested_alliance` M2O → **name** live at runtime (Option B, Sabo 2026-07-09); whole-collection read ✅ free, alliance data is already public (Finder). **Grant surface (be honest):** the candidate-list *query* expands only `id`+`name`, so the list never **surfaces** `official`; but the Core-forced `["*"]` grant does let a Viewer **read** the `official` FK directly via the API — an opaque `directus_users` id only, no user PII (Viewers have no `directus_users` read grant) |
 
@@ -251,7 +251,7 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 | `transfer_period` | read | `["*"]` | — | ✅ **wired Story 5.5** · free — window context (a Curator holds `transfer-curator` *instead of* `transfer-viewer`, so this policy carries its own reads; 5.7 counter denominators) |
 | `alliances` | read | `["*"]` | — | ✅ **wired Story 5.5** · free — resolve `desired_alliance`/`suggested_alliance` **names** live (same M2O deep-expand as the 5.4 Viewer list; alliance data is already public via the Finder) |
 | `candidates` | delete | — | — | ⏳ Epic 5.8 · ✅ free |
-| `transfer_groups` | create/update/delete | `["*"]` | — | ⏳ Epic 5.6 · ✅ free |
+| `transfer_groups` | **create / read / update / delete** | `["*"]` | — | ✅ **wired Story 5.6** · whole-collection ✅ free — **read is required** (not optional): after `POST /items/transfer_groups` the new group's **id is echoed only if the role can read** the collection, and the linking flow needs that id to stamp `candidates.group`. Membership lives on `candidates.group` (the 5.5 `candidates` update grant); the group-level suggestion is a **fan-out** of `candidates.suggested_alliance`, and `transfer_groups` has **no** suggested column (AR-10) |
 
 > *Story-tag semantics (Transfer):* the **`candidates`, `transfer_period`, `settings` (singleton) and
 > `transfer_groups` (shell) collections were created in Story 5.1** (data model + config — `README.md` §10
