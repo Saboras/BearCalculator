@@ -156,6 +156,43 @@ export function getCandidates() {
 }
 
 /*
+  --- Active transfer period read (Story 5.7) ---
+  The single active window's caps, read at RUNTIME on the SAME session client as
+  getCandidates (httpOnly cookie, credentials:'include'). The 5.7 counter denominators
+  (invited_cap / special_cap) + the active-window scoping + the carry-over derivation all
+  key off this row's id and its live caps — never a stored counter, never build-baked.
+
+  The runtime read grant ALREADY exists: `transfer_period read ["*"]` is wired for
+  transfer-viewer (Story 5.4) and transfer-curator (Story 5.5), so no new grant. Do NOT
+  reuse the build-time reader in transfer-build.ts — that one authenticates with the static
+  DIRECTUS_TOKEN for SSG baking; this is the live, cookie-authenticated shell read.
+
+  Returns null when no window is active (0 rows) so the shell can degrade calmly ("No
+  active transfer window") instead of throwing — a null denominator is a UX state here, not
+  a build failure (the build-time throw in transfer-build.ts is not appropriate at runtime).
+*/
+export interface TransferPeriod {
+  id: number;
+  name: string;
+  invited_cap: number | null;
+  random_cap: number | null;
+  special_cap: number | null;
+  active: boolean;
+}
+
+export async function getActivePeriod(): Promise<TransferPeriod | null> {
+  const rows = (await client.request(
+    readItems('transfer_period', {
+      filter: { active: { _eq: true } },
+      fields: ['*'],
+      limit: 1,
+      sort: ['-id'], // deterministic pick if the "exactly one active" invariant is ever violated
+    })
+  )) as TransferPeriod[];
+  return rows[0] ?? null;
+}
+
+/*
   --- Curator candidate write (Story 5.5) ---
   The FIRST Curator WRITE from the admin shell: advance status (Applied → Accepted →
   Transferred / Rejected, plus the Random exception Applied → Transferred) and set

@@ -300,12 +300,104 @@ import Icon from '../../components/Icon.astro';
     font-size: 14px;
   }
 
-  .cand-table-wrap {
-    overflow-x: auto; /* wide table scrolls in its own box, never the page body */
-    -webkit-overflow-scrolling: touch;
-  }
   .cand-table-wrap[hidden] {
     display: none;
+  }
+  /* Story 5.7: the horizontal scroll moved from .cand-table-wrap to this inner box so the cap-strip
+     above the table stays fixed while a wide table scrolls under it (the strip is a sibling here). */
+  .cand-table-scroll {
+    overflow-x: auto; /* wide table scrolls in its own box, never the page body (AC4) */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ===== Capacity counters strip (Story 5.7) — the gold-framed "room" above the calm table ===== */
+  /* Planning aids only, NEVER a gate. The strip gets the frame (a "room"); the table interior stays
+     calm (DESIGN Elevation — frame the room, not the chairs). Danger red is RESERVED — never here. */
+  .cap-strip {
+    background: linear-gradient(#FBF6EA, #F1E6CC); /* warm parchment; dark override below */
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-card);
+    box-shadow: 0 6px 18px rgba(224, 138, 43, .14);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .cap-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--color-accent); /* teal (light) / royal-blue (dark) — theme-aware, never raw #2AA7B0 */
+    margin-bottom: var(--space-3);
+  }
+  .cap-chip {
+    background: rgba(42, 167, 176, .12); /* teal tint; dark override swaps to royal-blue */
+    color: var(--color-accent);
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+  .cap-counters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+  }
+  .cap-counter {
+    background: #FFFFFF; /* calm white card on the parchment room; dark override below */
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    padding: var(--space-3) var(--space-4);
+  }
+  .cap-cl {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--color-muted);
+  }
+  .cap-cv {
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 5px;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums; /* every count is tabular (DESIGN Typography) */
+  }
+  .cap-cv small {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-muted); /* the "/ cap" denominator + " queued" note */
+  }
+  .cap-counter--editable .cap-cv {
+    color: var(--color-primary); /* gold: the live-editable special target (AC-2, never a literal 3) */
+  }
+  .cap-strip-note {
+    font-size: 12px;
+    color: var(--color-muted);
+    margin: var(--space-3) 0 0;
+  }
+  /* Calm note when the active window is scoped-empty (rows exist but none in-window) — review P2. */
+  .cand-empty-note {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: var(--space-5) 0 0;
+  }
+
+  /* Carry-over badge (Story 5.7) — success family (DESIGN: carry-over confirmation = success green),
+     NOT danger, NOT gold. Mirrors the badge-status--accepted success tint for readable text. */
+  .badge-carryover {
+    display: inline-block;
+    margin-left: var(--space-2);
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    color: #2f8f52; /* darker green than the #46D17A token for readable text on the light tint */
+    background: rgba(70, 209, 122, .16);
+    white-space: nowrap;
+    vertical-align: middle;
   }
 
   .cand-table {
@@ -709,6 +801,22 @@ import Icon from '../../components/Icon.astro';
   :global(:root[data-theme='dark']) .cand-select {
     background: var(--color-surface);
   }
+  /* Story 5.7 — the light parchment/white literals + the teal chip tint need dark variants
+     (--color-accent already swaps teal → royal-blue; --color-primary/--color-muted are theme-aware). */
+  :global(:root[data-theme='dark']) .cap-strip {
+    background: linear-gradient(var(--color-surface), var(--color-bg));
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
+  }
+  :global(:root[data-theme='dark']) .cap-counter {
+    background: rgba(255, 255, 255, .03);
+  }
+  :global(:root[data-theme='dark']) .cap-chip {
+    background: rgba(110, 140, 240, .14); /* royal-blue tint — teal never appears in dark (AC2) */
+  }
+  :global(:root[data-theme='dark']) .badge-carryover {
+    color: var(--color-success);
+    background: rgba(95, 227, 148, .14);
+  }
 
   /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
   @media (max-width: 767.98px) {
@@ -735,6 +843,7 @@ import Icon from '../../components/Icon.astro';
     getAdminAccess,
     getMyPermissions,
     getCandidates,
+    getActivePeriod,
     updateCandidate,
     updateCandidates,
     createGroup,
@@ -743,7 +852,7 @@ import Icon from '../../components/Icon.astro';
     logout,
     DATA_STUDIO_URL,
   } from '../../lib/directus';
-  import type { Candidate, CandidatePatch, AllianceOption } from '../../lib/directus';
+  import type { Candidate, CandidatePatch, AllianceOption, TransferPeriod } from '../../lib/directus';
 
   type Kind = 'custom' | 'studio';
   interface AreaDef {
@@ -928,6 +1037,12 @@ import Icon from '../../components/Icon.astro';
   let candidateRows: Candidate[] = [];
   const openDetails = new Set<number>();
   let alliancesCache: AllianceOption[] | null = null; // the suggested-alliance picker source (lazy)
+  // Story 5.7: the single active transfer window (caps for the counter denominators + the id for
+  // active-window scoping / carry-over derivation). Fetched once alongside candidates. null = no
+  // active window OR a transient caps-read failure — the two are told apart by capsReadError so the
+  // strip degrades calmly (denominators "—", counts kept) instead of freezing at n/0 (Task 6).
+  let activePeriod: TransferPeriod | null = null;
+  let capsReadError = false;
   // Story 5.6 (review P3): one guard for ALL candidate writes (5.5 per-row + 5.6 table-wide).
   // A 5.6 write rebuilds the whole tbody, so writes must serialize — otherwise a rerender could
   // detach another row's in-flight write (silent failure) or a rebuilt panel be re-clicked mid-write.
@@ -995,6 +1110,172 @@ import Icon from '../../components/Icon.astro';
     const out = new Set<number>();
     for (const [gid, set] of byGroup) if (set.size >= 2) out.add(gid);
     return out;
+  }
+
+  // ===== Active-window scoping + capacity counters (Story 5.7) — pure edge computations =====
+  // Everything the cap-strip shows is derived from the single getCandidates fetch + the active
+  // period's LIVE caps — no stored counter, no `carry` field, recomputed every render (AR-6/AD-4).
+  // Kept pure so they are unit-testable in isolation.
+
+  // The active-window set: a candidate is in-window iff it belongs to the active period OR is
+  // Accepted. An Accepted row from a PRIOR window is a carry-over that still occupies a slot, so it
+  // must not silently drop out of the next window's counts (AD-17). One status per row, so
+  // "Accepted AND not Transferred" reduces to status === 'Accepted' and each row appears once (no
+  // manual OR-branch dedupe needed). period == null (no active window / caps-read failure) →
+  // degrade to ALL rows so the table never goes blank.
+  function activeWindowRows(rows: Candidate[], period: TransferPeriod | null): Candidate[] {
+    if (period == null) return rows;
+    return rows.filter((r) => r.period === period.id || r.status === 'Accepted');
+  }
+
+  // Carry-over = an Accepted candidate stamped with a period that is no longer the active one. The
+  // period stamp is immutable (AD-17 — never re-stamped), so this is a safe derivation, never a write.
+  function isCarryOver(r: Candidate, period: TransferPeriod | null): boolean {
+    return period != null && r.status === 'Accepted' && r.period !== period.id;
+  }
+
+  // Sort a COPY so carried-over rows surface first, then the rest in the incoming -id order. Relies
+  // on Array.prototype.sort being stable (ES2019+; guaranteed in every target browser + Node 22).
+  function sortForWindow(rows: Candidate[], period: TransferPeriod | null): Candidate[] {
+    return [...rows].sort(
+      (a, b) => Number(isCarryOver(b, period)) - Number(isCarryOver(a, period)),
+    );
+  }
+
+  interface CapCounters {
+    invitePlanned: number;
+    specialPlanned: number;
+    randomAsk: number;
+    acceptedNoPath: number;
+    invitedCap: number | null;
+    specialCap: number | null;
+  }
+
+  // Bucket the ACTIVE-WINDOW set by planned_path (carried Accepted rows included, so they keep
+  // counting toward the caps they occupy — AD-17). Caps come LIVE off the active period row, never a
+  // literal (AC-2 — the special target is never a hardcoded 3); null when no active window / the caps
+  // read failed → the card renders a "—" denominator (Task 6), never n/0.
+  function computeCounters(windowRows: Candidate[], period: TransferPeriod | null): CapCounters {
+    let invitePlanned = 0;
+    let specialPlanned = 0;
+    let randomAsk = 0;
+    let acceptedNoPath = 0;
+    for (const r of windowRows) {
+      // A Rejected candidate frees its slot — it is no longer planned, so it counts toward no bucket
+      // (review 5.7 decision, Sabo 2026-07-14). Accepted + Transferred keep counting (a Transferred
+      // row consumed the slot). Reachable via Accept-as-<path> → Reject (5.5 leaves planned_path stale).
+      if (r.status === 'Rejected') continue;
+      if (r.planned_path === 'Invite') invitePlanned++;
+      else if (r.planned_path === 'Special') specialPlanned++;
+      else if (r.planned_path === 'Random-ask') randomAsk++;
+      // A raw-API-only occupied slot: Accepted but no planned_path (the UI Accept forces a path, so
+      // this is normally absent). Surfaced only when N>0 so planning is not silently blind (OQ-3).
+      if (r.status === 'Accepted' && !r.planned_path) acceptedNoPath++;
+    }
+    return {
+      invitePlanned,
+      specialPlanned,
+      randomAsk,
+      acceptedNoPath,
+      invitedCap: period?.invited_cap ?? null,
+      specialCap: period?.special_cap ?? null,
+    };
+  }
+
+  // A calm white counter card: label + "value / cap". `cap` null → a "—" denominator (unknown /
+  // caps-read failure). `editable` tints the value gold — the live-editable special target (AC-2).
+  // Over-target counts (e.g. 36 / 35) render plainly, no red, no alarm — never an error (OQ-4).
+  function counterCard(label: string, value: number, cap: number | null, editable: boolean): HTMLElement {
+    const card = document.createElement('div');
+    card.className = editable ? 'cap-counter cap-counter--editable' : 'cap-counter';
+    const cl = document.createElement('div');
+    cl.className = 'cap-cl';
+    cl.textContent = label; // trusted constant label
+    const cv = document.createElement('div');
+    cv.className = 'cap-cv';
+    cv.append(document.createTextNode(String(value))); // count → textContent, tabular-nums via CSS
+    const denom = document.createElement('small');
+    denom.textContent = ` / ${cap == null ? '—' : cap}`; // live cap, never a literal
+    cv.append(denom);
+    card.append(cl, cv);
+    return card;
+  }
+
+  // The Random-ask card: a bare list count with no denominator — AR-19 removed the random counter,
+  // the 20 random slots are out of scope (OQ-5). `random_cap` stays stored-but-unshown config.
+  function randomCard(value: number): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'cap-counter';
+    const cl = document.createElement('div');
+    cl.className = 'cap-cl';
+    cl.textContent = 'Random-ask';
+    const cv = document.createElement('div');
+    cv.className = 'cap-cv';
+    cv.append(document.createTextNode(String(value)));
+    const small = document.createElement('small');
+    small.textContent = ' queued'; // list count, not a capacity ratio
+    cv.append(small);
+    card.append(cl, cv);
+    return card;
+  }
+
+  // Success-tinted "Carry-over" badge (DESIGN: carry-over confirmation = success green, NOT danger,
+  // NOT gold). Surfaced next to the name; the row is sorted to the top of the scoped list (AC-5).
+  function carryOverBadge(): HTMLElement {
+    const b = document.createElement('span');
+    b.className = 'badge-carryover';
+    b.textContent = 'Carry-over'; // trusted constant → textContent
+    return b;
+  }
+
+  // The gold-framed capacity strip (Task 3): a "room" that frames three calm counter cards + the
+  // teal planning-aid chip. Read surface for BOTH roles (Viewer read-only, Curator in Work mode) —
+  // never gated. Rebuilt on every render so the counters recompute after each write (Task 5). role=
+  // status keeps the a11y floor minimal (it recomputes after writes; the shell already uses it).
+  function buildCapStrip(rows: Candidate[], period: TransferPeriod | null): HTMLElement {
+    const c = computeCounters(activeWindowRows(rows, period), period);
+
+    const strip = document.createElement('div');
+    strip.className = 'cap-strip';
+    strip.setAttribute('role', 'status');
+
+    const title = document.createElement('div');
+    title.className = 'cap-title';
+    title.append(document.createTextNode('Capacity counters'));
+    const chip = document.createElement('span');
+    chip.className = 'cap-chip';
+    chip.textContent = 'Planning aids — never a gate';
+    title.append(chip);
+    strip.append(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'cap-counters';
+    grid.append(counterCard('Invite-planned', c.invitePlanned, c.invitedCap, false));
+    grid.append(counterCard('Special-planned', c.specialPlanned, c.specialCap, true)); // gold, live cap
+    grid.append(randomCard(c.randomAsk));
+    strip.append(grid);
+
+    // A muted "Accepted · no path: N" line, only when N>0 (OQ-3) — surfaces an occupied slot that
+    // sits in no planned_path bucket so planning is not silently blind. Never a gate.
+    if (c.acceptedNoPath > 0) {
+      const note = document.createElement('p');
+      note.className = 'cap-strip-note';
+      note.textContent = `Accepted · no path: ${c.acceptedNoPath}`;
+      strip.append(note);
+    }
+
+    // No active window / caps unavailable — denominators already show "—"; add a calm note so the
+    // "—" reads as a state, not a glitch. Never throws (unlike the build-time reader).
+    if (period == null) {
+      const note = document.createElement('p');
+      note.className = 'cap-strip-note';
+      note.textContent = capsReadError
+        ? 'Couldn’t load the transfer window — counts shown across all applicants, targets unavailable.'
+        : 'No active transfer window — counts shown across all applicants.';
+      strip.append(note);
+    }
+
+    return strip;
   }
 
   // ===== Grouping + suggested-alliance (Story 5.6) — Work-mode only =====
@@ -1453,7 +1734,37 @@ import Icon from '../../components/Icon.astro';
     const wrap = document.getElementById('cand-table-wrap');
     if (!wrap) return;
     wrap.textContent = '';
+
+    // Story 5.7: the gold-framed capacity strip sits ABOVE the table, OUTSIDE the table's own
+    // horizontal-scroll box (below) so a wide table scrolls under a fixed-width strip. Rebuilt every
+    // render → counters recompute after each write for free (read-after-write, Task 5).
+    wrap.append(buildCapStrip(rows, activePeriod));
+
+    // Divergent flag + group membership derive over the FULL rows (a group can span in/out of the
+    // active window); only the tbody iterates the scoped+sorted subset (AC-4 active-window scoping,
+    // AC-5 carry-over-first). period == null degrades activeWindowRows to all rows (no blank table).
     const divergent = computeDivergentGroups(rows);
+    const rendered = sortForWindow(activeWindowRows(rows, activePeriod), activePeriod);
+    // Prune expansion ids that scoped out of the rendered set so stale ids don't accumulate
+    // (deferred-work L558/L218). Iterate a copy — openDetails is mutated in the loop.
+    const renderedIds = new Set(rendered.map((r) => r.id));
+    for (const id of Array.from(openDetails)) if (!renderedIds.has(id)) openDetails.delete(id);
+
+    // Story 5.7 (review P2): the active window can be empty while candidateRows is not (a fresh window
+    // with no new applications + no carry-overs). loadCandidates' empty state keys off candidateRows,
+    // so surface a calm in-window note here instead of a bare header-only table.
+    if (rendered.length === 0) {
+      const note = document.createElement('p');
+      note.className = 'cand-empty-note';
+      note.textContent = activePeriod
+        ? 'No candidates in the active transfer window yet.'
+        : 'No candidates to show.';
+      wrap.append(note);
+      return;
+    }
+
+    const scroll = document.createElement('div');
+    scroll.className = 'cand-table-scroll'; // the horizontal-scroll box (AC4, 5.4) — wraps the table only
 
     const table = document.createElement('table');
     table.className = 'cand-table';
@@ -1473,7 +1784,7 @@ import Icon from '../../components/Icon.astro';
     table.append(thead);
 
     const tbody = document.createElement('tbody');
-    rows.forEach((r) => {
+    rendered.forEach((r) => {
       const tr = document.createElement('tr');
       tr.className = 'cand-row';
       const inGroup = r.group != null;
@@ -1501,6 +1812,7 @@ import Icon from '../../components/Icon.astro';
       if (isOpen) toggle.classList.add('cand-expand--open');
       nameCell.append(toggle, document.createTextNode(' ' + dash(r.character_name)));
       if (r.needs_special_invite) nameCell.append(specialBadge());
+      if (isCarryOver(r, activePeriod)) nameCell.append(carryOverBadge()); // AC-5: derived, sorted first
       tr.append(nameCell);
 
       tr.append(td(dash(r.player_id), 'num'));
@@ -1575,20 +1887,15 @@ import Icon from '../../components/Icon.astro';
 
       // Curator status-lifecycle controls (Story 5.5) — only when the leader can write
       // (Owner or Transfer·Work). A Viewer sees the read-only detail exactly as in 5.4.
-      // refreshRow re-renders the compact-row chip + path cell + these controls in place
-      // after a successful write (no refetch — the load-once cache would block it anyway).
+      // Story 5.7: a status/path write recomputes the WHOLE table (like the 5.6 group writes), not
+      // just this row — a status change shifts the capacity counters and can move the row's
+      // active-window scope (marking a carry-over Transferred scopes it out), so the strip + scope +
+      // sort must recompute. rerenderCandidates rebuilds from the mutated rows and preserves expanded
+      // rows via openDetails; focus-after-rerender stays the accepted 5.6 DF3 tradeoff (the
+      // table-wide recompute is the chosen model — no refetch, the load-once cache blocks it anyway).
       const actionsHost = document.createElement('div');
-      const refreshRow = () => {
-        statusCell.textContent = '';
-        statusCell.append(statusChip(r.status));
-        pathCell.textContent = dash(r.planned_path);
-        if (canWriteCandidates) {
-          actionsHost.textContent = '';
-          actionsHost.append(buildActions(r, refreshRow));
-        }
-      };
       if (canWriteCandidates) {
-        actionsHost.append(buildActions(r, refreshRow));
+        actionsHost.append(buildActions(r, rerenderCandidates));
         dtd.append(actionsHost);
       }
 
@@ -1606,7 +1913,8 @@ import Icon from '../../components/Icon.astro';
     });
 
     table.append(tbody);
-    wrap.append(table);
+    scroll.append(table);
+    wrap.append(scroll);
   }
 
   let candFetching = false;
@@ -1617,7 +1925,21 @@ import Icon from '../../components/Icon.astro';
     showCandState('loading');
     try {
       const rows = await getCandidates();
-      candidateRows = rows ?? []; // held module-wide so 5.6 writes can recompute the table
+      candidateRows = rows ?? []; // held module-wide so 5.6/5.7 writes can recompute the table
+      // Story 5.7: fetch the active window's caps alongside the candidates (one fetch per shell load,
+      // AD-4). A transient failure here must NOT fail the whole list or cache zeroed caps — that
+      // would freeze every denominator at n/0 for the session (Task 6, mirroring the 5.6
+      // ensureAlliances no-cache-on-failure lesson). Degrade to null so counts still show with a "—"
+      // denominator + a calm note; a 401/403 rethrows to the outer catch → /leader (a granted leader
+      // never 403s here → the session lapsed).
+      activePeriod = null;
+      capsReadError = false;
+      try {
+        activePeriod = await getActivePeriod();
+      } catch (perr) {
+        if (authRejected(perr)) throw perr;
+        capsReadError = true;
+      }
       // Warm the suggested-alliance picker so the per-row controls build synchronously (a
       // Curator already holds the free alliances read; a Viewer builds no controls).
       if (canWriteCandidates) await ensureAlliances();

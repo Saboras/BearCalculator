@@ -377,8 +377,11 @@ any write to `directus_users` / `directus_roles` / `directus_policies`; the Owne
 Likewise **`transfer_period`** and the **`settings` singleton** (caps, active flag, kingdom-wide
 thresholds) receive **no non-Owner *write* grant** in any per-area policy — **deny-by-default is the
 Owner-only guard** (the Owner writes them via the admin bypass, per AD-9). A **read** grant for the
-counter denominators (**caps on `transfer_period`**) is free and belongs to `transfer-viewer` (⏳ wired
-5.4/5.7). Separately, the **build token** (`finder-build-read`) gets a free **read** on `transfer_period`
+counter denominators (**caps on `transfer_period`**) is free and belongs to `transfer-viewer` /
+`transfer-curator` (✅ read grant **wired Story 5.4/5.5**; ✅ **counter denominators now consumed Story
+5.7** — the admin shell reads the active period at runtime via `getActivePeriod()` and derives the
+per-path counters at the edge, no new grant). Separately, the **build token** (`finder-build-read`)
+gets a free **read** on `transfer_period`
 (**wired Story 5.2** — the `/join` build bakes the single active period id it stamps into
 `candidates.period`; §2 / README §11) — a *read* only, still no write. The **`settings` threshold has a
 *separate* reader**:
