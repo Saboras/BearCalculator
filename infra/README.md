@@ -1162,6 +1162,110 @@ delete**) were minted and attached to roles; a Curator + Viewer user drove the p
   (dissolve at 1 remaining / delete-empty at 0 / keep at ≥2 / none if ungrouped), and the reachability-toggle
   selector (off → active-window set; on → prior-window Applied + terminal reachable).
 
+## 17. Guides & categories data model + publish gate (Story 6.1)
+
+The Knowledge Base backend: a **`categories`** collection and — per the **Option 2** publish-gate
+decision (Sabo, 2026-07-14) — **two** guide collections, **`guide_drafts`** (Editor-writable working
+copy) and **`guides`** (Senior/Owner-writable, the public-build source). Draft-vs-published is
+**collection membership**, not a `status` field. **Pure Directus/backend + docs — ZERO `site/`
+change** (the reader is Story 6.4, authoring is 6.2, publish is 6.3). Collections live in `data.db`
+(captured by the schema snapshot); the seed category rows and the grants live in `data.db` **only**
+(not the snapshot — §6).
+
+- **The publish gate is a collection boundary, and it is genuinely server-enforced — for free.**
+  `guides-editor` holds a whole-collection write grant on `guide_drafts` and **no grant on `guides`**;
+  `guides-senior` holds the whole-collection write on `guides`. So an Editor's publish attempt is a
+  **real 403** on Core with **no license** — unlike the original AD-6 `status` field-gate, which is a
+  custom permission rule (🔒, `403 RESOURCE_RESTRICTED`). This is the one place the project
+  hard-enforces a within-area boundary rather than leaning on an Option-3 UX convention. AD-6 is
+  amended accordingly (roles-and-policies §0, §3, §4 mech-2).
+- **Publishing = a Senior copies a `guide_drafts` row into `guides`, reusing the immutable slug.**
+  Re-editing a published guide = edit the draft, re-publish. The **copy mechanism** (manual Studio
+  copy vs a minimal helper — **never** a custom approval Flow, AD-6/AD-7) is **Story 6.3's** decision,
+  plus the publish→rebuild webhook. 6.1 only lays the two-collection shape.
+- **Immutable slug (AR-18).** `categories.slug`, `guide_drafts.slug`, and `guides.slug` each carry a
+  **free Studio `readonly` interface condition** (`rule: {id: {_nnull: true}}`) — editable at creation,
+  read-only once saved. This is the same *interface mechanism* described for `alliances.slug` in §9, but
+  `alliances.slug` carries **no** such condition in the committed schema (it shows `readonly: false` /
+  `conditions: null` — that guard lives only in `data.db`, §9); these three guide slugs are the **first**
+  whose readonly condition is captured in `directus-schema.yaml` itself. A draft's slug and its published
+  slug are **identical** (no link-rot: preview URL == public URL), and the slug is the **join key**
+  between the two collections (no back-reference relation; 6.3's copy must preserve the slug). This is a **UI-only** guard (a raw API
+  `PATCH` can still change it — the honest Option-3-style limit, live-confirmed); there is no free
+  server rule for write-once.
+- **Categories CRUD is Owner-only** (resolves the 3.3-deferred "categories write-owner unspecified"
+  gap). Leaders (Editor/Senior/Viewer) **read + assign** categories; only the Owner creates/edits them
+  in the Data Studio (leader-extensible later if the Owner grants it).
+
+### 17.1 The three collections (field spec)
+
+`categories` (Owner-authored; `icon: category`):
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| `name` | string | ✓ | display label (`Events` / `Troops & Heroes` / `Alliance & Transfer`) |
+| `slug` | string, **unique** | ✓ | kebab-case browse URL (6.4 `/guides/<slug>`); free Studio `readonly` after create |
+| `sort` | integer | — | optional manual order for the KB (6.4) |
+
+`guide_drafts` (Editor-writable) and `guides` (Senior/Owner-writable) — **identical shape**:
+
+| Field | Type | Req | Notes |
+|---|---|---|---|
+| `title` | string | ✓ | card + `<h1>` |
+| `slug` | string, **unique** | ✓ | immutable kebab-case (AR-18); free Studio `readonly` after create; join key across the two collections |
+| `body` | text (`input-rich-text-html`) | — | WYSIWYG rich content: tables/images/embedded video (FR-16); semantic HTML for translatability (UX-DR-22) |
+| `category` | M2O → `categories`, **ON DELETE SET NULL** | — | one category per guide; deleting a category orphans (null), never deletes the guide |
+| `creator_credit` | string | — | attribution (e.g. "Strat Game Sloth") — UX-DR-21; authored in 6.2 |
+| `date_created` / `date_updated` | Directus system fields | auto | the card "updated date" |
+
+### 17.2 Seed the starter categories (the `data.db` rows, after a rebuild)
+
+The 3 starter categories are **data**, not in the schema snapshot — re-author them after a from-scratch
+`schema apply` (Owner, Data Studio or API):
+
+| name | slug | sort |
+|---|---|---|
+| Events | `events` | 1 |
+| Troops & Heroes | `troops-heroes` | 2 |
+| Alliance & Transfer | `alliance-transfer` | 3 |
+
+("Getting Started" was deliberately dropped — EXPERIENCE.md.) `guide_drafts` and `guides` start empty
+(authored in 6.2). **Grants** (`guides-viewer` reads all three, `guides-editor`/`guides-senior` writes —
+roles-and-policies §3) are also `data.db`-only and minted once by the Owner; the free reads are the 6.1
+deliverable, the writes land in 6.2/6.3.
+
+### 17.3 Local verification status (Story 6.1)
+
+Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the Windows/Docker box
+(disposable container `k1516-61verify` via **PowerShell**, fresh SQLite DB on the container overlay FS;
+committed `directus-schema.yaml` applied first — "Snapshot applied successfully" — then the two new
+collections built via the raw REST API; re-snapshotted; torn down after). Collections/fields/relations
+built as the Owner (admin bypass); a throwaway Editor-shaped policy drove the boundary proof.
+
+- **AC1 (shape)** — `categories` (`id, name, slug, sort`), `guide_drafts` + `guides` (`id, title, slug,
+  body, category, creator_credit`) created; both `category` M2O → `categories` carry **`on_delete: SET
+  NULL`** (verified: deleting a category set the draft's `category` to null, the guide row survived); a
+  draft was created with a rich-HTML body (table + `<img>` + `<iframe>`) and a category.
+- **AC2 (immutable slug)** — all three `slug` fields carry the `readonly` condition (`rule
+  {id:{_nnull:true}}`, `readonly:true`) — captured in the snapshot. Draft `bear-trap-basics` was
+  "published" by creating a `guides` row with the **same slug** (preview URL == public URL). Honest
+  limit: an admin raw-API `PATCH slug` still **succeeded** (the `readonly` guard is Studio-UI-only; no
+  free server write-once rule).
+- **AC3 (publish gate — server-enforced, FREE)** — an Editor-shaped policy (whole-collection
+  `guide_drafts` **create/read** only, attached to a test user) → **`POST /items/guide_drafts` = 200**,
+  **`POST /items/guides` = 403**. The publish gate holds at the server, at collection granularity, **with
+  no license** — the Option-2 payoff.
+- **License wall (re-proven — why Option 2 was needed)** — on a fresh policy against `guides`: a
+  **field-subset** update (`fields:["body","title"]`), a **validation** rule, and a **row filter** each →
+  **`403 RESOURCE_RESTRICTED`** (`"custom_permission_rules_enabled is a restricted resource"`); a
+  **whole-collection** read (`fields:["*"]`, no filter) → **200**. So the original AD-6 `status`
+  field-gate is genuinely 🔒 on Core; the collection split is the only free path to real enforcement.
+- **Snapshot** — `infra/directus-schema.yaml` re-snapshotted to **8** collections (`alliances`,
+  `candidates`, `categories`, `guide_drafts`, `guides`, `settings`, `transfer_groups`, `transfer_period`);
+  `apply --dry-run` of the committed file back against the instance → **"No changes to apply."** Existing
+  collections unchanged (field counts 8/19/3/2/6 intact; only the 3 new collections + 2 new relations
+  added).
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
