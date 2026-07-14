@@ -163,7 +163,7 @@ Accounts**.
 |---|---|---|---|---|
 | — (base) | **Leader** (role) | — | login + read-own-profile; the container every leader shares | base role |
 | Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` + `transfer_period` (+ `alliances` for M2O names) — no writes; `transfer_groups` read ⏳ (re-deferred at 5.6 — not needed until group **names** are shown; §3) | collection **read** grant ✅ free — **candidate list delivered Story 5.4** |
-| Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6** ✅); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` **CRUD** (**5.6** ✅); delete ⏳ 5.8 | collection **read + update** grant ✅ free — update delivered **5.5**, grouping delivered **5.6**; *field-limited to work-fields* is the 🔒 Option-1 target |
+| Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6** ✅); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` **CRUD** (**5.6** ✅); delete ✅ **5.8** | collection **read + update + delete** grant ✅ free — update delivered **5.5**, grouping delivered **5.6**, delete/cleanup delivered **5.8**; *field-limited to work-fields* is the 🔒 Option-1 target |
 | Guides | `guides-viewer` | yes | **read** drafts (`guides` non-published, leader-visible) | collection **read** grant ✅ free |
 | Guides | `guides-editor` | yes | create/update **`guides.body` / `category`** drafts — **cannot** set `status = published` | **field-level** (status excluded) 🔒 |
 | Guides | `guides-senior` | yes | Editor **+** write **`guides.status = published`** | **field-level** on `status` (AD-6) 🔒 |
@@ -250,7 +250,7 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 | `candidates` | update | `["*"]` **as-built (Option 3)** | — | ✅ **wired Story 5.5** · whole-collection ✅ free — the field-limited `["status","planned_path","suggested_alliance","group"]` is the 🔒 **Option-1 target** (a full update lets a Curator rewrite the public core/`desired_alliance` **or re-stamp `period`**, violating AD-8/AD-9/AD-17 — UX/convention only, see note) |
 | `transfer_period` | read | `["*"]` | — | ✅ **wired Story 5.5** · free — window context (a Curator holds `transfer-curator` *instead of* `transfer-viewer`, so this policy carries its own reads; 5.7 counter denominators) |
 | `alliances` | read | `["*"]` | — | ✅ **wired Story 5.5** · free — resolve `desired_alliance`/`suggested_alliance` **names** live (same M2O deep-expand as the 5.4 Viewer list; alliance data is already public via the Finder) |
-| `candidates` | delete | — | — | ⏳ Epic 5.8 · ✅ free |
+| `candidates` | delete | — | — | ✅ **wired Story 5.8** · whole-collection ✅ free — `delete` has **no** field/row/validation axis, so the free whole-collection shape is the **only** shape (no Option-1 tension, unlike `update`). Powers the Curator per-row **Delete** (any status) + the between-windows **cleanup** (terminal rows only). The server 403 for a Viewer/anon (grant absent here) **is** the AC-4 "denied server-side" gate; `candidates` is a schema leaf (nothing references a candidates row), so a hard delete leaves no FK orphan |
 | `transfer_groups` | **create / read / update / delete** | `["*"]` | — | ✅ **wired Story 5.6** · whole-collection ✅ free — **read is required** (not optional): after `POST /items/transfer_groups` the new group's **id is echoed only if the role can read** the collection, and the linking flow needs that id to stamp `candidates.group`. Membership lives on `candidates.group` (the 5.5 `candidates` update grant); the group-level suggestion is a **fan-out** of `candidates.suggested_alliance`, and `transfer_groups` has **no** suggested column (AR-10) |
 
 > *Story-tag semantics (Transfer):* the **`candidates`, `transfer_period`, `settings` (singleton) and
@@ -259,7 +259,7 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > those collections — **5.2** Public create-only, **5.4** Viewer read (candidate list — ✅ **delivered**:
 > `candidates` + `transfer_period` reads, plus a free `alliances` read so the list resolves M2O alliance
 > **names** live at runtime, Option B), **5.5** Curator
-> work-field update, **5.6** `transfer_groups` CRUD, **5.8** Curator delete. The **`settings` singleton** has
+> work-field update, **5.6** `transfer_groups` CRUD, **5.8** Curator delete (✅ **delivered** — per-row Delete + between-windows cleanup). The **`settings` singleton** has
 > a *separate* read consumer, not a Transfer grant row: `settings.special_invite_power_threshold` is read by
 > the **5.3** `>130M` form-edge compare. **Mechanism decided + delivered (Story 5.3): a build-time
 > static-token read** on the `finder-build-read` policy (like §9.5 alliances) — **not** a `transfer-viewer`
@@ -392,6 +392,14 @@ gets a free **read** on `transfer_period`
 hand a Curator a `transfer_period`/`settings` *write* grant "for counters" — a Curator never writes
 caps, the active flag, or a threshold. (**Epic 5.1 created `transfer_period` + `settings`** —
 `README.md` §10; it attached **no** grant at all — every grant lands with its consuming story, §3.)
+
+The **`candidates` delete** grant (**wired Story 5.8**, §3) is **not** a new AD-9 field-group — deleting the
+whole applicant record is the same **Curator** authority that already owns `candidates` status /
+planned_path / suggested_alliance / group; the Owner overrides via the admin bypass. It has no
+field/row axis, so it is whole-collection ✅ free (no Option-1 tension). `candidates` is a schema **leaf**
+(no collection references a candidates row — `transfer_groups` has no back-reference; membership lives on
+`candidates.group`), so a hard delete leaves no dangling FK; a delete that drops a transfer group below 2
+members is dissolved client-side (the same "no group of one" invariant as the 5.6 unlink).
 
 ---
 

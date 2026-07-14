@@ -1083,6 +1083,85 @@ live-verified in **5.4/5.5**; 5.7 just adds its **consumer**.
   `planned_path` buckets, live `special_cap` never 3, no random denominator, caps-failure → `—` never `n/0`,
   0-active → `null`, never-a-gate over-target computes calmly).
 
+## 16. Manual delete & window cleanup (Story 5.8)
+
+The Curator can now **delete any candidate** (any status, any time — a player who went elsewhere is
+removed) and **clear terminal candidates between windows**. Both are **runtime, client-side,
+session-cookie** DELETEs via `site/src/lib/directus.ts` (`deleteCandidate` / `deleteCandidates`); the list
+stays **live** (no rebuild). **No schema change** — candidates already exists (Story 5.1); the only new
+thing is one `data.db` grant.
+
+- **Per-row Delete** — a danger button in the row-action strip, present for **every** status (incl. the
+  terminal `Transferred`/`Rejected` rows that carry no status actions). A **two-step inline confirm**
+  ("Delete this candidate? This can't be undone." → Confirm / Cancel) guards the one-click irreversible
+  destroy — **hard delete** (204), the daily `data.db` backup is the recovery net; **no modal** (KISS —
+  none in the component library). Routes through the existing table-wide `runTable` (a delete shifts the
+  counters + scope), which rerenders on success.
+- **Window cleanup** — a Curator-gated **"Clear transferred/rejected (N)"** control above the table
+  (**outside** the gold cap-strip — danger red is reserved-out there), also two-step-confirmed. It deletes
+  **only** `Transferred`/`Rejected` rows, **across every window** (terminal rows never carry over), in **one
+  transaction** (`deleteItems`). **Accepted rows are never touched** (AD-17) — they carry forward
+  automatically. There is **no** Directus Flow / server job (AD-7): cleanup is a manual Curator batch.
+- **Carry-over confirmation (AC-3)** — after a cleanup, a calm dashed **".cleared" card** ("List cleared…
+  Accepted but not transferred was carried forward automatically") with a **success-green** carry-over pill
+  and a live "N cleared · M carried forward" count (M recomputed live from the surviving Accepted rows, so
+  it never goes stale). The per-row "Carry-over" badge + carried-first sort (Story 5.7) remain the primary
+  carry-over surface.
+- **Counters self-heal (AC-1)** — removing a row from the in-memory `candidateRows` + the rerender drops it
+  from the capacity counters (a pure edge recompute — "stops counting") and prunes its `openDetails`
+  expansion id, for free. `period` is **never** written (AD-17).
+- **Reachability toggle** — 5.7's active-window scoping hides prior-window still-`Applied` rows (period ≠
+  active, not Accepted → not a carry-over), making them un-actionable. A Curator-gated **"Show closed-window
+  applicants"** toggle (off by default — the calm active-window view stays default) reveals them so a
+  leftover application can be Rejected/Deleted.
+- **Server-enforced denial (AC-4)** — the gate is the **grant's absence** for non-Curators, not the UI: a
+  Viewer / anonymous `DELETE` → **403** even though the UI also hides the control. `candidates` is a schema
+  **leaf** (nothing references a candidates row), so a hard delete leaves no FK orphan; a delete that drops
+  a transfer group below 2 members dissolves the singleton client-side (the 5.6 unlink invariant).
+
+### 16.1 The one new grant (`data.db`, not the schema snapshot)
+
+On the **`transfer-curator`** policy add a whole-collection **`candidates` `delete`** grant (`fields:["*"]`,
+no filter). `delete` has **no** field/row/validation axis, so the free whole-collection shape is the **only**
+shape — there is no Option-1-vs-Option-3 tension here (unlike the update grant). **No read grant is needed
+for delete** — Directus `DELETE` returns **204 No Content** (nothing to echo); the Curator holds `candidates`
+read from 5.5 anyway. `transfer-viewer` and Public get **no** delete grant (their `DELETE` 403s — AC-4).
+`app_access` is **not** needed (custom `/admin` shell, session REST API — §5).
+
+### 16.2 Local verification status (Story 5.8)
+
+Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the Windows/Docker box
+(disposable container `k1516-58verify` via PowerShell; committed `directus-schema.yaml` applied —
+"Snapshot applied successfully" — then `docker restart` to reload the schema cache; torn down after). A
+`transfer-curator` policy (candidates **read + update + delete**, transfer_period read, alliances read,
+transfer_groups CRUD) and a `transfer-viewer` policy (candidates/transfer_period/alliances read, **no
+delete**) were minted and attached to roles; a Curator + Viewer user drove the proofs.
+
+- **Grants** — all Curator grants **incl. `candidates` delete** created **200** (free whole-collection).
+- **AC-1 / AC-4 (per-row delete)** — Curator `DELETE /items/candidates/:id` on an **Applied** row → **204**,
+  and an admin re-read of that id → **403** (the row is gone). **Viewer** `DELETE` → **403**; **anonymous**
+  `DELETE` → **403** (the grant is absent — the server 403 *is* AC-4's "denied server-side"). **Owner**
+  (admin bypass) `DELETE` → **204**.
+- **AC-2 (cleanup batch)** — Curator batch **`DELETE /items/candidates`** with body `[rejectedId,
+  transferredId]` (`deleteItems`) → **204**; both terminal rows gone. The shell only ever passes
+  `Transferred`/`Rejected` ids to this call — Accepted rows are filtered out before it (never touched,
+  AD-17).
+- **License wall (re-proven)** — on a fresh policy, a **whole-collection** `candidates` delete grant →
+  **200**, while a **row-filtered** (`permissions:{status:{_eq:'Rejected'}}`) and a **field-subset**
+  (`fields:["status"]`) delete grant each → **403** (the Core restricted-resource wall; the 12.0.2 body is
+  empty, the 200-vs-403 split is the proof) — so whole-collection is the **only** free delete shape (same §0
+  wall as candidates update / transfer_groups).
+- **Build hygiene (Node 22)** — `dist/admin/index.html` links a stylesheet (CSS emitted — the Node-24
+  no-CSS hazard avoided); the 5.8 logic (`Clear transferred/rejected`, `Show closed-window applicants`,
+  `Confirm delete`, `List cleared`, `carried forward`) and CSS classes (`cand-toolbar`, `cand-cleared`,
+  `cand-cleared-pill`, `cand-toggle`) are in the bundle; **zero** candidate data / session token baked into
+  the static admin HTML (13.5 KB).
+- **Pure-logic unit test** — **18/18**: the terminal-cleanup selector (Transferred+Rejected only, Accepted/
+  Applied excluded across windows), the never-touch-Accepted invariant, cleanup across all windows, the
+  carried-forward count, the delete-drops-from-counters recompute, the group-below-2 dissolve decision
+  (dissolve at 1 remaining / delete-empty at 0 / keep at ≥2 / none if ungrouped), and the reachability-toggle
+  selector (off → active-window set; on → prior-window Applied + terminal reachable).
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):

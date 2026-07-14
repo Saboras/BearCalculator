@@ -8,6 +8,7 @@ import {
   updateItems,
   createItem,
   deleteItem,
+  deleteItems,
 } from '@directus/sdk';
 
 /*
@@ -256,6 +257,35 @@ export function createGroup() {
 // on_delete: SET NULL on candidates.group means any lingering member is un-linked, not deleted.
 export function deleteGroup(id: number) {
   return client.request(deleteItem('transfer_groups', id));
+}
+
+/*
+  --- Curator candidate delete (Story 5.8) ---
+  Manual delete of any candidate (any status, any time — a player who went elsewhere is
+  removed) + the between-windows cleanup that clears terminal (Transferred/Rejected) rows.
+  Same session client, same httpOnly cookie (credentials:'include') — the DELETE
+  authenticates automatically. Directus returns 204 No Content (nothing to echo), so no read
+  grant is needed for the delete itself (the Curator holds `candidates` read from 5.5 anyway).
+
+  ⚠️ Enforcement (Option 3, Core tier): the `transfer-curator` policy carries a FREE
+  whole-collection `candidates` delete grant. `delete` has no field/row/validation axis, so
+  the free whole-collection shape is the ONLY shape — there is no Option-1-vs-Option-3 tension
+  here (unlike the update grant). The SERVER enforces WHO may delete (Curator 204 / Viewer 403
+  / anon 403 / Owner admin-bypass 204); that server 403 IS AC-4's "denied server-side" — the
+  UI also hides the control, but the gate is the grant's absence for non-Curators (AD-4/AD-5).
+  Candidates is a schema LEAF (nothing references a candidates row — transfer_groups has no
+  back-reference; membership lives only on candidates.group), so a hard delete leaves no FK
+  orphan. A delete that drops a transfer group below 2 members is dissolved in the shell.
+*/
+export function deleteCandidate(id: number) {
+  return client.request(deleteItem('candidates', id));
+}
+
+// The between-windows cleanup batch (AC-2): delete every terminal row in ONE transaction
+// (mirrors the 5.6 updateCandidates atomic fan-out — not an N-loop that could half-delete).
+// Callers pass ONLY Transferred/Rejected ids; Accepted rows are never included (AD-17).
+export function deleteCandidates(ids: number[]) {
+  return client.request(deleteItems('candidates', ids));
 }
 
 export interface AllianceOption {

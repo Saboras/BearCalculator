@@ -737,6 +737,97 @@ import Icon from '../../components/Icon.astro';
     outline-offset: 2px;
   }
 
+  /* ===== Manual delete + window cleanup (Story 5.8) ===== */
+  /* Curator toolbar above the table: batch cleanup (danger) + the reachability toggle. It sits
+     OUTSIDE the gold cap-strip because danger red is reserved-out there (DESIGN Do's-and-Don'ts). */
+  .cand-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+  .cand-cleanup {
+    min-width: 0;
+  }
+  .cand-toolbar-note {
+    font-size: 12.5px;
+    color: var(--color-muted);
+  }
+  .cand-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--color-ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cand-toggle input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  /* Separate the destructive per-row Delete from the status/group actions above it. */
+  .cand-action-row--delete {
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--color-border);
+  }
+  /* The between-windows cleanup confirmation (mockup .cleared) — a calm dashed card with a
+     success-green carry-over pill (carry-over confirmation = success, never danger). */
+  .cand-cleared {
+    position: relative;
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+    text-align: center;
+  }
+  .cand-cleared-dismiss {
+    position: absolute;
+    top: 4px;
+    right: 10px;
+    background: transparent;
+    border: 0;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+  .cand-cleared-dismiss:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .cand-cleared-head {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--color-primary); /* gold headline */
+    margin-bottom: var(--space-2);
+  }
+  .cand-cleared-body {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0 auto var(--space-3);
+    max-width: 46ch;
+  }
+  .cand-cleared-counts {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums; /* tabular counts (DESIGN Typography) */
+    margin: 0 0 var(--space-3);
+  }
+  .cand-cleared-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    border-radius: var(--radius-pill);
+    color: #2f8f52; /* darker green than the #46D17A token for readable text on the light tint */
+    background: rgba(70, 209, 122, .16);
+  }
+
   /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
   :global(:root[data-theme='dark']) .shell-head,
   :global(:root[data-theme='dark']) .tabs {
@@ -817,6 +908,11 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
   }
+  /* Story 5.8 — the success-green carry-over pill washes out on the dark card. */
+  :global(:root[data-theme='dark']) .cand-cleared-pill {
+    color: var(--color-success);
+    background: rgba(95, 227, 148, .14);
+  }
 
   /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
   @media (max-width: 767.98px) {
@@ -848,6 +944,8 @@ import Icon from '../../components/Icon.astro';
     updateCandidates,
     createGroup,
     deleteGroup,
+    deleteCandidate,
+    deleteCandidates,
     getAlliances,
     logout,
     DATA_STUDIO_URL,
@@ -1037,6 +1135,15 @@ import Icon from '../../components/Icon.astro';
   let candidateRows: Candidate[] = [];
   const openDetails = new Set<number>();
   let alliancesCache: AllianceOption[] | null = null; // the suggested-alliance picker source (lazy)
+  // Story 5.8: the reachability toggle. 5.7's active-window scoping hides prior-window still-Applied
+  // rows (period ≠ active, not Accepted → not a carry-over), making them un-actionable for delete /
+  // cleanup. When on, the table renders the un-scoped set so a Curator can reach + clear them. Off by
+  // default → the calm active-window view (5.7) stays the default (never permanently broadens scope).
+  let showClosedWindow = false;
+  // Story 5.8: the between-windows cleanup confirmation (the mockup .cleared card). Set to the number
+  // of rows the last cleanup removed; the "carried forward" count is recomputed LIVE at render (never
+  // stale). null = no notice. Cleared on a fresh load / a later per-row delete / dismiss.
+  let cleanupNotice: { cleared: number } | null = null;
   // Story 5.7: the single active transfer window (caps for the counter denominators + the id for
   // active-window scoping / carry-over derivation). Fetched once alongside candidates. null = no
   // active window OR a transient caps-read failure — the two are told apart by capsReadError so the
@@ -1406,6 +1513,207 @@ import Icon from '../../components/Icon.astro';
     showCandState('table');
   }
 
+  // ===== Manual delete + window cleanup (Story 5.8) — Work-mode only =====
+  // Delete is a session-cookie DELETE (204). Removing the row from candidateRows + a rerender drops
+  // it from the capacity counters (a pure edge recompute — AC-1 "stops counting") and prunes its
+  // openDetails id for free. period is NEVER written (AD-17). The server 403s a Viewer's delete
+  // (grant absent) — AC-4; the UI also hides the control (canWriteCandidates).
+
+  // Dissolve any of the given groups that dropped below 2 members after a delete (a lone member is
+  // not a group). Mirrors unlinkFromGroup's tail; on_delete SET NULL un-links, never deletes.
+  async function dissolveIfUndersized(gids: Set<number>): Promise<void> {
+    for (const gid of gids) {
+      const remaining = groupMembers(candidateRows, gid);
+      if (remaining.length === 1) {
+        await updateCandidate(remaining[0].id, { group: null });
+        remaining[0].group = null;
+        await deleteGroup(gid);
+      } else if (remaining.length === 0) {
+        await deleteGroup(gid);
+      }
+    }
+  }
+
+  // Delete one candidate (any status, any window). Removes it from the in-memory source of truth,
+  // prunes its expansion id, and dissolves its group if the delete leaves a singleton (Task 4).
+  async function deleteCandidateRow(r: Candidate): Promise<void> {
+    const gid = r.group;
+    cleanupNotice = null; // a fresh destructive action supersedes a stale cleanup confirmation
+    await deleteCandidate(r.id);
+    candidateRows = candidateRows.filter((x) => x.id !== r.id);
+    openDetails.delete(r.id);
+    if (gid != null) await dissolveIfUndersized(new Set([gid]));
+  }
+
+  // The between-windows cleanup (AC-2): delete EVERY terminal row (Transferred / Rejected), across
+  // all windows (OQ-3 — terminal rows never carry over, so window-scoping the delete adds nothing).
+  // Accepted rows are NEVER selected (AD-17) — they carry forward automatically. Returns the number
+  // of rows cleared (0 → nothing to do). Dissolves any group left below 2 by the batch.
+  async function runCleanup(): Promise<number> {
+    const terminal = candidateRows.filter(
+      (r) => r.status === 'Transferred' || r.status === 'Rejected',
+    );
+    if (terminal.length === 0) return 0;
+    const ids = terminal.map((r) => r.id);
+    const gids = new Set<number>();
+    for (const r of terminal) if (r.group != null) gids.add(r.group);
+    await deleteCandidates(ids);
+    const idSet = new Set(ids);
+    candidateRows = candidateRows.filter((r) => !idSet.has(r.id));
+    for (const id of ids) openDetails.delete(id);
+    await dissolveIfUndersized(gids);
+    return ids.length;
+  }
+
+  // The Curator toolbar above the table (Story 5.8): the batch "clear transferred/rejected" action +
+  // the "show closed-window applicants" reachability toggle. Gated on canWriteCandidates (a Viewer
+  // never sees it). Rebuilt every render so the terminal count + toggle state stay live.
+  function buildCandToolbar(rows: Candidate[]): HTMLElement {
+    const bar = document.createElement('div');
+    bar.className = 'cand-toolbar';
+
+    // --- Window cleanup: clear ALL terminal rows (Transferred / Rejected), any window (OQ-3).
+    const terminalCount = rows.filter(
+      (r) => r.status === 'Transferred' || r.status === 'Rejected',
+    ).length;
+    const cleanup = document.createElement('div');
+    cleanup.className = 'cand-cleanup';
+    const cleanupMsg = document.createElement('p');
+    cleanupMsg.className = 'cand-action-msg';
+    cleanupMsg.setAttribute('role', 'alert');
+    cleanupMsg.hidden = true;
+
+    if (terminalCount === 0) {
+      const none = document.createElement('span');
+      none.className = 'cand-toolbar-note';
+      none.textContent = 'Nothing to clear — no transferred or rejected candidates.';
+      cleanup.append(none);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'cand-action-row';
+      const trigger = candButton(`Clear transferred/rejected (${terminalCount})`, 'danger');
+
+      // The guarded batch: serialize via writeInFlight, delete the terminal rows, then rerender.
+      // On success set the .cleared confirmation (AC-3); 401/403 → session lapsed → /leader.
+      const doCleanup = () => {
+        if (writeInFlight) return;
+        writeInFlight = true;
+        const controls = Array.from(bar.querySelectorAll('button, input')) as (
+          | HTMLButtonElement
+          | HTMLInputElement
+        )[];
+        const prevDisabled = controls.map((c) => c.disabled);
+        controls.forEach((c) => (c.disabled = true));
+        cleanupMsg.hidden = true;
+        cleanupMsg.textContent = '';
+        runCleanup()
+          .then((n) => {
+            if (n > 0) cleanupNotice = { cleared: n };
+            rerenderCandidates();
+          })
+          .catch((err) => {
+            if (authRejected(err)) {
+              window.location.replace('/leader');
+              return;
+            }
+            cleanupMsg.hidden = false; // reveal the role="alert" region BEFORE writing text
+            cleanupMsg.textContent = 'Couldn’t clear the list. Please try again.';
+            controls.forEach((c, i) => (c.disabled = prevDisabled[i]));
+          })
+          .finally(() => {
+            writeInFlight = false;
+          });
+      };
+      const restore = () => {
+        row.textContent = '';
+        row.append(trigger);
+      };
+      trigger.addEventListener('click', () => {
+        row.textContent = '';
+        const q = document.createElement('span');
+        q.className = 'cand-action-label';
+        q.textContent = `Clear ${terminalCount} transferred/rejected candidate${
+          terminalCount === 1 ? '' : 's'
+        }? Accepted candidates are kept. This can’t be undone.`;
+        const yes = candButton('Clear them', 'danger');
+        yes.addEventListener('click', doCleanup);
+        const no = candButton('Cancel', 'path');
+        no.addEventListener('click', restore);
+        row.append(q, yes, no);
+      });
+      row.append(trigger);
+      cleanup.append(row);
+    }
+    cleanup.append(cleanupMsg);
+    bar.append(cleanup);
+
+    // --- Reachability toggle: reveal prior-window (closed) applicants that 5.7 scopes out (Task 6).
+    const tog = document.createElement('label');
+    tog.className = 'cand-toggle';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = showClosedWindow;
+    cb.addEventListener('change', () => {
+      // A rerender while another candidate write is in flight would detach that write's
+      // error UI (its msg/controls nodes) → silent failure (the L1155 hazard). Ignore the
+      // flip until the write settles; revert the visual state so it doesn't lie.
+      if (writeInFlight) {
+        cb.checked = showClosedWindow;
+        return;
+      }
+      showClosedWindow = cb.checked;
+      rerenderCandidates();
+    });
+    const tlab = document.createElement('span');
+    tlab.textContent = 'Show closed-window applicants';
+    tog.append(cb, tlab);
+    bar.append(tog);
+
+    return bar;
+  }
+
+  // The between-windows cleanup confirmation (Story 5.8, AC-3) — the mockup .cleared card: a calm
+  // dashed-border card with a success-green carry-over pill. "cleared" is the last cleanup's count;
+  // "carried forward" is recomputed LIVE (Accepted rows, which cleanup never touches — AD-17) so it
+  // never goes stale. Dismissable.
+  function buildClearedNotice(): HTMLElement {
+    const carried = candidateRows.filter((r) => r.status === 'Accepted').length;
+    const card = document.createElement('div');
+    card.className = 'cand-cleared';
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'cand-cleared-dismiss';
+    dismiss.setAttribute('aria-label', 'Dismiss');
+    dismiss.textContent = '×';
+    dismiss.addEventListener('click', () => {
+      // Don't rerender mid-write — it would detach an in-flight write's error UI (L1155 hazard).
+      if (writeInFlight) return;
+      cleanupNotice = null;
+      rerenderCandidates();
+    });
+
+    const head = document.createElement('div');
+    head.className = 'cand-cleared-head';
+    head.textContent = 'List cleared';
+
+    const body = document.createElement('p');
+    body.className = 'cand-cleared-body';
+    body.textContent =
+      'Terminal candidates were cleared for the next event. Anyone marked Accepted but not transferred was carried forward automatically.';
+
+    const counts = document.createElement('p');
+    counts.className = 'cand-cleared-counts';
+    counts.textContent = `${cleanupNotice?.cleared ?? 0} cleared · ${carried} carried forward`;
+
+    const pill = document.createElement('span');
+    pill.className = 'cand-cleared-pill';
+    pill.textContent = 'Accepted-not-transferred carried to next event';
+
+    card.append(dismiss, head, body, counts, pill);
+    return card;
+  }
+
   // ===== Curator status-lifecycle controls (Story 5.5) — Work-mode only =====
   // The legal transition graph is CLIENT-GUIDED only (AR-9/AD-7): no Directus Flow/hook
   // encodes it. The server enforces only WHO may write (Curator 200 / Viewer 403). Every
@@ -1696,6 +2004,31 @@ import Icon from '../../components/Icon.astro';
     box.append(buildSuggestSection(r, runTable));
     box.append(buildGroupSection(r, runTable));
 
+    // --- Delete (Story 5.8) — any status, any time (FR-10). A two-step inline confirm guards the
+    // one-click irreversible destroy (hard delete; the daily backup is the only recovery). No modal
+    // (KISS — none in the component library). Routes through the table-wide runTable (a delete shifts
+    // the counters + scope), which rerenders on success and drops the row.
+    const del = document.createElement('div');
+    del.className = 'cand-action-row cand-action-row--delete';
+    const delBtn = candButton('Delete', 'danger');
+    const restoreDelete = () => {
+      del.textContent = '';
+      del.append(delBtn);
+    };
+    delBtn.addEventListener('click', () => {
+      del.textContent = '';
+      const q = document.createElement('span');
+      q.className = 'cand-action-label';
+      q.textContent = 'Delete this candidate? This can’t be undone.';
+      const yes = candButton('Confirm delete', 'danger');
+      yes.addEventListener('click', () => runTable(() => deleteCandidateRow(r)));
+      const no = candButton('Cancel', 'path');
+      no.addEventListener('click', restoreDelete);
+      del.append(q, yes, no);
+    });
+    del.append(delBtn);
+    box.append(del);
+
     box.append(msg);
     return box;
   }
@@ -1740,11 +2073,20 @@ import Icon from '../../components/Icon.astro';
     // render → counters recompute after each write for free (read-after-write, Task 5).
     wrap.append(buildCapStrip(rows, activePeriod));
 
+    // Story 5.8: the Curator cleanup + reachability toolbar sits above the table (OUTSIDE the gold
+    // cap-strip — danger red is reserved-out there). A Viewer never sees it. Built every render so
+    // the terminal count + toggle state stay live. The .cleared confirmation shows after a cleanup.
+    if (canWriteCandidates) wrap.append(buildCandToolbar(rows));
+    if (cleanupNotice) wrap.append(buildClearedNotice());
+
     // Divergent flag + group membership derive over the FULL rows (a group can span in/out of the
     // active window); only the tbody iterates the scoped+sorted subset (AC-4 active-window scoping,
     // AC-5 carry-over-first). period == null degrades activeWindowRows to all rows (no blank table).
     const divergent = computeDivergentGroups(rows);
-    const rendered = sortForWindow(activeWindowRows(rows, activePeriod), activePeriod);
+    // Story 5.8: the reachability toggle broadens the scope to ALL rows (prior-window applicants
+    // included) so a Curator can reach + clear stranded leftovers; off → the 5.7 active-window set.
+    const scoped = showClosedWindow ? rows : activeWindowRows(rows, activePeriod);
+    const rendered = sortForWindow(scoped, activePeriod);
     // Prune expansion ids that scoped out of the rendered set so stale ids don't accumulate
     // (deferred-work L558/L218). Iterate a copy — openDetails is mutated in the loop.
     const renderedIds = new Set(rendered.map((r) => r.id));
@@ -1756,7 +2098,7 @@ import Icon from '../../components/Icon.astro';
     if (rendered.length === 0) {
       const note = document.createElement('p');
       note.className = 'cand-empty-note';
-      note.textContent = activePeriod
+      note.textContent = activePeriod && !showClosedWindow
         ? 'No candidates in the active transfer window yet.'
         : 'No candidates to show.';
       wrap.append(note);
@@ -1926,6 +2268,7 @@ import Icon from '../../components/Icon.astro';
     try {
       const rows = await getCandidates();
       candidateRows = rows ?? []; // held module-wide so 5.6/5.7 writes can recompute the table
+      cleanupNotice = null; // a fresh load supersedes any prior cleanup confirmation (Story 5.8)
       // Story 5.7: fetch the active window's caps alongside the candidates (one fetch per shell load,
       // AD-4). A transient failure here must NOT fail the whole list or cache zeroed caps — that
       // would freeze every denominator at n/0 for the session (Task 6, mirroring the 5.6
