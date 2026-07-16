@@ -378,6 +378,19 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-muted);
     margin: var(--space-3) 0 0;
   }
+  /* ===== Guides publish list (Story 6.3) — reuses the calm cand-table styling ===== */
+  .guide-publish-cell {
+    white-space: nowrap; /* the Publish button + its inline error stay on the action column */
+  }
+  .guide-slug {
+    overflow-wrap: anywhere; /* long kebab slugs wrap inside the cell, never widen the page */
+  }
+  .guides-studio-note {
+    color: var(--color-muted);
+    font-size: 12.5px;
+    margin: var(--space-4) 0 0;
+  }
+
   /* Calm note when the active window is scoped-empty (rows exist but none in-window) — review P2. */
   .cand-empty-note {
     font-size: 14px;
@@ -483,6 +496,12 @@ import Icon from '../../components/Icon.astro';
   .badge-status--rejected {
     color: var(--color-danger);
     background: rgba(216, 53, 42, .14);
+  }
+  /* Story 6.3: the third guide publish state — published, but the draft carries newer,
+     unpublished edits. Amber attention tint (Draft reuses --applied, Published --transferred). */
+  .badge-status--draft-newer {
+    color: #9a621b; /* darker amber than the gold token for readable text on a light tint */
+    background: rgba(224, 138, 43, .16);
   }
 
   /* Special-invite chip — compact inline variant of DESIGN badge-special (reserved danger). */
@@ -858,6 +877,11 @@ import Icon from '../../components/Icon.astro';
     background: rgba(216, 53, 42, .2);
     border-color: rgba(216, 53, 42, .5);
   }
+  /* Story 6.3 — the light amber tint washes out on the dark card. */
+  :global(:root[data-theme='dark']) .badge-status--draft-newer {
+    color: #F2A93B;
+    background: rgba(242, 169, 59, .16);
+  }
   :global(:root[data-theme='dark']) .cand-detail > td {
     background: rgba(242, 169, 59, .05);
   }
@@ -947,28 +971,41 @@ import Icon from '../../components/Icon.astro';
     deleteCandidate,
     deleteCandidates,
     getAlliances,
+    getGuideDrafts,
+    getGuideDraft,
+    getPublishedGuides,
+    publishGuide,
     logout,
     DATA_STUDIO_URL,
   } from '../../lib/directus';
-  import type { Candidate, CandidatePatch, AllianceOption, TransferPeriod } from '../../lib/directus';
+  import type {
+    Candidate,
+    CandidatePatch,
+    AllianceOption,
+    TransferPeriod,
+    GuideDraft,
+    PublishedGuide,
+  } from '../../lib/directus';
 
-  type Kind = 'custom' | 'studio';
   interface AreaDef {
     key: string; // the /permissions/me collection key
     area: string; // chip word (Transfer/Guides/Alliances/Accounts)
     label: string; // tab label
     icon: string;
-    kind: Kind;
     ownerOnly?: boolean;
   }
 
-  // The four conceptual admin areas. Only Candidates (Transfer) is a custom surface; the
-  // rest hand off to the Data Studio. Accounts is Owner-only (§2 roles-and-policies).
+  // The four conceptual admin areas. Candidates (Transfer) and — since Story 6.3 — the
+  // Guides publish list are custom surfaces (panelBody branches on `key`); the rest hand
+  // off to the Data Studio. Guides AUTHORING stays in the Studio (AD-3): the custom panel
+  // is only the minimal publish surface (the Option-B "Owner-blessed helper", Sabo
+  // 2026-07-16 — a recorded deviation from the one-custom-surface letter of AR-5).
+  // Accounts is Owner-only.
   const AREAS: AreaDef[] = [
-    { key: 'candidates', area: 'Transfer', label: 'Candidates', icon: 'clipboard', kind: 'custom' },
-    { key: 'guides', area: 'Guides', label: 'Guides', icon: 'book-open', kind: 'studio' },
-    { key: 'alliances', area: 'Alliances', label: 'Alliances', icon: 'building-2', kind: 'studio' },
-    { key: 'directus_users', area: 'Accounts', label: 'Accounts', icon: 'crown', kind: 'studio', ownerOnly: true },
+    { key: 'candidates', area: 'Transfer', label: 'Candidates', icon: 'clipboard' },
+    { key: 'guides', area: 'Guides', label: 'Guides', icon: 'book-open' },
+    { key: 'alliances', area: 'Alliances', label: 'Alliances', icon: 'building-2' },
+    { key: 'directus_users', area: 'Accounts', label: 'Accounts', icon: 'crown', ownerOnly: true },
   ];
 
   const loadingEl = document.getElementById('admin-loading');
@@ -1055,7 +1092,7 @@ import Icon from '../../components/Icon.astro';
   }
 
   function panelBody(area: AreaDef): string {
-    if (area.kind === 'custom') {
+    if (area.key === 'candidates') {
       // Trusted CONSTANTS only (frame + states). Candidate ROWS are built later with
       // textContent/createElement in renderCandidateTable — never innerHTML with user data.
       return `<h2>Candidates</h2>
@@ -1064,6 +1101,17 @@ import Icon from '../../components/Icon.astro';
 <div class="cand-state" id="cand-error" hidden><p class="admin-msg" role="alert">Couldn’t load the candidate list. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="cand-retry">Retry</button></div>
 <div class="cand-state" id="cand-empty" hidden><p class="muted">No candidates yet — applications will appear here as they come in.</p></div>
 <div class="cand-table-wrap" id="cand-table-wrap" hidden></div>`;
+    }
+    if (area.key === 'guides') {
+      // Trusted CONSTANTS only. Guide ROWS are built with textContent in renderGuidesTable —
+      // draft body HTML is NEVER rendered here (the 6.4 public reader owns sanitize+render).
+      return `<h2>Guides</h2>
+<p class="cand-intro">Guide drafts and their published state. Editors author drafts in the Data Studio; a Senior or the Owner publishes here — publishing copies the draft verbatim to the public collection at the same address, and the public site rebuilds (~1–3 min).</p>
+<div class="cand-state" id="guides-loading" role="status"><p class="muted">Loading guides…</p></div>
+<div class="cand-state" id="guides-error" hidden><p class="admin-msg" role="alert">Couldn’t load the guides list. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="guides-retry">Retry</button></div>
+<div class="cand-state" id="guides-empty" hidden><p class="muted">No guide drafts yet — Editors author drafts in the Data Studio and they appear here for review.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a></div>
+<div class="cand-table-wrap" id="guides-table-wrap" hidden></div>
+<p class="guides-studio-note">Drafts are authored in the Directus Data Studio — the ready-made editor, not a screen built here. <a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio</a></p>`;
     }
     const owner = area.ownerOnly ? ' (Owner only)' : '';
     return `<h2>${area.label}</h2><p>${area.area}${owner} is managed in the Directus Data Studio — the ready-made admin, not a screen built here.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a>`;
@@ -1104,12 +1152,14 @@ import Icon from '../../components/Icon.astro';
 
       tab.addEventListener('click', () => selectTab(i, tabs, panels));
       if (a.key === 'candidates') tab.addEventListener('click', () => maybeLoadCandidates());
+      if (a.key === 'guides') tab.addEventListener('click', () => maybeLoadGuides());
       tab.addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         e.preventDefault();
         const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
         selectTab(next, tabs, panels);
         if (areas[next]?.key === 'candidates') maybeLoadCandidates(); // keyboard activation must load too (mirrors the click + boot triggers)
+        if (areas[next]?.key === 'guides') maybeLoadGuides();
         tabs[next].focus();
       });
 
@@ -1121,6 +1171,7 @@ import Icon from '../../components/Icon.astro';
 
     selectTab(0, tabs, panels); // default to the first accessible tab (Candidates if present)
     if (areas[0]?.key === 'candidates') maybeLoadCandidates(); // lazy-load if Candidates is initial
+    if (areas[0]?.key === 'guides') maybeLoadGuides(); // a Guides-only leader lands here (Story 6.3)
   }
 
   // ===== Candidates panel (Story 5.4) — lazy-loaded, read-only calm table =====
@@ -2308,6 +2359,218 @@ import Icon from '../../components/Icon.astro';
     loadCandidates();
   }
 
+  // ===== Guides panel (Story 6.3) — the Senior/Owner publish surface =====
+  // Publish = copy a guide_drafts row VERBATIM into `guides` (create-or-update by slug) via
+  // publishGuide(). The server enforces WHO (an Editor/Viewer gets a real 403 on `guides` —
+  // the Option-2 collection-boundary gate); this panel only guides UX (AD-4). Authoring
+  // stays in the Data Studio (AD-3) — no WYSIWYG, no editing, no body preview here. All
+  // draft data enters the DOM via textContent; body HTML is NEVER rendered in the shell.
+  let canPublishGuides = false; // set in boot(): Owner OR a `guides` write grant (Guides·Work)
+  let guideDrafts: GuideDraft[] = [];
+  let publishedGuides: PublishedGuide[] = [];
+  let guidesLoaded = false;
+  let guidesFetching = false;
+
+  function showGuidesState(which: 'loading' | 'error' | 'empty' | 'table') {
+    const map: Record<string, string> = {
+      loading: 'guides-loading',
+      error: 'guides-error',
+      empty: 'guides-empty',
+      table: 'guides-table-wrap',
+    };
+    for (const [key, elId] of Object.entries(map)) {
+      const el = document.getElementById(elId);
+      if (el) el.hidden = key !== which;
+    }
+  }
+
+  // The derived per-draft publish state — a pure edge computation over the two in-memory
+  // lists, never stored (AD-4): no `guides` row with the draft's slug → the draft is
+  // unpublished; a row exists and is at least as new as the draft → published; the draft
+  // is newer → published with unpublished edits pending re-publish. Timestamps are
+  // ISO-8601 UTC; a never-updated row falls back to its creation stamp. Ties (the copy is
+  // written moments AFTER the draft's last save) count as published — only a draft edit
+  // AFTER the publish flips it back to 'draft-newer'.
+  type GuideState = 'draft-only' | 'published' | 'draft-newer';
+  function effectiveStamp(dateUpdated: string | null, dateCreated: string | null): number {
+    const s = dateUpdated ?? dateCreated;
+    const t = s ? Date.parse(s) : NaN;
+    return Number.isNaN(t) ? 0 : t;
+  }
+  function guideState(draft: GuideDraft, published: PublishedGuide[]): GuideState {
+    const match = published.find((g) => g.slug === draft.slug);
+    if (!match) return 'draft-only';
+    return effectiveStamp(draft.date_updated, draft.date_created) >
+      effectiveStamp(match.date_updated, match.date_created)
+      ? 'draft-newer'
+      : 'published';
+  }
+
+  function guideStateChip(state: GuideState): HTMLElement {
+    const chip = document.createElement('span');
+    const cls: Record<GuideState, string> = {
+      'draft-only': 'badge-status badge-status--applied',
+      published: 'badge-status badge-status--transferred',
+      'draft-newer': 'badge-status badge-status--draft-newer',
+    };
+    const label: Record<GuideState, string> = {
+      'draft-only': 'Draft',
+      published: 'Published',
+      'draft-newer': 'Draft newer',
+    };
+    chip.className = cls[state];
+    chip.textContent = label[state]; // the word carries meaning beyond colour (a11y)
+    return chip;
+  }
+
+  const isoDay = (s: string | null): string => (s ? s.slice(0, 10) : '—');
+
+  async function loadGuides() {
+    if (guidesFetching) return;
+    guidesFetching = true;
+    showGuidesState('loading');
+    try {
+      // Both reads are wired since 6.1 (guides-viewer/-senior hold guide_drafts + guides
+      // read). The published list carries only slug + timestamps — never content.
+      const [drafts, published] = await Promise.all([getGuideDrafts(), getPublishedGuides()]);
+      guideDrafts = drafts ?? [];
+      publishedGuides = published ?? [];
+      if (guideDrafts.length === 0) {
+        showGuidesState('empty');
+      } else {
+        renderGuidesTable();
+        showGuidesState('table');
+      }
+      guidesLoaded = true; // success — don't auto-refetch on tab re-activation (load-once, mirror 5.4)
+    } catch (err) {
+      if (authRejected(err)) {
+        window.location.replace('/leader'); // session lapsed (a granted leader never 403s here)
+        return;
+      }
+      showGuidesState('error');
+    } finally {
+      guidesFetching = false;
+    }
+  }
+  function maybeLoadGuides() {
+    if (guidesLoaded || guidesFetching) return;
+    loadGuides();
+  }
+
+  function buildPublishCell(draft: GuideDraft, state: GuideState): HTMLTableCellElement {
+    const cell = document.createElement('td');
+    cell.className = 'guide-publish-cell';
+    const msg = document.createElement('p');
+    msg.className = 'cand-action-msg';
+    msg.setAttribute('role', 'alert');
+    msg.hidden = true;
+    const btn = candButton(state === 'draft-only' ? 'Publish' : 'Re-publish', 'gold');
+    if (state === 'published') {
+      // Published and up to date — a re-publish would be a redundant no-op copy (the 5.5
+      // review-P1 lesson: disable the no-op control instead of letting it flash the row).
+      btn.disabled = true;
+      btn.title = 'Published and up to date — edit the draft to re-publish';
+    }
+    btn.addEventListener('click', () => doPublish(draft, btn, msg));
+    cell.append(btn, msg);
+    return cell;
+  }
+
+  async function doPublish(draft: GuideDraft, btn: HTMLButtonElement, msg: HTMLElement) {
+    if (writeInFlight || btn.disabled) return; // one module-wide write guard (5.6 review P3)
+    writeInFlight = true;
+    const prevLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Publishing…';
+    msg.hidden = true;
+    msg.textContent = '';
+    try {
+      // Re-read the draft at click time (review P1): the panel list is load-once, and an
+      // Editor may have saved newer content in the Studio since — the copy must publish
+      // the CURRENT draft, never the cached one. Also keeps the row's Updated cell honest.
+      const fresh = await getGuideDraft(draft.id);
+      const idx = guideDrafts.findIndex((d) => d.id === draft.id);
+      if (idx !== -1) guideDrafts[idx] = fresh;
+      const existing = publishedGuides.find((g) => g.slug === fresh.slug);
+      const saved = await publishGuide(fresh, existing?.id);
+      // Read-after-write on the in-memory published list: the echoed row carries the
+      // server stamps (the Senior holds the guides read). Defensive fallbacks keep the
+      // chip truthful even if a proxy strips the echo body.
+      if (existing) {
+        existing.date_updated = saved?.date_updated ?? new Date().toISOString();
+      } else if (saved?.id != null) {
+        publishedGuides.push({
+          id: saved.id,
+          slug: saved.slug ?? fresh.slug,
+          date_created: saved.date_created ?? new Date().toISOString(),
+          date_updated: saved.date_updated ?? null,
+        });
+      } else {
+        // Create succeeded but the echo was stripped (review P2) — never invent an id
+        // (a fake update target would break the next re-publish); drop load-once and
+        // re-sync both lists from the server instead.
+        guidesLoaded = false;
+        loadGuides();
+        return;
+      }
+      renderGuidesTable(); // re-derive the state chips in place — no refetch, no reload
+    } catch (err) {
+      if (authRejected(err)) {
+        window.location.replace('/leader');
+        return;
+      }
+      msg.hidden = false; // reveal the role="alert" region BEFORE writing text (5.5 review P2)
+      msg.textContent = 'Couldn’t publish. Please try again.';
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+    } finally {
+      writeInFlight = false;
+    }
+  }
+
+  function renderGuidesTable() {
+    const wrap = document.getElementById('guides-table-wrap');
+    if (!wrap) return;
+    wrap.textContent = '';
+
+    const scroll = document.createElement('div');
+    scroll.className = 'cand-table-scroll'; // wide table scrolls in its own box, never the page
+
+    const table = document.createElement('table');
+    table.className = 'cand-table';
+
+    const cols = ['Title', 'Slug', 'Category', 'Updated', 'State'];
+    if (canPublishGuides) cols.push('Publish');
+    const thead = document.createElement('thead');
+    const htr = document.createElement('tr');
+    for (const c of cols) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = c;
+      htr.append(th);
+    }
+    thead.append(htr);
+    table.append(thead);
+
+    const tbody = document.createElement('tbody');
+    for (const d of guideDrafts) {
+      const tr = document.createElement('tr');
+      tr.append(td(dash(d.title)));
+      tr.append(td(d.slug, 'guide-slug')); // the immutable public address (join key)
+      tr.append(td(dash(d.category?.name ?? null)));
+      tr.append(td(isoDay(d.date_updated ?? d.date_created)));
+      const st = guideState(d, publishedGuides);
+      const stateCell = document.createElement('td');
+      stateCell.append(guideStateChip(st));
+      tr.append(stateCell);
+      if (canPublishGuides) tr.append(buildPublishCell(d, st));
+      tbody.append(tr);
+    }
+    table.append(tbody);
+    scroll.append(table);
+    wrap.append(scroll);
+  }
+
   async function doLogout(btn: HTMLButtonElement) {
     if (btn.disabled) return;
     btn.disabled = true;
@@ -2359,6 +2622,12 @@ import Icon from '../../components/Icon.astro';
     // Story 5.5: gate the per-row status/path controls on write capability. Owner (admin
     // bypass) or a Curator whose Transfer area resolved to 'Work' (holds the update grant).
     canWriteCandidates = isOwner || accessible.some((a) => a.key === 'candidates' && a.mode === 'Work');
+    // Story 6.3: gate the per-row Publish controls the same way — Owner, or a Senior whose
+    // Guides area resolved to 'Work' (holds the 6.3 `guides` create/update grants). A
+    // leader whose union carries a `guides` READ (guides-viewer) sees the list with no
+    // controls; a pure guides-editor holds NO `guides` grant at all, so the tab itself is
+    // absent (the 3.5 area keying) — their surface is the Studio. Server 403s regardless.
+    canPublishGuides = isOwner || accessible.some((a) => a.key === 'guides' && a.mode === 'Work');
 
     if (accessible.length === 0) {
       showOnly(emptyEl); // signed in, no area granted yet
@@ -2387,9 +2656,10 @@ import Icon from '../../components/Icon.astro';
     .getElementById('admin-empty-logout')
     ?.addEventListener('click', (e) => doLogout(e.currentTarget as HTMLButtonElement));
 
-  // Candidates Retry — delegated on the static #admin-panels (the button is built per-render).
+  // Candidates/Guides Retry — delegated on the static #admin-panels (the buttons are built per-render).
   panelsEl?.addEventListener('click', (e) => {
     if ((e.target as HTMLElement)?.closest?.('#cand-retry')) loadCandidates();
+    if ((e.target as HTMLElement)?.closest?.('#guides-retry')) loadGuides();
   });
 
   runBoot();

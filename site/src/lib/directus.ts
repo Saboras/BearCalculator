@@ -3,6 +3,7 @@ import {
   authentication,
   rest,
   readMe,
+  readItem,
   readItems,
   updateItem,
   updateItems,
@@ -300,4 +301,99 @@ export function getAlliances() {
   return client.request(
     readItems('alliances', { fields: ['id', 'name'], limit: -1, sort: ['name'] })
   ) as Promise<AllianceOption[]>;
+}
+
+/*
+  --- Guides publish action (Story 6.3) ---
+  The Senior/Owner publish half of the Option-2 gate: "publish" = materialize a `guides`
+  row (the public-build source) from a `guide_drafts` row (the Editor working copy), the
+  two collections joined ONLY by the immutable slug — no relation, no status field. Same
+  session client, same httpOnly cookie. The reads are wired since 6.1 (guides-viewer /
+  guides-senior); the writes are the 6.3 `guides-senior` grants (guides create/update +
+  guide_drafts update), whole-collection ["*"] — the only free Core shape.
+
+  ⚠️ Enforcement reality (AD-4): the server enforces only WHO may write `guides` — a
+  Senior gets 200, an Editor/Viewer a real 403 (the collection-boundary gate). WHAT gets
+  copied is this helper's discipline: publishGuide() copies title/slug/body/category/
+  creator_credit VERBATIM from the draft, sends `slug` only on CREATE (the row is found by
+  slug on update — the publish path can never drift a published URL), and never sends the
+  system date fields. Copying in code (not by hand in the Studio) is what guarantees
+  guide_drafts.slug == guides.slug — the "no link-rot / preview URL == public URL"
+  invariant (AR-18). `body` is copied AS-IS; sanitization is the 6.4 public reader's MUST
+  (infra README §18.2) — the admin shell never renders body HTML.
+*/
+export interface GuideCategory {
+  id: number;
+  name: string | null;
+}
+// List shape — deliberately WITHOUT body: the panel never renders body HTML, and the
+// publish path re-reads the draft fresh at click time (review P1), so the load-once
+// list needn't ship every draft's HTML to every leader.
+export interface GuideDraft {
+  id: number;
+  title: string;
+  slug: string;
+  category: GuideCategory | null;
+  creator_credit: string | null;
+  date_created: string | null;
+  date_updated: string | null;
+}
+export interface GuideDraftFull extends GuideDraft {
+  body: string | null;
+}
+// The published side needs only the join key + timestamps (for the derived state chip) —
+// the list never renders published content; the id is the update target on re-publish.
+export interface PublishedGuide {
+  id: number;
+  slug: string;
+  date_created: string | null;
+  date_updated: string | null;
+}
+
+export function getGuideDrafts() {
+  return client.request(
+    readItems('guide_drafts', {
+      fields: ['id', 'title', 'slug', { category: ['id', 'name'] }, 'creator_credit', 'date_created', 'date_updated'],
+      limit: -1, // a kingdom KB is small (tens of guides); no pagination
+      sort: ['-id'], // newest first (mirrors the candidate list)
+    })
+  ) as Promise<GuideDraft[]>;
+}
+
+// Fresh single-draft read for the publish path (review P1): the panel list is load-once,
+// but the copy must never publish a stale body — an Editor may have saved in the Studio
+// after the Senior's panel loaded. Fetched at click time, body included.
+export function getGuideDraft(id: number) {
+  return client.request(
+    readItem('guide_drafts', id, {
+      fields: ['id', 'title', 'slug', 'body', { category: ['id', 'name'] }, 'creator_credit', 'date_created', 'date_updated'],
+    })
+  ) as Promise<GuideDraftFull>;
+}
+
+export function getPublishedGuides() {
+  return client.request(
+    readItems('guides', {
+      fields: ['id', 'slug', 'date_created', 'date_updated'],
+      limit: -1,
+    })
+  ) as Promise<PublishedGuide[]>;
+}
+
+// Publish (create) or re-publish (update) a draft into `guides`. Pass existingGuideId when
+// a `guides` row with the draft's slug already exists — found by the CALLER over its
+// in-memory published list, so the create-vs-update branch is unit-testable in isolation.
+export function publishGuide(draft: GuideDraftFull, existingGuideId?: number) {
+  const copy = {
+    title: draft.title,
+    body: draft.body,
+    category: draft.category?.id ?? null, // M2O write side is the id
+    creator_credit: draft.creator_credit,
+  };
+  if (existingGuideId != null) {
+    return client.request(updateItem('guides', existingGuideId, copy)) as Promise<PublishedGuide>;
+  }
+  return client.request(
+    createItem('guides', { ...copy, slug: draft.slug })
+  ) as Promise<PublishedGuide>;
 }

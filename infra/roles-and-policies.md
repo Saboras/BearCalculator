@@ -88,7 +88,20 @@ locked. So "a Viewer can never do a Work action" holds at the server; what is *n
 under Option 3 is the *within-a-writer-role* fineness (which row / which field).
 
 > ### Amendment — RATIFIED 2026-07-14: **Option 2 for the Guides publish gate (AD-6 only)**
-> **DECIDED (Sabo, Owner, 2026-07-14): the Guides publish gate uses Option 2 (split collections), not Option 3.** Unlike the Alliance-Official own-row and Curator work-fields boundaries (which stay Option-3 UX conventions), the guides gate controls **public visibility**, so it is worth hard-enforcing — and Option 2 does so **for free** on Core. **AD-6 is amended** from "field-level `status` permission" to: **two collections** — `guide_drafts` (Editor-writable) and `guides` (Senior/Owner-writable, the public-build source). Draft-vs-published is **collection membership** (no `status` field). Because `guides-editor` holds **no write grant on `guides`**, an Editor's publish attempt is a **genuine server-side 403** — collection-level, license-free, live-proven in Story 6.1. The collections + free reads land in **6.1**; the Editor `guide_drafts` write in **6.2**; the Senior `guides` write (the publish action) + the draft→published **copy mechanism** in **6.3** (which must **not** be a custom approval Flow — AD-6/AD-7). Slug immutability stays a free Studio `readonly` condition + discipline (still 🔒 to server-enforce). *(This resolves the deferred-work "6.1 publish gate unsatisfiable as worded" item — it is now satisfiable and satisfied.)*
+> **DECIDED (Sabo, Owner, 2026-07-14): the Guides publish gate uses Option 2 (split collections), not Option 3.** Unlike the Alliance-Official own-row and Curator work-fields boundaries (which stay Option-3 UX conventions), the guides gate controls **public visibility**, so it is worth hard-enforcing — and Option 2 does so **for free** on Core. **AD-6 is amended** from "field-level `status` permission" to: **two collections** — `guide_drafts` (Editor-writable) and `guides` (Senior/Owner-writable, the public-build source). Draft-vs-published is **collection membership** (no `status` field). Because `guides-editor` holds **no write grant on `guides`**, an Editor's publish attempt is a **genuine server-side 403** — collection-level, license-free, live-proven in Story 6.1. The collections + free reads land in **6.1**; the Editor `guide_drafts` write in **6.2**; the Senior `guides` write (the publish action) + the draft→published **copy mechanism** in **6.3** (which must **not** be a custom approval Flow — AD-6/AD-7). Slug immutability stays a free Studio `readonly` condition + discipline (still 🔒 to server-enforce). *(This resolves the deferred-work "6.1 publish gate unsatisfiable as worded" item — it is now satisfiable and satisfied. 6.3 delivered: the Senior writes are wired + live-proven, and the copy mechanism is the admin-shell publish panel — README §19.)*
+
+> ### ⚠️ Second license wall — RECORDED 2026-07-16 (Story 6.3): **Core caps Studio-user SEATS**
+> On a fresh `12.0.2` Core container, creating the **4th** user whose policy union carries
+> **`app_access: true`** fails server-side with `403 {"category":"seats","code":"LIMIT_EXCEEDED"}` —
+> the free tier limits **"Studio Users"** (Directus docs: Admin *or* App access in ≥1 policy; an
+> over-entitlement instance can even be **locked down** after a grace period). Users **without**
+> `app_access` are unlimited — and the custom admin shell + public site authenticate via the
+> **session API**, which needs **no seat**. Consequence for the §2 taxonomy: `app_access: yes` is a
+> **scarce resource** — only leaders who genuinely open the Data Studio need it (Guides
+> Editors/Seniors for WYSIWYG authoring, the Owner, Alliance Officials for their row); Transfer
+> Curators/Viewers work entirely in the custom shell and can run `app_access: false`. Weigh before
+> onboarding ~10 leaders: trim `app_access` per policy, cap simultaneous Editor accounts, or license.
+> Tracked as a decision-needed item in `deferred-work.md`; README §19.4 carries the full finding.
 
 <details><summary>The two options NOT taken (kept for the record / future revisit)</summary>
 
@@ -170,7 +183,7 @@ Accounts**.
 | Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6** ✅); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` **CRUD** (**5.6** ✅); delete ✅ **5.8** | collection **read + update + delete** grant ✅ free — update delivered **5.5**, grouping delivered **5.6**, delete/cleanup delivered **5.8**; *field-limited to work-fields* is the 🔒 Option-1 target |
 | Guides | `guides-viewer` | yes | **read** `guide_drafts` + `guides` + `categories` (leader-visible drafts + published) — **wired Story 6.1** | collection **read** grant ✅ free |
 | Guides | `guides-editor` | yes | create/update `guide_drafts` (whole-collection); read `categories` — **no grant on `guides`** so cannot publish | collection **write** on `guide_drafts` ✅ free — **Option 2** (6.1 shape; write grant **wired Story 6.2**, live-proven) |
-| Guides | `guides-senior` | yes | **publish**: create/update `guides` (the publish action); reads `guide_drafts` + `guides` + `categories` wired 6.1 — the Senior *role* also holds `guides-editor` to author drafts | collection **write** on `guides` ✅ free — **Option 2**, server-enforced gate (6.3 grant) |
+| Guides | `guides-senior` | yes (for *authoring* via `guides-editor`; the **publish surface itself is the custom `/admin` shell** — session API, no seat needed; §0 seats note) | **publish**: create/update `guides` (the publish action) **+ update `guide_drafts`** (re-edit before re-publish); reads `guide_drafts` + `guides` + `categories` wired 6.1 — the Senior *role* also holds `guides-editor` to author drafts | collection **write** on `guides` ✅ free — **Option 2**, server-enforced gate, **wired Story 6.3** (live-proven: Senior 200, Editor/Viewer 403) |
 | Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
 | Alliances / Transfer | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`) **+ read `settings`** (Story 5.3 — the `special_invite_power_threshold` the `/join` power-badge compares against); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2 / 5.3** (keeps Public locked; §3) |
 | all | **Owner** = built-in **Administrator** role (`admin_access: true`) | — | **everything** (universal override) | admin bypass — **no per-collection rules** ✅ free |
@@ -307,21 +320,25 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 | `guide_drafts` | read | `["*"]` | — | ✅ wired Story 6.1 · free |
 | `guides` | read | `["*"]` | — | ✅ wired Story 6.1 · free |
 | `categories` | read | `["*"]` | — | ✅ wired Story 6.1 · free |
-| `guide_drafts` | update | `["*"]` | — | ⏳ Epic 6.3 · ✅ free — re-edit a draft before re-publishing |
-| `guides` | create | `["*"]` | — | ⏳ Epic 6.3 · ✅ free — **the publish action** (materialize a published row from a draft, same slug) |
-| `guides` | update | `["*"]` | — | ⏳ Epic 6.3 · ✅ free — re-edit a published guide |
+| `guide_drafts` | update | `["*"]` | — | ✅ **wired Story 6.3** · free (live-proven: Senior update → 200) — re-edit a draft before re-publishing |
+| `guides` | create | `["*"]` | — | ✅ **wired Story 6.3** · free (live-proven: Senior create → 200, slug+body verbatim) — **the publish action** (materialize a published row from a draft, same slug) |
+| `guides` | update | `["*"]` | — | ✅ **wired Story 6.3** · free (live-proven: Senior update → 200) — re-publish / correct a published guide |
 
 > *Story-tag semantics (Option 2):* the **`categories` + `guide_drafts` + `guides` collections
 > are created in Story 6.1** (+ the free **reads** wired). The publish gate is a **collection
 > boundary**, not a field rule — `guides-editor` gets **no `guides` write grant**, so an Editor
-> publish attempt is a genuine server-side **403** (live-proven 6.1 + 6.2), *free* on Core. **6.2
+> publish attempt is a genuine server-side **403** (live-proven 6.1 + 6.2 + 6.3), *free* on Core. **6.2
 > wired** the Editor `guide_drafts` write (create + update; live-proven Editor 200 on `guide_drafts`,
-> 403 on `guides`); **6.3** wires the Senior `guides` write (the publish action) +
-> the draft→published **copy mechanism** (must not be a custom Flow — AD-6/AD-7). `categories`
-> CRUD is **Owner-only** (§AD-9): leaders read + assign, never create. The Senior **role** layers
-> this policy on `guides-editor` (author drafts *and* publish — the "Work+" in the name); **all three
-> collection reads (`guide_drafts` + `guides` + `categories`) are wired 6.1** (Task 3.1); the Editor
-> `guide_drafts` **write landed Story 6.2** — only the Senior `guides` writes wait for 6.3.
+> 403 on `guides`); **6.3 wired** the Senior `guides` writes (the publish action; live-proven Senior
+> 200 / Editor+Viewer 403) + the draft→published **copy mechanism**: NOT a custom approval Flow
+> (AD-6/AD-7 hold) — publish is the admin-shell **Guides panel** copying the draft **verbatim in code**
+> via the leader session (`publishGuide()`, README §19.2; Option B, Sabo 2026-07-16 — slug-equality
+> structurally guaranteed, a recorded minimal deviation from AR-5's one-custom-surface letter).
+> The publish→rebuild **Flow** (README §19.3) fires on `guides`+`categories` writes, never on
+> `guide_drafts` (live-proven). `categories` CRUD is **Owner-only** (§AD-9): leaders read + assign,
+> never create. The Senior **role** layers this policy on `guides-editor` (author drafts *and*
+> publish — the "Work+" in the name); a Senior needs a **Studio seat** only for authoring — the
+> publish surface runs on the session API (see the §0 seats note / README §19.4).
 
 ### `alliances-official` (Alliances · Work)
 | Collection | Action | Fields | Row filter | Status |
@@ -462,11 +479,14 @@ members is dissolved client-side (the same "no group of one" invariant as the 5.
    **full-collection `guide_drafts`** write grant and **no grant on `guides`**; `guides-senior`
    holds the **full-collection `guides`** write grant. Publishing = a Senior copies a draft into
    `guides` (same immutable slug). This is **NOT** a Flow or hook (AD-6/AD-7 forbid a custom
-   approval workflow — the copy mechanism, decided in **Epic 6.3**, must stay a plain
-   create/update, e.g. a manual Studio copy). **✅ Free and server-enforced on Core** — collection
-   grants are not a custom permission rule; **live-proven Story 6.1** (an Editor-scoped token got
-   **200** on `guide_drafts`, **403** on `guides`). Collections + free reads wired **6.1**; Editor
-   `guide_drafts` write **6.2**; Senior `guides` write (publish) **6.3**.
+   approval workflow — the copy mechanism stays a plain create/update). **Decided Story 6.3 (Sabo
+   2026-07-16): the copy is the admin-shell Guides panel** — `publishGuide()` copies the draft
+   **verbatim in code** over the leader session (create-or-update on `guides` keyed by slug; slug
+   sent only on create → slug-equality structurally guaranteed; README §19.2). **✅ Free and
+   server-enforced on Core** — collection grants are not a custom permission rule; **live-proven
+   Story 6.1** (an Editor-scoped token got **200** on `guide_drafts`, **403** on `guides`) and
+   re-proven 6.3 (Senior 200 / Editor + Viewer 403). Collections + free reads wired **6.1**; Editor
+   `guide_drafts` write **6.2**; Senior `guides` writes (publish) **wired 6.3**.
    > **Why Option 2 here (not Option 3):** the guides gate controls **public visibility**, so it
    > is worth hard-enforcing — and the split does it for free, unlike the field-gate form (a field
    > subset → `403 RESOURCE_RESTRICTED` on Core, still 🔒). Slug immutability stays a free Studio

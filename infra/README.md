@@ -1341,12 +1341,15 @@ Two operational caveats (Story 6.2 review):
   path — it silently reverts to its default `all` (transforms re-enabled, nothing fails loudly). The
   missing Editor grants self-correct loudly (Editors just 403); the setting does not — re-apply this
   section after any rebuild that does not restore `data.db` from the §3 backup.
-- **Data Studio previews are unverified under `none`.** `none` also refuses the system-preset
-  thumbnails the Studio file library / image picker request — the 6.2 run proved the API behavior but
-  did not check those Studio surfaces. **Verify in the 6.3 live run** that Editors still get usable
-  image previews; only if authoring is genuinely degraded, switch to
-  `storage_asset_transform: presets` (system presets allowed, arbitrary transforms still refused) and
-  update this section (Sabo 2026-07-16: keep `none` until proven broken).
+- **Data Studio previews VERIFIED under `none` — not degraded (Story 6.3 live run).** The 6.2
+  worry ("`none` also refuses the system-preset thumbnails") is **empirically disproven** on
+  `12.0.2`: with `storage_asset_transform: none`, the **system-preset** requests the Studio file
+  library / image picker issue (`GET /assets/<id>?key=system-small-cover`, `?key=system-medium-cover`)
+  still return **200 `image/png`**, while arbitrary transforms (`?width=100`) stay refused
+  (**400** "Dynamic asset generation has been disabled for this project") and originals serve **200**.
+  `none` gates only *arbitrary dynamic* transforms; the built-in `system-*` preset keys keep working —
+  Editor authoring is NOT degraded. **Keep `none`** (Sabo 2026-07-16 decision confirmed; no switch to
+  `presets` needed).
 
 ### 18.4 Local verification status (Story 6.2)
 
@@ -1377,6 +1380,140 @@ the Editor proofs; the Owner (admin bypass) drove the override.
   toolbars (`null` → the 17-item list, `+38/−2` additive); 8 collections + all field counts intact;
   `12.0.2` pin kept; `apply --dry-run` → **"No changes to apply."** Grants + the `storage_asset_transform`
   setting are `data.db` (live-proven, not git artifacts).
+
+## 19. Review & publish gate — Senior `guides` writes, the in-shell publish action, the rebuild Flow (Story 6.3)
+
+Story 6.3 wires the **Senior half** of the Option-2 publish gate (§17: `guide_drafts` = the Editor
+working copy, `guides` = the Senior/Owner-writable public-build source, joined ONLY by the immutable
+slug). "Publish" = **materialize a `guides` row from a `guide_drafts` row, same slug**; re-editing a
+published guide = edit the **draft**, re-publish (the draft is the permanent working copy — never
+delete it on publish). Editing a published guide therefore goes through the same gate by construction.
+
+### 19.1 The three `guides-senior` grants (mint once, `data.db`)
+
+On the **`guides-senior`** policy (reads on `guide_drafts`/`guides`/`categories` are wired since 6.1;
+the Senior *role* also holds `guides-editor` for draft authoring — do not add `guide_drafts` create
+here). All three are whole-collection `fields:["*"]`, no row filter, no validation (each of those is
+🔒 `403 RESOURCE_RESTRICTED` on Core — re-proven in the 6.3 run):
+
+| Collection | Action | Why |
+|---|---|---|
+| `guide_drafts` | **update** | re-edit a draft before re-publishing |
+| `guides` | **create** | **the publish action** (materialize from a draft, same slug) |
+| `guides` | **update** | re-publish / correct a published guide |
+
+No `guides` **delete** grant exists for Seniors (removing a published guide is an Owner action).
+Like every grant: `data.db` only (§3 backup; re-mint by hand after a from-scratch rebuild, §4.2/§5.3).
+
+### 19.2 The publish surface — the admin-shell Guides panel (Option B, Sabo 2026-07-16)
+
+The Data Studio has **no cross-collection copy** ("Save as Copy" duplicates within the same
+collection only), and a manual copy ceremony would rest the "no link-rot / draft URL == public URL"
+invariant (AR-18, §17) on human discipline. **Decided: Option B — the minimal in-shell publish
+action** (the deferred-work "Owner-blessed helper"): the site `/admin` shell's **Guides tab** lists
+every draft with a derived state chip (**Draft** / **Published** / **Draft newer** — edge-computed by
+slug-match + timestamp compare, never stored) and gives Seniors/Owner a per-row **Publish /
+Re-publish** button that copies `title`/`slug`/`body`/`category`/`creator_credit` **verbatim** via the
+leader's session (`publishGuide()` in `site/src/lib/directus.ts`): create-or-update on `guides` keyed
+by the draft's slug, `slug` sent **only on create** — the publish path can never drift a published URL,
+and slug-equality is **structurally guaranteed** (no typo surface). The draft is **re-read fresh at
+publish time** (6.3 review P1): the panel list is load-once and never ships `body`, so the copy pulls
+the CURRENT draft from the server at click time — an Editor's Studio save after the Senior's panel
+loaded can never be silently left out of a publish.
+
+- **The gate stays server-side (AD-4):** the button is UX only — an Editor/Viewer reaching it gets a
+  real **403** on `guides` (no grant). A leader whose policy union carries a `guides` **read**
+  (`guides-viewer`) sees the same list read-only; a **pure** `guides-editor` policy holds **no
+  `guides` grant at all**, so the shell — which keys the Guides tab on the `guides` collection (the
+  3.5 area keying) — shows that leader **no Guides tab**; their surface is the Data Studio. (In the
+  §2 model every Guides leader is expected to also hold `guides-viewer`; recorded for accuracy.)
+- **Authoring stays in the Data Studio (AD-3):** the panel has **no WYSIWYG, no editing, no body
+  preview** (draft body HTML is never rendered in the shell — the sanitize MUST stays with the 6.4
+  public reader, §18.2). A Data-Studio hand-off link remains in the panel.
+- **Recorded deviation from AR-5's letter** ("only Candidates is a custom admin surface"): the Guides
+  publish *list* is a second, deliberately minimal custom surface — sanctioned as the deferred-work
+  "minimal Owner-blessed helper" option and ratified by the Owner (Sabo 2026-07-16). Authoring,
+  accounts and alliances still use the Studio directly.
+- Seniors publish via the **shell session** (API), so publishing needs **no Studio seat** (see 19.4).
+
+### 19.3 The publish→rebuild Flow (AR-4/AR-20; attach on the host, mirror §4/§9.5)
+
+One Directus **Flow** notifies GitHub on every public-content change — the §4 pipe, now for guides:
+
+- **Trigger:** Event Hook → **Action (non-blocking)** → scope `items.create`, `items.update`,
+  `items.delete` → collections **`guides` + `categories`** (a category rename changes public rendering
+  too). **Never `guide_drafts`** — drafts must not rebuild the public site (proven in the 6.3 run:
+  a draft edit fires nothing; a `guides`/`categories` write fires).
+- **Operation:** Webhook / Request URL — `POST https://api.github.com/repos/<owner>/<repo>/dispatches`,
+  headers `Authorization: Bearer <fine-grained PAT>` + `Accept: application/vnd.github+json`, body
+  `{"event_type":"directus-publish"}`. Store the PAT **inside the Flow operation** (Directus secret,
+  `data.db`) — never in git. The GitHub receiver is already wired (`deploy.yml`
+  `repository_dispatch: [directus-publish]`, §4; the deploy step self-skips until `SSH_HOST` exists).
+- **Live end-to-end verification is a host/launch step** (needs the real PAT + VPS — same ratified
+  posture as the §9.5 alliances Flow). The 6.3 container run proved the Flow **fires with the exact
+  production shape** (trigger event `guides.items.create`, the request operation executed with the
+  headers/body above — see 19.5).
+- Publish is live after the **~1–3 min rebuild** (AR-4/NFR-4) — and publicly *visible* only once the
+  6.4 public reader renders `guides` at build time (no `/guides` page exists before 6.4).
+- ⚠️ **Local-test gotcha:** Directus's SSRF guard denies Flow webhook requests to `localhost`/private
+  IPs ("resolves to a denied IP address") — don't point a test Flow at a local URL and read the deny
+  as breakage; `api.github.com` is unaffected in production.
+- Like every `data.db` artifact, the Flow must be **re-authored by hand** after a from-scratch
+  rebuild (§4.2/§5.3 convention) — a §3 backup restore preserves it.
+
+### 19.4 ⚠️ NEW license-wall finding — Core caps **Studio-user seats** (`LIMIT_EXCEEDED`)
+
+Discovered in the 6.3 run (fresh `12.0.2` Core container): creating the **4th** user whose policy
+union carries **`app_access: true`** fails with `403 {"category":"seats","code":"LIMIT_EXCEEDED"}`
+("seats limit exceeded") — i.e. the free Core tier caps **"Studio Users"** (per the Directus docs: a
+user with Admin *or* App access in ≥1 policy). Empirically: bootstrap admin + 2 app-access users
+created fine, the 3rd non-admin app-access user was refused; users **without** `app_access` create
+freely (the 6.3 Viewer proofs ran with `app_access:false`). Docs also warn an instance **over its
+entitlement** can be **locked down** after a grace period (API disabled, non-admin login blocked).
+
+**Production impact (launch-relevant, decision-needed):** the §7 role model gives every leader policy
+`app_access: yes`, and ~10 leaders are planned. Only leaders who genuinely open the **Data Studio**
+need a seat — that is Guides **Editors/Seniors authoring drafts** and the Owner (AD-3); Transfer
+Curators/Viewers work in the custom shell (session API, no Studio), and since 6.3 **publishing also
+needs no seat** (19.2). Mitigations to weigh before launch: keep `app_access: false` on policies whose
+area never opens the Studio, cap the number of simultaneous Editor accounts, or license. Tracked in
+`deferred-work.md` as a decision-needed item — the 6.3 deliverable itself (grants + Flow + shell
+surface) is unaffected.
+
+### 19.5 Local verification status (Story 6.3)
+
+Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the Windows/Docker box
+(disposable container `k1516-63verify` via **PowerShell**, fresh SQLite DB on the container overlay
+FS; committed `directus-schema.yaml` applied — "Snapshot applied successfully", 8 collections — then
+`docker restart` before writes; `storage_asset_transform:none` re-applied (1.3); torn down after;
+pre-existing `k1516db`/`k1516vdb` volumes untouched). Throwaway **Senior-shaped** (the 19.1 writes +
+reads, `app_access:true`), **Editor-shaped** (6.2 shape) and **Viewer-shaped** (reads only,
+`app_access:false` — see 19.4) policies + test users; Owner = admin bypass.
+
+- **AC1 (publish; Editor cannot)** — Senior `POST /items/guides` (verbatim copy of the seeded rich
+  draft) → **200**, `slug` equal + `body` byte-identical to the draft; Editor `POST/PATCH
+  /items/guides` → **403 FORBIDDEN**; Owner → **200**. All 13 whole-collection grants minted **200**
+  (free); license wall re-proven on `guides`: field-subset / row-filter / validation each →
+  **403 `RESOURCE_RESTRICTED`**.
+- **AC2 (edit-published goes through the gate)** — Senior `PATCH /items/guide_drafts/:id` → **200**
+  (re-edit the working copy) and Senior `PATCH /items/guides/:id` → **200** (re-publish); the shell's
+  update path never sends `slug`.
+- **AC3 (webhook → rebuild)** — the 19.3 Flow created via API (`/flows` + `/operations`, root
+  operation linked); a Senior `guides` create fired it (run log: trigger event `guides.items.create`,
+  the `github_dispatch` request operation executed with the production headers/body — the only
+  "failure" was the expected localhost SSRF deny); a `guide_drafts` edit fired **nothing** (log count
+  unchanged); a `categories` create fired. Live GitHub fire = host/launch step (19.3).
+- **AC4 (Viewer reads, never writes)** — Viewer `GET /items/guide_drafts` → **200**;
+  Viewer `POST/PATCH /items/guides` → **403**; Viewer `PATCH /items/guide_drafts/:id` → **403**;
+  anon `GET /items/guide_drafts` → **403**.
+- **Images (18.3 caveat closed)** — original **200**; `?key=system-small-cover` /
+  `?key=system-medium-cover` → **200 `image/png`** (Studio previews work under `none`);
+  `?width=100` → **400** (arbitrary transforms stay disabled).
+- **Site build** — Node 22 (`fnm` 22.23.1): 7 pages, 8 CSS files emitted; 6.3 publish logic in the
+  admin bundle; **zero** draft/guide content or token in the static admin HTML; **zero**
+  `DIRECTUS_TOKEN` in `dist/`; 28/28 pure-logic unit checks (state derivation + verbatim-copy payload).
+- **Schema** — ZERO delta: `apply --dry-run` against the committed snapshot → **"No changes to
+  apply."**; `12.0.2` pin untouched. Grants + Flow live in `data.db` (live-proven, not git artifacts).
 
 ## Local verification status (Story 3.1 / MIN-1)
 
