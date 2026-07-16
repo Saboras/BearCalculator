@@ -169,7 +169,7 @@ Accounts**.
 | Transfer | `transfer-viewer` | ⏳ see §5 | **read** `candidates` + `transfer_period` (+ `alliances` for M2O names) — no writes; `transfer_groups` read ⏳ (re-deferred at 5.6 — not needed until group **names** are shown; §3) | collection **read** grant ✅ free — **candidate list delivered Story 5.4** |
 | Transfer | `transfer-curator` | **no** (API-only — the custom `/admin` shell uses the session REST API, not the Data Studio; §5) | Viewer reads **+ update** `candidates` (whole-collection, Option 3): status / planned_path (**5.5**), suggested_alliance / group (**5.6** ✅); its own `transfer_period` + `alliances` reads (**5.5**); `transfer_groups` **CRUD** (**5.6** ✅); delete ✅ **5.8** | collection **read + update + delete** grant ✅ free — update delivered **5.5**, grouping delivered **5.6**, delete/cleanup delivered **5.8**; *field-limited to work-fields* is the 🔒 Option-1 target |
 | Guides | `guides-viewer` | yes | **read** `guide_drafts` + `guides` + `categories` (leader-visible drafts + published) — **wired Story 6.1** | collection **read** grant ✅ free |
-| Guides | `guides-editor` | yes | create/update `guide_drafts` (whole-collection); read `categories` — **no grant on `guides`** so cannot publish | collection **write** on `guide_drafts` ✅ free — **Option 2** (Story 6.1 shape / 6.2 grant) |
+| Guides | `guides-editor` | yes | create/update `guide_drafts` (whole-collection); read `categories` — **no grant on `guides`** so cannot publish | collection **write** on `guide_drafts` ✅ free — **Option 2** (6.1 shape; write grant **wired Story 6.2**, live-proven) |
 | Guides | `guides-senior` | yes | **publish**: create/update `guides` (the publish action); reads `guide_drafts` + `guides` + `categories` wired 6.1 — the Senior *role* also holds `guides-editor` to author drafts | collection **write** on `guides` ✅ free — **Option 2**, server-enforced gate (6.3 grant) |
 | Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
 | Alliances / Transfer | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`) **+ read `settings`** (Story 5.3 — the `special_invite_power_threshold` the `/join` power-badge compares against); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2 / 5.3** (keeps Public locked; §3) |
@@ -295,8 +295,8 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 ### `guides-editor` (Guides · Work) — author drafts; **cannot publish (server-enforced)**
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
-| `guide_drafts` | create | `["*"]` | — | ⏳ Epic 6.2 · ✅ free |
-| `guide_drafts` | update | `["*"]` | — | ⏳ Epic 6.2 · ✅ free |
+| `guide_drafts` | create | `["*"]` | — | ✅ **wired Story 6.2** · free (live-proven: Editor create → 200) |
+| `guide_drafts` | update | `["*"]` | — | ✅ **wired Story 6.2** · free (live-proven: Editor update → 200) |
 | `guide_drafts` | read | `["*"]` | — | ✅ wired Story 6.1 · free |
 | `categories` | read | `["*"]` | — | ✅ wired Story 6.1 · free |
 | `guides` | *(none)* | **NO GRANT** | — | **the publish gate — no `guides` write → real 403 (live-proven 6.1)** |
@@ -314,13 +314,14 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > *Story-tag semantics (Option 2):* the **`categories` + `guide_drafts` + `guides` collections
 > are created in Story 6.1** (+ the free **reads** wired). The publish gate is a **collection
 > boundary**, not a field rule — `guides-editor` gets **no `guides` write grant**, so an Editor
-> publish attempt is a genuine server-side **403** (live-proven 6.1), *free* on Core. **6.2** wires
-> the Editor `guide_drafts` write; **6.3** wires the Senior `guides` write (the publish action) +
+> publish attempt is a genuine server-side **403** (live-proven 6.1 + 6.2), *free* on Core. **6.2
+> wired** the Editor `guide_drafts` write (create + update; live-proven Editor 200 on `guide_drafts`,
+> 403 on `guides`); **6.3** wires the Senior `guides` write (the publish action) +
 > the draft→published **copy mechanism** (must not be a custom Flow — AD-6/AD-7). `categories`
 > CRUD is **Owner-only** (§AD-9): leaders read + assign, never create. The Senior **role** layers
 > this policy on `guides-editor` (author drafts *and* publish — the "Work+" in the name); **all three
-> collection reads (`guide_drafts` + `guides` + `categories`) are wired 6.1** (Task 3.1) — only the
-> writes wait for 6.3.
+> collection reads (`guide_drafts` + `guides` + `categories`) are wired 6.1** (Task 3.1); the Editor
+> `guide_drafts` **write landed Story 6.2** — only the Senior `guides` writes wait for 6.3.
 
 ### `alliances-official` (Alliances · Work)
 | Collection | Action | Fields | Row filter | Status |

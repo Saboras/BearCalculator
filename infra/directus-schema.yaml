@@ -1641,7 +1641,25 @@ fields:
       note: >-
         Rich content: tables/images/embedded video (FR-16). Semantic HTML for
         translatability (UX-DR-22).
-      options: null
+      options:
+        toolbar:
+          - bold
+          - italic
+          - underline
+          - removeformat
+          - customLink
+          - bullist
+          - numlist
+          - blockquote
+          - h1
+          - h2
+          - h3
+          - table
+          - customImage
+          - customMedia
+          - hr
+          - code
+          - fullscreen
       readonly: false
       required: false
       searchable: true
@@ -1978,7 +1996,25 @@ fields:
       note: >-
         Rich content: tables/images/embedded video (FR-16). Semantic HTML
         (UX-DR-22).
-      options: null
+      options:
+        toolbar:
+          - bold
+          - italic
+          - underline
+          - removeformat
+          - customLink
+          - bullist
+          - numlist
+          - blockquote
+          - h1
+          - h2
+          - h3
+          - table
+          - customImage
+          - customMedia
+          - hr
+          - code
+          - fullscreen
       readonly: false
       required: false
       searchable: true

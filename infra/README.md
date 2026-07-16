@@ -1266,6 +1266,118 @@ built as the Owner (admin bypass); a throwaway Editor-shaped policy drove the bo
   collections unchanged (field counts 8/19/3/2/6 intact; only the 3 new collections + 2 new relations
   added).
 
+## 18. Editor authoring — draft-write grant, WYSIWYG & image handling (Story 6.2)
+
+Story 6.1 built the two-collection shape and wired the free **reads**; Story 6.2 turns Editors into
+**authors**. It wires the **free Editor write grant** on `guide_drafts`, configures the **WYSIWYG
+toolbar** so tables/images/video are authorable without code, and **disables Directus on-the-fly image
+transforms** (NFR-14). Editors author entirely in the **Directus Data Studio** (AR-5/NFR-18/AD-3 — *no
+custom editor is built*). **Pure Directus/backend + one schema delta + docs — ZERO `site/` change**
+(the public reader + off-box image optimization are Story 6.4; the publish action is Story 6.3).
+
+- **The publish gate stays real.** `guides-editor` gets a whole-collection **create + update** grant on
+  `guide_drafts` and **still no grant on `guides`** — so an Editor's publish attempt is a genuine **403**
+  on Core (server-enforced, license-free; re-proven §18.4). Draft-vs-published remains **collection
+  membership** — there is no `status` field.
+- **Categories are Owner-created.** The Editor **reads + assigns** an existing category via the
+  `category` M2O (roles-and-policies §AD-9) — never creates one.
+
+### 18.1 The Editor draft-write grant (`data.db`, mint-once — not the schema snapshot)
+
+On the **`guides-editor`** policy (created in 6.1, `app_access: true`) add two free whole-collection
+grants (`fields:["*"]`, `permissions:{}`):
+
+| Collection | Action | Fields | Notes |
+|---|---|---|---|
+| `guide_drafts` | **create** | `["*"]` | the Editor authors a new draft |
+| `guide_drafts` | **update** | `["*"]` | the Editor edits an existing draft |
+
+The `guide_drafts` + `categories` **reads** are already wired (6.1). **Do NOT** add any `guides` grant
+here (that is `guides-senior` / Story 6.3) — its absence *is* the publish gate. Grants live in `data.db`
+(recovered from the §3 daily backup), **not** the schema snapshot (§6) — the git deliverable is this
+runbook + the live proof (§18.4), exactly as 6.1 handled its reads.
+
+### 18.2 WYSIWYG toolbar — the one schema change
+
+`guide_drafts.body` and `guides.body` are `input-rich-text-html`. Their default toolbar carries
+`customImage` (upload → `directus_files`) and `customMedia` (embed video/iframe) but **no `table`
+button** — so FR-16's **tables** aren't authorable through the UI. Story 6.2 sets an explicit
+`options.toolbar` on **both** `body` fields (identical shape — a Senior edits `guides.body` in 6.3):
+
+```
+toolbar: [bold, italic, underline, removeformat, customLink, bullist, numlist, blockquote,
+          h1, h2, h3, table, customImage, customMedia, hr, code, fullscreen]
+```
+
+This is the **only** schema change in 6.2 (the rest of the git footprint is docs) — an additive
+`body.options` delta on both fields (`null` → the toolbar), captured by re-snapshotting
+`directus-schema.yaml` (`12.0.2` pin kept; `apply --dry-run` → "No changes to apply."). No dedicated
+upload folder is set (the 6.4 build reads inline images by their file reference regardless — YAGNI).
+
+> **Sanitization forward-guard (binds Story 6.4):** the WYSIWYG stores `body` HTML **as-is** — the
+> `code` source view and `customMedia` embeds let an Editor (or a compromised Editor account) persist
+> arbitrary HTML (`<iframe>`, `<script>`, event-handler attributes). Drafts are leader-only, so the
+> exposure today is nil — but the **public reader/build (Story 6.4) MUST sanitize `guides.body`
+> before rendering it into public HTML**. Tracked in `deferred-work.md` (Story 6.2 review).
+
+### 18.3 Image handling — on-the-fly transforms disabled (NFR-14)
+
+Set the project setting **`storage_asset_transform: none`** (Data Studio → Settings → Files →
+transformations = **None**, or `PATCH /settings {"storage_asset_transform":"none"}`). Directus then
+serves **only original assets**; any `?width=…&height=…` transform request is refused
+(`400 INVALID_QUERY` "Dynamic asset generation has been disabled for this project"). This is the
+correct NFR-14 lever — **not** an `ASSETS_TRANSFORM_*` env key (those only *bound* concurrency/dimension,
+they do not *disable* transforms). It lives in `directus_settings` (**`data.db`**, backed up §3), so
+`docker-compose.yml` is **untouched** (a concurrency env would be an inert no-op once transforms are
+`none` — KISS; the 1 GB-box RAM risk is already fenced by `mem_limit: 512m` + swap + no public traffic
+reaching Directus, AD-2/AD-13). Guide images upload as **originals** into **`directus_files`** (stored
+on the `directus_uploads` volume); the **off-box** optimization (AD-13 Astro image pipeline) happens at
+**build time** in **Story 6.4**.
+
+Two operational caveats (Story 6.2 review):
+
+- **Re-set by hand after a from-scratch rebuild.** Like every `data.db`-only artifact (the §4.2/§5.3
+  convention), `storage_asset_transform` does **not** survive the from-scratch `schema apply` rebuild
+  path — it silently reverts to its default `all` (transforms re-enabled, nothing fails loudly). The
+  missing Editor grants self-correct loudly (Editors just 403); the setting does not — re-apply this
+  section after any rebuild that does not restore `data.db` from the §3 backup.
+- **Data Studio previews are unverified under `none`.** `none` also refuses the system-preset
+  thumbnails the Studio file library / image picker request — the 6.2 run proved the API behavior but
+  did not check those Studio surfaces. **Verify in the 6.3 live run** that Editors still get usable
+  image previews; only if authoring is genuinely degraded, switch to
+  `storage_asset_transform: presets` (system presets allowed, arbitrary transforms still refused) and
+  update this section (Sabo 2026-07-16: keep `none` until proven broken).
+
+### 18.4 Local verification status (Story 6.2)
+
+Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the Windows/Docker box
+(disposable container `k1516-62verify` via **PowerShell**, fresh SQLite DB on the container overlay FS;
+the **pre-6.2 (6.1-state) committed** `directus-schema.yaml` applied first — "Snapshot applied
+successfully" — then `docker restart` to reload the server schema cache before the `/fields` toolbar
+writes whose result is the snapshot now committed; torn down after, pre-existing
+`k1516db`/`k1516vdb` volumes left untouched). An Editor-shaped throwaway policy (`guide_drafts`
+create/update/read + `categories` read, `app_access:true`, **no `guides` grant**) + a test user drove
+the Editor proofs; the Owner (admin bypass) drove the override.
+
+- **AC1 / AC3 (Editor authors a rich draft)** — Editor `POST /items/guide_drafts` with a `<table>` +
+  `<img>` + `<iframe>` body, a `category` M2O, and a `creator_credit` "Strat Game Sloth" → **200**
+  (body stored with table/img/iframe intact); Editor `PATCH /items/guide_drafts/:id` → **200**. Both
+  `body` toolbars now expose `table` + `customImage` + `customMedia`. All four Editor grants minted
+  **200** (whole-collection = free; no `RESOURCE_RESTRICTED`).
+- **AC2 (draft state)** — anonymous `GET /items/guide_drafts` → **403** (not public); the Editor token
+  `GET /items/guide_drafts` → **200** (leader-visible); no `status` field (membership = draft).
+- **AC4 (transforms disabled — the 6.2 half of NFR-14; the off-box build-time optimization is Story
+  6.4)** — with `storage_asset_transform:none`: authorized `GET /assets/<id>` → **200 `image/png`**
+  (original served); `GET /assets/<id>?width=100` → **400 `INVALID_QUERY`** ("Dynamic asset generation
+  has been disabled for this project").
+- **AC5 (publish gate — server-enforced, free)** — the Editor token → `POST /items/guides` = **403
+  FORBIDDEN** and `PATCH /items/guides/:id` = **403 FORBIDDEN** (no `guides` grant). The Owner (admin
+  bypass) → `POST /items/guides` = **200** (the override).
+- **Schema** — `directus-schema.yaml` re-snapshotted; the **only** delta is the two `body.options`
+  toolbars (`null` → the 17-item list, `+38/−2` additive); 8 collections + all field counts intact;
+  `12.0.2` pin kept; `apply --dry-run` → **"No changes to apply."** Grants + the `storage_asset_transform`
+  setting are `data.db` (live-proven, not git artifacts).
+
 ## Local verification status (Story 3.1 / MIN-1)
 
 Verified on the Windows/Docker dev box (`docker compose up`, real containers):
