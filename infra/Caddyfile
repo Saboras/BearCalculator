@@ -12,8 +12,21 @@
 	email {$CADDY_ACME_EMAIL}
 }
 
+# Security headers on every response. Caddy's auto-HTTPS redirects HTTP→HTTPS but
+# does NOT emit HSTS on its own; both hosts set it explicitly (no includeSubDomains —
+# each host carries its own header, a future non-TLS subdomain must not break).
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
 # Public static site — Astro dist/ rsynced to /srv/site by CI (read-only mount).
 {$SITE_DOMAIN} {
+	import security_headers
 	root * /srv/site
 	encode zstd gzip
 	file_server
@@ -21,5 +34,6 @@
 
 # Admin subdomain — the ONLY path to Directus, over auto-HTTPS.
 {$DIRECTUS_DOMAIN} {
+	import security_headers
 	reverse_proxy directus:8055
 }

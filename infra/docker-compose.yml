@@ -70,6 +70,7 @@ services:
     restart: "no"       # one-shot: must NOT restart (unless-stopped would loop forever)
     user: "0:0"
     entrypoint: ["sh", "-c", "chown -R 1000:1000 /data /config"]
+    mem_limit: 64m
     volumes:
       - caddy_data:/data
       - caddy_config:/config
@@ -113,8 +114,13 @@ services:
         max-file: "3"
 
 volumes:
+  # Explicit names: backup.sh resolves mountpoints via `docker volume inspect
+  # directus_db|directus_uploads` — without `name:` Compose prefixes the project
+  # dir (infra_directus_db) and every backup run aborts on "No such volume".
   directus_db:
+    name: directus_db
   directus_uploads:
+    name: directus_uploads
   directus_extensions:
   caddy_data:
   caddy_config:

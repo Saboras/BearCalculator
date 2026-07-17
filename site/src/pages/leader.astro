@@ -322,7 +322,7 @@ import Icon from '../components/Icon.astro';
   // A 401/403 is a real auth rejection. Anything else — server down, CORS/URL mismatch,
   // 5xx — rejects fetch with no response, and must NOT be reported as a wrong password.
   function authRejected(err: unknown): boolean {
-    const status = (err as { response?: { status?: number } }).response?.status;
+    const status = (err as { response?: { status?: number } })?.response?.status;
     return status === 401 || status === 403;
   }
 
