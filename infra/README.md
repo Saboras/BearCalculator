@@ -1319,6 +1319,10 @@ upload folder is set (the 6.4 build reads inline images by their file reference 
 > arbitrary HTML (`<iframe>`, `<script>`, event-handler attributes). Drafts are leader-only, so the
 > exposure today is nil — but the **public reader/build (Story 6.4) MUST sanitize `guides.body`
 > before rendering it into public HTML**. Tracked in `deferred-work.md` (Story 6.2 review).
+> **✅ SATISFIED Story 6.4:** every public render/excerpt now passes through the single
+> `sanitizeGuideBody()` gate (`site/src/lib/sanitize-guide.ts`, allowlist in §20.2) — live-proven
+> against seeded `<script>`/`onerror`/`javascript:`/foreign-iframe payloads, all absent from the
+> built HTML while tables/images/YouTube embeds survive (§20.3). The guard text stays for history.
 
 ### 18.3 Image handling — on-the-fly transforms disabled (NFR-14)
 
@@ -1514,6 +1518,92 @@ reads, `app_access:true`), **Editor-shaped** (6.2 shape) and **Viewer-shaped** (
   `DIRECTUS_TOKEN` in `dist/`; 28/28 pure-logic unit checks (state derivation + verbatim-copy payload).
 - **Schema** — ZERO delta: `apply --dry-run` against the committed snapshot → **"No changes to
   apply."**; `12.0.2` pin untouched. Grants + Flow live in `data.db` (live-proven, not git artifacts).
+
+## 20. Public guide reading & discovery — the build reader, sanitize gate, image localization, search (Story 6.4)
+
+Story 6.4 makes published guides actually **visible**: the SSG build reads the **`guides`** collection
+(Option 2 — membership IS published, no status filter; `guide_drafts` is never read) and renders the
+public KB — `/guides` (category overview + search), `/guides/<category-slug>` (per-category listing,
+the §17 browse URL), `/guide/<slug>` (the reader; the separate singular family keeps guide slugs
+collision-free vs category slugs, and a category change can never break a guide URL — AR-18).
+Categories come from the `categories` collection (Owner-CRUD, leader-extensible — never hardcoded).
+
+### 20.1 The three `finder-build-read` grants (mint once, `data.db`)
+
+On the **existing** `finder-build-read` service policy (the same policy/token the Finder + `/join`
+build reads use — §9.5/§11.2; the `finder-build` user has **no `app_access`** → consumes **no Studio
+seat**, §19.4). All whole-collection `fields:["*"]`, no filter (free on Core, §0):
+
+| Collection | Action | Why |
+|---|---|---|
+| `guides` | read | the public-build source (published rows) |
+| `categories` | read | category browse pages + chips + manual `sort` order |
+| `directus_files` | read | **measured 6.4:** `GET /assets/<id>` is NOT public — anon **and** a token without this grant both got **403**; with it **200 `image/png`**. The build downloads guide-image originals (20.2). |
+
+Boundary matrix (live, disposable container): build token GET `guides`/`categories` → **200**; build
+token GET `guide_drafts` → **403** (drafts stay leader-only — no grant exists); anon GET
+`guides`/`categories` → **403** (Public stays create-only-candidates). Like every grant: `data.db`
+only (§3 backup; re-mint by hand after a from-scratch rebuild, §4.2/§5.3).
+
+### 20.2 The build pipeline — sanitize → localize images → render (+ the search artifact)
+
+- **Fenced reader:** `site/src/lib/guides-build.ts` (the 4th build-only client, mirror of
+  `directus-build.ts`): token from `process.env.DIRECTUS_TOKEN`, never bundled client-side; fail-loud
+  on a configured-but-failing read. **No guides seed exists by design** — an unconfigured build
+  (placeholder token) renders an **empty KB** with calm states and warns `[guides]` (CI stays green
+  pre-VPS; committed guide content would rot).
+- **Sanitize (the §18.2 MUST — lands here):** `sanitizeGuideBody()` in `site/src/lib/sanitize-guide.ts`
+  runs centrally in the data layer — no consumer ever sees raw WYSIWYG HTML. Pinned allowlist:
+  sanitize-html defaults + `img` + `iframe`; `allowedIframeHostnames` = `www.youtube.com` /
+  `www.youtube-nocookie.com` (every other iframe src is stripped); `style`/`class`/event handlers /
+  `<script>` / `javascript:` die; body `<h1>` demoted to `<h2>` (the page h1 is the title);
+  `target="_blank"` links get `rel="noopener noreferrer"` forced.
+- **Image localization (AD-13 / the off-box half of NFR-14):** guide images live INLINE in `body` as
+  `/assets/<uuid>` refs (relative or absolute — the WYSIWYG stores either). At build,
+  `site/src/lib/guide-images.ts` downloads each referenced **original** (authenticated via the read
+  token's `?access_token=` query — Astro's pipeline fetches with a plain GET; the token never reaches
+  `dist/`, the token-leak grep proves it) → optimizes through the Astro/sharp pipeline (webp) →
+  rewrites the `src` to the emitted local hashed asset. Result: **zero Directus URLs in public
+  HTML** (AD-2), pages render with Directus offline (NFR-2), and no `?width=` transform is ever
+  requested (§18.3 — they 400 under `storage_asset_transform: none`).
+- **Search (AR-18):** the client-side index is generated at build at the **fixed artifact path
+  `/guides-index.json`** (static endpoint `site/src/pages/guides-index.json.ts` — title/slug/category
+  + a sanitized plain-text excerpt); the reader (`site/src/scripts/guides/search.ts`, bundled into
+  `/guides`) lazy-fetches that same artifact — generator + reader from **one build step**, no server
+  search endpoint. The spine's deferred "search library" choice resolves to **none** (hand-rolled
+  substring match at tens-of-guides scale).
+- **Translatability (NFR-6/AD-14):** plain semantic HTML (real headings/tables/links, no text in
+  images) — browser auto-translate is the entire i18n mechanism. Guide pages emit a meta/OG
+  description (Discord unfurls — link-sharing is the primary distribution, UJ-4).
+
+### 20.3 Local verification status (Story 6.4)
+
+Verified against real `directus/directus:12.0.2` (Core, `LICENSE_KEY=""`) on the Windows/Docker box
+(disposable container `k1516-64verify` via **PowerShell**, fresh SQLite on the container overlay FS;
+committed `directus-schema.yaml` applied — "Snapshot applied successfully" — then `docker restart`;
+`storage_asset_transform:none` re-applied; torn down after; `k1516db`/`k1516vdb` untouched). Seeded:
+the 3 starter categories (one left EMPTY), a rich guide (table + uploaded PNG referenced in BOTH
+relative and absolute form + YouTube iframe + credit), an XSS-payload guide (`<script>`, `onerror`,
+`javascript:` href, foreign iframe, inline style/class), an uncategorized guide, and a
+`guide_drafts` row as the draft-negative.
+
+- **Build (Node 22 via fnm, the §CSS-gate discipline):** configured build → **14 pages**, all guide
+  routes emitted (`/guide/<slug>` ×3, `/guides/<category>` ×3 incl. the empty one, `/guides`,
+  `/guides-index.json`), 1 optimized webp emitted into `_astro/`.
+- **Sanitize gates:** all XSS markers **absent** from built HTML; table + YouTube iframe **present**;
+  body h1 → h2; `style`/`class` stripped; `rel="noopener noreferrer"` forced. 25/25 pure-logic unit
+  checks (allowlist, excerpt, matcher, asset-ref extraction).
+- **Image gates:** both img forms rewritten to the SAME local `_astro/<uuid>_*.webp`; **zero**
+  `localhost:8055` in any guide output; **zero** `DIRECTUS_TOKEN`/token value anywhere in `dist/`.
+  (The Directus origin legitimately remains in the session/admin and `/join` client bundles — those
+  are the sanctioned runtime-API surfaces, not public reads.)
+- **Draft-negative:** the seeded draft's title/slug appear **nowhere** in `dist/` (the build token's
+  `guide_drafts` read is a live 403).
+- **Empty states:** the empty category page renders its "No published guides in … yet" note + links
+  the other categories; an unconfigured (placeholder-token) build stays **green** — 8 pages, empty
+  KB state on `/guides`, `[]` index, `[guides]` warning.
+- **Schema** — ZERO delta: `apply --dry-run` → **"No changes to apply."**; `12.0.2` pin untouched.
+  The three grants live in `data.db` (live-proven, not git artifacts).
 
 ## Local verification status (Story 3.1 / MIN-1)
 

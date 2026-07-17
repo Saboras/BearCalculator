@@ -1,0 +1,76 @@
+---
+/*
+  Guide card (Story 6.4, UX-DR-13): category chip + title + updated date +
+  creator credit, whole card = one link (UX-DR-20) to the guide's stable
+  /guide/<slug> address. Used by the category pages and the KB root's
+  uncategorized section.
+*/
+import type { Guide } from '../data/guides';
+
+interface Props {
+  guide: Guide;
+}
+const { guide } = Astro.props;
+const day = guide.updated ? guide.updated.slice(0, 10) : null;
+---
+
+<a class="guide-card" href={`/guide/${guide.slug}/`}>
+  {guide.category && <span class="badge-category">{guide.category.name}</span>}
+  <h3 class="guide-card-title">{guide.title}</h3>
+  <p class="guide-card-meta">
+    {day && <>Updated <time datetime={guide.updated}>{day}</time></>}
+    {day && guide.creator_credit && ' · '}
+    {guide.creator_credit && <>credit: {guide.creator_credit}</>}
+  </p>
+</a>
+
+<style>
+  /* DESIGN card recipe — gold-framed parchment gradient; frame the room, not
+     every chair (flourishes stay at container/landing level). */
+  .guide-card {
+    display: block;
+    background: linear-gradient(180deg, #fdf9ef, #f8efd8);
+    border: 2px solid var(--color-primary);
+    border-radius: 10px;
+    padding: var(--space-5);
+    text-decoration: none;
+    color: var(--color-ink);
+  }
+  .guide-card:hover {
+    text-decoration: none;
+    border-color: var(--color-primary-hover);
+    box-shadow: 0 2px 8px rgba(44, 38, 34, 0.12);
+  }
+  :global(:root[data-theme='dark']) .guide-card {
+    background: linear-gradient(180deg, #2b2620, #241f1a);
+  }
+
+  /* DESIGN badge-category — the teal guide-category chip. */
+  .badge-category {
+    display: inline-block;
+    background: rgba(42, 167, 176, 0.14);
+    color: #1c7c83;
+    border: 1px solid rgba(42, 167, 176, 0.4);
+    border-radius: var(--radius-pill);
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  :global(:root[data-theme='dark']) .badge-category {
+    color: #6fd3da;
+    background: rgba(42, 167, 176, 0.18);
+  }
+
+  /* Titles/meta are information → Inter (global body font), high contrast. */
+  .guide-card-title {
+    font-family: var(--font-body);
+    font-size: 17px;
+    font-weight: 700;
+    margin: var(--space-3) 0 0;
+  }
+  .guide-card-meta {
+    color: var(--color-muted);
+    font-size: 13px;
+    margin: var(--space-2) 0 0;
+  }
+</style>

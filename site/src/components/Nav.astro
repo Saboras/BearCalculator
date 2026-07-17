@@ -13,7 +13,10 @@ const tabs = [
   { label: 'Home', short: 'Home', href: '/', icon: 'house' },
   { label: 'Tools', short: 'Tools', href: '/tools', icon: 'wrench' },
   { label: 'Alliance Finder', short: 'Finder', href: '/finder', icon: 'compass' },
-  { label: 'Guides', short: 'Guides', href: '/guides', icon: 'book-open' },
+  // `also`: guide DETAIL pages live under /guide/<slug> (Story 6.4 — a separate
+  // URL family so guide slugs can never collide with category slugs); the
+  // Guides tab must light up for them too.
+  { label: 'Guides', short: 'Guides', href: '/guides', icon: 'book-open', also: '/guide' },
 ];
 const joinHref = '/join';
 const loginHref = '/leader';
@@ -21,6 +24,8 @@ const loginHref = '/leader';
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const isActive = (href: string) =>
   href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
+const isTabActive = (t: { href: string; also?: string }) =>
+  isActive(t.href) || (t.also !== undefined && isActive(t.also));
 ---
 
 {/* Desktop sticky top bar */}
@@ -30,8 +35,8 @@ const isActive = (href: string) =>
     {tabs.map((t) => (
       <a
         href={t.href}
-        class:list={['nav-link', { active: isActive(t.href) }]}
-        aria-current={isActive(t.href) ? 'page' : undefined}
+        class:list={['nav-link', { active: isTabActive(t) }]}
+        aria-current={isTabActive(t) ? 'page' : undefined}
       >{t.label}</a>
     ))}
     <a
@@ -69,8 +74,8 @@ const isActive = (href: string) =>
   {tabs.map((t) => (
     <a
       href={t.href}
-      class:list={['tab', { active: isActive(t.href) }]}
-      aria-current={isActive(t.href) ? 'page' : undefined}
+      class:list={['tab', { active: isTabActive(t) }]}
+      aria-current={isTabActive(t) ? 'page' : undefined}
     >
       <span class="tab-icon" aria-hidden="true"><Icon name={t.icon} /></span>
       <span class="tab-label">{t.short}</span>

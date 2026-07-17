@@ -1,0 +1,119 @@
+---
+/*
+  /guides/<category-slug> — per-category listing (Story 6.4, ⭐ Q1 Option B;
+  the §17 schema note's "browse URL"). One static page per `categories` row
+  (getStaticPaths), guide cards newest-first. An EMPTY category states it
+  plainly and offers the other categories — never a blank page (AC6/UX-DR-19).
+*/
+import Layout from '../../layouts/Layout.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { categories, guidesInCategory, type GuideCategory } from '../../data/guides';
+
+export function getStaticPaths() {
+  return categories.map((c) => ({ params: { category: c.slug }, props: { cat: c } }));
+}
+
+interface Props {
+  cat: GuideCategory;
+}
+const { cat } = Astro.props;
+const list = guidesInCategory(cat.slug);
+const others = categories.filter((c) => c.slug !== cat.slug);
+---
+
+<Layout
+  title={`${cat.name} guides — Kingdom 1516`}
+  description={`Kingdom 1516 guides in the ${cat.name} category — browse, read, share.`}
+>
+  <main class="cat-page">
+    <p class="crumb"><a href="/guides/">Guides</a> · {cat.name}</p>
+    <h1>{cat.name}</h1>
+
+    {
+      list.length === 0 ? (
+        <div class="cat-zero">
+          <p>No published guides in {cat.name} yet.</p>
+          {others.length > 0 && (
+            <>
+              <p class="muted">Try another category:</p>
+              <ul class="cat-zero-links">
+                {others.map((c) => (
+                  <li>
+                    <a href={`/guides/${c.slug}/`}>{c.name}</a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <a class="btn-gold" href="/guides/">All guides</a>
+        </div>
+      ) : (
+        <ol class="guide-list">
+          {list.map((g) => (
+            <li>
+              <GuideCard guide={g} />
+            </li>
+          ))}
+        </ol>
+      )
+    }
+  </main>
+</Layout>
+
+<style>
+  .cat-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-6) var(--space-9);
+  }
+  .crumb {
+    font-size: 13px;
+    color: var(--color-muted);
+    margin: 0 0 var(--space-3);
+  }
+  .crumb a {
+    color: inherit;
+  }
+  h1 {
+    margin: 0;
+  }
+
+  .guide-list {
+    list-style: none;
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  /* Empty category — never a dead end (mirror the Finder zero-state voice). */
+  .cat-zero {
+    margin-top: var(--space-6);
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-7) var(--space-5);
+  }
+  .cat-zero p {
+    margin: 0 0 var(--space-3);
+  }
+  .cat-zero-links {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-5);
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cat-zero-links a {
+    color: var(--color-primary-hover);
+    font-weight: 600;
+  }
+
+  @media (min-width: 768px) {
+    .guide-list {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

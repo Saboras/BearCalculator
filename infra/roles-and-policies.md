@@ -185,7 +185,7 @@ Accounts**.
 | Guides | `guides-editor` | yes | create/update `guide_drafts` (whole-collection); read `categories` — **no grant on `guides`** so cannot publish | collection **write** on `guide_drafts` ✅ free — **Option 2** (6.1 shape; write grant **wired Story 6.2**, live-proven) |
 | Guides | `guides-senior` | yes (for *authoring* via `guides-editor`; the **publish surface itself is the custom `/admin` shell** — session API, no seat needed; §0 seats note) | **publish**: create/update `guides` (the publish action) **+ update `guide_drafts`** (re-edit before re-publish); reads `guide_drafts` + `guides` + `categories` wired 6.1 — the Senior *role* also holds `guides-editor` to author drafts | collection **write** on `guides` ✅ free — **Option 2**, server-enforced gate, **wired Story 6.3** (live-proven: Senior 200, Editor/Viewer 403) |
 | Alliances | `alliances-official` | yes | **read + update `alliances`** — as-built (Option 3): `fields:["*"]`, no row filter; own-row + own-fields are Owner discipline | collection **read + update** grant ✅ free — **delivered Story 4.2**; the own-row `official = $CURRENT_USER` filter + field subset (AD-5) is the 🔒 Option-1 target |
-| Alliances / Transfer | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`) **+ read `settings`** (Story 5.3 — the `special_invite_power_threshold` the `/join` power-badge compares against); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2 / 5.3** (keeps Public locked; §3) |
+| Alliances / Transfer / Guides | `finder-build-read` (service) | no | **read `alliances`** (Story 4.3) **+ read `transfer_period`** (Story 5.2 — the active period id the `/join` form stamps into `candidates.period`) **+ read `settings`** (Story 5.3 — the `special_invite_power_threshold` the `/join` power-badge compares against) **+ read `guides` + `categories` + `directus_files`** (Story 6.4 — the public KB build source + guide-image originals; NEVER `guide_drafts`); the SSG build token; no write, no other collection | collection **read** grants ✅ free — **delivered 4.3 / 5.2 / 5.3 / 6.4** (keeps Public locked; §3) |
 | all | **Owner** = built-in **Administrator** role (`admin_access: true`) | — | **everything** (universal override) | admin bypass — **no per-collection rules** ✅ free |
 | public | built-in **Public** policy | — | **create-only** on `candidates`, **no read** — **wired Story 5.2** | AD-12 ✅ free (whole-collection create); the AD-12/AR-14 **hardening** = Directus IP rate limiter + form honeypot at the **edge** (a `preset`/`validation` on the grant stays 🔒/Option-3 — §3/§4/§0) |
 
@@ -362,20 +362,26 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 > field subset and the row filter the moment Directus is licensed. **Do NOT grant `create`/`delete`**
 > to this policy — the Owner creates/deletes alliances (AD-9 / FR-3).
 
-### `finder-build-read` (Build · Read) — the SSG read token (Stories 4.3 / 5.2 / 5.3)
+### `finder-build-read` (Build · Read) — the SSG read token (Stories 4.3 / 5.2 / 5.3 / 6.4)
 | Collection | Action | Fields | Row filter | Status |
 |---|---|---|---|---|
 | `alliances` | read | `["*"]` (all fields) | — none | ✅ **delivered Story 4.3** · whole-collection read = free (§0) |
 | `transfer_period` | read | `["*"]` (all fields) | — none | ✅ **delivered Story 5.2** · the active period id `/join` stamps into `candidates.period` · whole-collection read = free |
 | `settings` (singleton) | read | `["*"]` (all fields) | — none | ✅ **delivered Story 5.3** · the `special_invite_power_threshold` the `/join` power-badge compares against · whole-collection read = free |
+| `guides` | read | `["*"]` (all fields) | — none | ✅ **wired Story 6.4** · the public-build source (Option 2: membership = published) · whole-collection read = free |
+| `categories` | read | `["*"]` (all fields) | — none | ✅ **wired Story 6.4** · category browse pages + chips + manual sort · whole-collection read = free |
+| `directus_files` | read | `["*"]` (all fields) | — none | ✅ **wired Story 6.4** · guide-image originals for the build's download-optimize-localize step — **measured**: `GET /assets/<id>` is 403 for anon AND for a token without this grant (README §20.1) · whole-collection read = free |
 
 > Not a leader role — a **service policy** attached to a dedicated `finder-build` user whose **static
 > token** the Astro build uses to pull build-time data (AR-18: "the build pulls with a read-only token").
-> It grants **read on `alliances`, `transfer_period`, and the `settings` singleton only** — nothing else, no
-> write, no other collection. This is why **Public stays locked** (AD-12): the build authenticates with its
-> own token instead of opening the collections to the world. The token lives in the `DIRECTUS_TOKEN` build
-> secret (non-`PUBLIC_`, never in the client bundle); the grant lives only in `data.db` (backed up, §6), not
-> in `directus-schema.yaml`. Runbook: `README.md` §9.5 (+ §11.2 for the `transfer_period`/`settings` reads).
+> It grants **read on `alliances`, `transfer_period`, the `settings` singleton, `guides`, `categories`
+> and `directus_files` only** — nothing else, no write, **no `guide_drafts`** (drafts stay leader-only;
+> a build-token GET on `guide_drafts` is a live-proven 403, Story 6.4). This is why **Public stays
+> locked** (AD-12): the build authenticates with its own token instead of opening the collections to
+> the world. The `finder-build` user has no `app_access` → consumes **no Studio seat** (§0 seats note).
+> The token lives in the `DIRECTUS_TOKEN` build secret (non-`PUBLIC_`, never in the client bundle); the
+> grant lives only in `data.db` (backed up, §6), not in `directus-schema.yaml`. Runbook: `README.md`
+> §9.5 (+ §11.2 for the `transfer_period`/`settings` reads, §20.1 for the guides/categories/files reads).
 > When Directus is licensed, these can tighten to field-subsets / published-only, but on Core the
 > whole-collection read is the free, correct shape.
 
@@ -384,7 +390,7 @@ grant to the **same** policy named here. 🔒 marks a rule that needs a Directus
 |---|---|---|---|---|
 | `candidates` | **create** | `["*"]` | none (`permissions: {}`) | **wired Story 5.2** — the whole-collection create grant (the only free create shape, §0 line proof). The `/join` form posts here as the anonymous role. |
 | `candidates` | ~~read~~ | — | — | **NOT granted** — deny-by-default keeps it write-only; an unauthenticated `GET`/list of `candidates` → 403 (AD-12: create-only, no read). |
-| (everything else) | — | — | — | **no access** (verified via unauthenticated `GET /users`/`/roles`/`/policies` → 403). Confirmed **no `alliances` / `transfer_period` / `settings` read** — the build reads those via the `finder-build-read` token, not Public. |
+| (everything else) | — | — | — | **no access** (verified via unauthenticated `GET /users`/`/roles`/`/policies` → 403). Confirmed **no `alliances` / `transfer_period` / `settings` / `guides` / `categories` read** (anon GET `guides`/`categories` → 403 re-proven Story 6.4) — the build reads all of those via the `finder-build-read` token, not Public. |
 
 > **Hardening is at the edge, not in the grant (Option 3, §0/§4).** The create grant is `fields:["*"]`,
 > so a hostile client *could* send Curator-only fields (`status`, `suggested_alliance`); locking the

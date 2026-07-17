@@ -6,9 +6,15 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
+  /*
+    Optional meta/OG description (Story 6.4). Guide links are shared in Discord
+    (UJ-4: link-sharing is the primary distribution), and title + description is
+    what the unfurl shows. Pages that don't pass it render exactly as before.
+  */
+  description?: string;
 }
 
-const { title = 'Kingdom 1516' } = Astro.props;
+const { title = 'Kingdom 1516', description } = Astro.props;
 ---
 
 <!doctype html>
@@ -40,6 +46,10 @@ const { title = 'Kingdom 1516' } = Astro.props;
     <Font cssVariable="--font-inter" preload />
 
     <title>{title}</title>
+    <meta property="og:title" content={title} />
+    <meta property="og:type" content="website" />
+    {description && <meta name="description" content={description} />}
+    {description && <meta property="og:description" content={description} />}
   </head>
   <body>
     <Nav />

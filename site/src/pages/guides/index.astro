@@ -1,0 +1,241 @@
+---
+/*
+  /guides — the public knowledge-base root (Story 6.4, ⭐ Q1 Option B):
+  category overview cards (each linking its /guides/<category-slug> page),
+  the client-side search (AC4 — reads the build-emitted /guides-index.json),
+  and the "More guides" section for category-less rows (M2O SET NULL — never
+  dropped). Everything is SSG from the build-time read; no runtime Directus
+  fetch (AD-1/AD-2). With zero guides (or an unconfigured build) the page
+  renders its calm empty state — never a blank page (UX-DR-19/NFR-2).
+*/
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { categories, guides, guidesInCategory, uncategorizedGuides } from '../../data/guides';
+
+const cats = categories.map((c) => ({ ...c, count: guidesInCategory(c.slug).length }));
+---
+
+<Layout
+  title="Guides — Kingdom 1516"
+  description="How Kingshot events work — structured Kingdom 1516 guides by category: browse, search, or open a shared link."
+>
+  <main class="kb">
+    <header class="kb-head">
+      <h1>Guides</h1>
+      <p class="kb-sub">
+        Structured answers by category. Non-English? Your browser's translate add-on renders every
+        guide in your language, in place.
+      </p>
+    </header>
+
+    {
+      guides.length === 0 ? (
+        <div class="kb-zero">
+          <p>No guides published yet — they appear here as soon as a leader publishes one.</p>
+          <a class="btn-gold" href="/">Back to the homepage</a>
+        </div>
+      ) : (
+        <>
+          {/* Only rendered when there is something to search — the empty KB
+              would otherwise offer a search whose messages point at
+              categories the zero state doesn't show. */}
+          <section class="kb-search" aria-label="Guide search">
+            <label class="label" for="guide-search">
+              Search guides
+            </label>
+            <div class="kb-search-row">
+              <span class="kb-search-icon" aria-hidden="true">
+                <Icon name="search" />
+              </span>
+              <input type="search" id="guide-search" placeholder="e.g. bear trap" autocomplete="off" />
+            </div>
+            <p class="kb-search-status muted" id="guide-search-status" aria-live="polite" hidden />
+            <ol class="kb-results" id="guide-search-results" hidden />
+          </section>
+          <ol class="cat-list">
+            {cats.map((c) => (
+              <li>
+                <a class="cat-card" href={`/guides/${c.slug}/`}>
+                  <h2 class="cat-name">{c.name}</h2>
+                  <p class="cat-count muted">
+                    {c.count === 0 ? 'No guides yet' : c.count === 1 ? '1 guide' : `${c.count} guides`}
+                  </p>
+                  <span class="cat-cta">Browse →</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          {uncategorizedGuides.length > 0 && (
+            <section class="kb-more">
+              <h2>More guides</h2>
+              <ol class="guide-list">
+                {uncategorizedGuides.map((g) => (
+                  <li>
+                    <GuideCard guide={g} />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </>
+      )
+    }
+  </main>
+</Layout>
+
+<script src="../../scripts/guides/search.ts"></script>
+
+<style>
+  .kb {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-6) var(--space-9);
+  }
+  .kb-head h1 {
+    margin: 0;
+  }
+  .kb-sub {
+    color: var(--color-muted);
+    max-width: 620px;
+    margin: var(--space-3) 0 0;
+  }
+
+  /* ===== Search ===== */
+  .kb-search {
+    margin: var(--space-6) 0 0;
+  }
+  .kb-search-row {
+    position: relative;
+    max-width: 480px;
+    margin-top: var(--space-2);
+  }
+  .kb-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-muted);
+    font-size: 15px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  #guide-search {
+    width: 100%;
+    padding: 10px 12px 10px 36px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font: inherit;
+  }
+  #guide-search:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+  .kb-search-status {
+    font-size: 13px;
+    margin: var(--space-2) 0 0;
+  }
+  .kb-results {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    max-width: 480px;
+    display: grid;
+    gap: var(--space-2);
+  }
+  /* Result rows are built by the client script with textContent (never HTML). */
+  .kb-results :global(a) {
+    display: block;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-button);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .kb-results :global(a:hover) {
+    border-color: var(--color-primary);
+    text-decoration: none;
+  }
+  .kb-results :global(.kb-result-cat) {
+    color: var(--color-muted);
+    font-size: 12.5px;
+    margin-left: var(--space-2);
+  }
+
+  /* ===== Category cards ===== */
+  .cat-list {
+    list-style: none;
+    margin: var(--space-7) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-4);
+  }
+  .cat-card {
+    display: block;
+    background: linear-gradient(180deg, #fdf9ef, #f8efd8);
+    border: 2px solid var(--color-primary);
+    border-radius: 10px;
+    padding: var(--space-5);
+    text-decoration: none;
+    color: var(--color-ink);
+  }
+  .cat-card:hover {
+    text-decoration: none;
+    border-color: var(--color-primary-hover);
+    box-shadow: 0 2px 8px rgba(44, 38, 34, 0.12);
+  }
+  .cat-name {
+    margin: 0;
+    font-size: 20px;
+  }
+  .cat-count {
+    margin: var(--space-2) 0 0;
+    font-size: 13px;
+  }
+  .cat-cta {
+    display: inline-block;
+    margin-top: var(--space-3);
+    color: var(--color-primary-hover);
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* ===== Uncategorized + zero state ===== */
+  .kb-more {
+    margin-top: var(--space-7);
+  }
+  .guide-list {
+    list-style: none;
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-4);
+  }
+  .kb-zero {
+    margin-top: var(--space-7);
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-7) var(--space-5);
+  }
+  .kb-zero p {
+    color: var(--color-muted);
+    margin: 0 0 var(--space-4);
+  }
+
+  :global(:root[data-theme='dark']) .cat-card {
+    background: linear-gradient(180deg, #2b2620, #241f1a);
+  }
+
+  @media (min-width: 768px) {
+    .cat-list {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .guide-list {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
