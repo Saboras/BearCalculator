@@ -44,6 +44,24 @@ test.describe('join', () => {
     await page.goto('/join/');
     await expect(page.getByRole('heading', { name: 'Apply to transfer' })).toBeVisible();
   });
+
+  test('yes/no radios render inline and are checkable', async ({ page }) => {
+    // Regression: generic .field input/label rules once gave the radios width:100%
+    // and block labels — circle stacked above its text instead of beside it.
+    await page.goto('/join/');
+    const opts = page.locator('.yn-opt');
+    expect(await opts.count()).toBeGreaterThanOrEqual(4);
+    for (const opt of await opts.all()) {
+      const input = await opt.locator('input').boundingBox();
+      const text = await opt.locator('span').boundingBox();
+      expect(input!.width).toBeLessThan(30);
+      expect(Math.abs((input!.y + input!.height / 2) - (text!.y + text!.height / 2))).toBeLessThan(8);
+      expect(input!.x + input!.width).toBeLessThanOrEqual(text!.x + 2);
+    }
+    const yes = page.locator('input[name="team_player_kvk"][value="yes"]');
+    await yes.check();
+    await expect(yes).toBeChecked();
+  });
 });
 
 test.describe('tools', () => {

@@ -312,7 +312,9 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     border: 0;
     padding: 0;
   }
-  .field label,
+  /* Direct children only — the nested .yn-opt labels are the segmented control,
+     not field captions (block display here stacked the radio above its text). */
+  .field > label,
   .yn legend {
     display: block;
     font-size: 13px;
@@ -325,7 +327,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     color: var(--color-muted);
     font-weight: 400;
   }
-  .field input,
+  .field input:not([type="radio"]),
   .field textarea,
   .field select {
     width: 100%;
@@ -348,7 +350,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     text-align: right;
   }
   /* Gold focus ring (DESIGN input spec: border → primary + soft gold glow). */
-  .field input:focus-visible,
+  .field input:not([type="radio"]):focus-visible,
   .field textarea:focus-visible,
   .field select:focus-visible {
     outline: none;
@@ -539,7 +541,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   }
   /* Inputs use a white fill in light mode (DESIGN); in dark, use the surface token
      so fields don't glare white on the dark card. */
-  :global(:root[data-theme="dark"]) .field input,
+  :global(:root[data-theme="dark"]) .field input:not([type="radio"]),
   :global(:root[data-theme="dark"]) .field textarea,
   :global(:root[data-theme="dark"]) .field select,
   :global(:root[data-theme="dark"]) .yn-opt {
