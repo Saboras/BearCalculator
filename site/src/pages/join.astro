@@ -158,8 +158,9 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
         {/*
           Power drives the special-invite flag (Story 5.3): entered IN MILLIONS, the
           client multiplies ×1,000,000 and compares to the build-baked threshold — over
-          it, the badge shows and needs_special_invite is recorded true. Power itself is
-          a client-side classifier only: never sent, never stored (no `power` column).
+          it, the badge shows and needs_special_invite is recorded true. Since 2026-07-18
+          the raw value is also stored (`power` column) so Curators see it in the
+          candidate table — Owner decision superseding the original never-stored choice.
         */}
         <div class="field">
           <label for="f-power">Your power (in millions)</label>
@@ -804,9 +805,11 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       team_player_kvk: yesno('team_player_kvk'),
       others_transferring: text('others_transferring'),
       day4_fcfs: yesno('day4_fcfs'),
-      // Derived from power (millions → raw), not self-declared (Story 5.3). Power is
-      // never sent; only this boolean is recorded.
+      // The flag stays derived (millions → raw vs the build-baked threshold, Story 5.3).
+      // Since 2026-07-18 the raw power itself is ALSO stored (Owner decision — the
+      // candidate table shows it), superseding the original never-stored choice.
       needs_special_invite: needsSpecialInvite(powerToRaw(text('power'))),
+      power: Math.round(powerToRaw(text('power'))),
       period: config.activePeriodId,
     };
     if (text('what_you_seek')) payload.what_you_seek = text('what_you_seek');

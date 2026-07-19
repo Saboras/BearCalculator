@@ -63,7 +63,9 @@ import Icon from '../../components/Icon.astro';
 
 <style is:global>
   .admin {
-    max-width: 960px;
+    /* DESIGN Layout & Spacing: the candidate table is a wide data surface —
+       desktop content max ~1100–1180px (960 clipped the table on desktops). */
+    max-width: 1180px;
     margin: 0 auto;
     padding: var(--space-6) var(--space-4) var(--space-9);
   }
@@ -1231,6 +1233,13 @@ import Icon from '../../components/Icon.astro';
     return s === '' ? '—' : s;
   };
 
+  // Raw power → "135.5M" (one decimal only when fractional); null = row predates the column.
+  const fmtPower = (raw: number | null | undefined): string => {
+    if (raw == null || !Number.isFinite(raw)) return '—';
+    const m = raw / 1_000_000;
+    return (Number.isInteger(m) ? String(m) : m.toFixed(1)) + 'M';
+  };
+
   function td(text: string, className?: string): HTMLTableCellElement {
     const cell = document.createElement('td');
     if (className) cell.className = className;
@@ -2162,8 +2171,8 @@ import Icon from '../../components/Icon.astro';
     const table = document.createElement('table');
     table.className = 'cand-table';
 
-    const cols = ['Name', 'Player ID', 'Kingdom', 'Timezone', 'Desired', 'Suggested', 'Status', 'Planned path'];
-    const numCol = new Set([1, 2]); // Player ID, Kingdom → tabular, right-aligned
+    const cols = ['Name', 'Player ID', 'Kingdom', 'Power', 'Timezone', 'Desired', 'Suggested', 'Status', 'Planned path'];
+    const numCol = new Set([1, 2, 3]); // Player ID, Kingdom, Power → tabular, right-aligned
     const thead = document.createElement('thead');
     const htr = document.createElement('tr');
     cols.forEach((c, i) => {
@@ -2210,6 +2219,7 @@ import Icon from '../../components/Icon.astro';
 
       tr.append(td(dash(r.player_id), 'num'));
       tr.append(td(r.kingdom_number == null ? '—' : String(r.kingdom_number), 'num'));
+      tr.append(td(fmtPower(r.power), 'num'));
       tr.append(td(dash(r.timezone)));
       tr.append(td(dash(r.desired_alliance?.name ?? null)));
       const suggCell = td(dash(r.suggested_alliance?.name ?? null));

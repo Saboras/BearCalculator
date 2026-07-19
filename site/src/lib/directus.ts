@@ -137,6 +137,7 @@ export interface Candidate {
   others_transferring: string;
   day4_fcfs: boolean;
   needs_special_invite: boolean;
+  power: number | null; // raw units; null on rows from before the column existed
   what_you_seek: string | null;
   players_to_avoid: string | null;
   status: string;
