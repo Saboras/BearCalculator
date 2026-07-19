@@ -486,12 +486,12 @@ import Icon from '../../components/Icon.astro';
     color: #2f8f52; /* darker green than the #46D17A token for readable text on a light tint */
     background: rgba(70, 209, 122, .16);
   }
-  /* Transferred = done & moved on — accent family (teal light / royal-blue dark), so it
-     reads apart from the green "Accepted" at a glance. Text darker than the accent token
-     for contrast on the light tint (badge-category precedent). */
+  /* Transferred = done & moved on — a FILLED accent chip (teal light / royal-blue dark).
+     Solid fill, not a tint: the teal tint sat too close to the green Accepted tint to
+     tell apart at chip size. Both tokens swap with the theme, no dark override needed. */
   .badge-status--transferred {
-    color: #1c7c83;
-    background: rgba(42, 167, 176, .14);
+    color: var(--color-accent-foreground);
+    background: var(--color-accent);
   }
   .badge-status--rejected {
     color: var(--color-danger);
@@ -869,10 +869,6 @@ import Icon from '../../components/Icon.astro';
   :root[data-theme='dark'] .badge-status--accepted {
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
-  }
-  :root[data-theme='dark'] .badge-status--transferred {
-    color: #a7b8f5; /* lightened royal blue — the dark-mode accent family */
-    background: rgba(110, 140, 240, .18);
   }
   :root[data-theme='dark'] .badge-status--rejected,
   :root[data-theme='dark'] .badge-special-chip {
