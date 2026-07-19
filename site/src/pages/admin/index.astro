@@ -436,6 +436,17 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-ink);
     vertical-align: top;
   }
+  /* Apply-window section head — calm small-caps divider between window groups. */
+  .cand-window-head td {
+    padding: var(--space-6) var(--space-3) var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-muted);
+    border-bottom: 1.5px solid var(--color-border);
+    white-space: nowrap;
+  }
   .cand-row td:first-child {
     border-left: 3px solid transparent; /* left-rail accent slot */
   }
@@ -960,6 +971,7 @@ import Icon from '../../components/Icon.astro';
     getMyPermissions,
     getCandidates,
     getActivePeriod,
+    getPeriods,
     updateCandidate,
     updateCandidates,
     createGroup,
@@ -1196,6 +1208,9 @@ import Icon from '../../components/Icon.astro';
   // strip degrades calmly (denominators "—", counts kept) instead of freezing at n/0 (Task 6).
   let activePeriod: TransferPeriod | null = null;
   let capsReadError = false;
+  // Apply-window labels for the grouped candidate table (id → name/active). A read
+  // failure degrades to "Window <id>" labels — never blocks the list.
+  let periodsById = new Map<number, { name: string | null; active: boolean }>();
   // Story 5.6 (review P3): one guard for ALL candidate writes (5.5 per-row + 5.6 table-wide).
   // A 5.6 write rebuilds the whole tbody, so writes must serialize — otherwise a rerender could
   // detach another row's in-flight write (silent failure) or a rebuilt panel be re-clicked mid-write.
@@ -2175,7 +2190,46 @@ import Icon from '../../components/Icon.astro';
     table.append(thead);
 
     const tbody = document.createElement('tbody');
-    rendered.forEach((r) => {
+
+    // Group rows by APPLY window (Owner request 2026-07-18): active window first, then
+    // closed windows newest-first, no-window rows last. Carry-overs stay under the window
+    // they applied in (their badge + the counters keep the active-window semantics).
+    // With a single window on screen the headers are skipped — the plain table stays.
+    const groupOrder: (number | null)[] = [];
+    const groupsByPeriod = new Map<number | null, Candidate[]>();
+    for (const r of rendered) {
+      const key = r.period ?? null;
+      if (!groupsByPeriod.has(key)) {
+        groupsByPeriod.set(key, []);
+        groupOrder.push(key);
+      }
+      groupsByPeriod.get(key)!.push(r);
+    }
+    const activeId = activePeriod?.id ?? null;
+    groupOrder.sort((a, b) => {
+      if (a === b) return 0;
+      if (a === activeId) return -1;
+      if (b === activeId) return 1;
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return (b as number) - (a as number);
+    });
+    const showWindowHeads = groupOrder.length > 1;
+    const windowHeadRow = (key: number | null): HTMLTableRowElement => {
+      const tr = document.createElement('tr');
+      tr.className = 'cand-window-head';
+      const th = document.createElement('td');
+      th.colSpan = cols.length;
+      const info = key == null ? null : periodsById.get(key);
+      const label = key == null ? 'No window' : (info?.name?.trim() || `Window ${key}`);
+      th.textContent = key != null && key === activeId ? `${label} — active` : label;
+      tr.append(th);
+      return tr;
+    };
+
+    for (const groupKey of groupOrder) {
+      if (showWindowHeads) tbody.append(windowHeadRow(groupKey));
+      groupsByPeriod.get(groupKey)!.forEach((r) => {
       const tr = document.createElement('tr');
       tr.className = 'cand-row';
       const inGroup = r.group != null;
@@ -2302,7 +2356,8 @@ import Icon from '../../components/Icon.astro';
         if (open) openDetails.add(r.id);
         else openDetails.delete(r.id); // remember expansion across a table-wide re-render
       });
-    });
+      });
+    }
 
     table.append(tbody);
     scroll.append(table);
@@ -2332,6 +2387,12 @@ import Icon from '../../components/Icon.astro';
       } catch (perr) {
         if (authRejected(perr)) throw perr;
         capsReadError = true;
+      }
+      try {
+        periodsById = new Map((await getPeriods()).map((p) => [p.id, { name: p.name, active: p.active }]));
+      } catch (perr) {
+        if (authRejected(perr)) throw perr;
+        periodsById = new Map(); // group labels fall back to "Window <id>"
       }
       // Warm the suggested-alliance picker so the per-row controls build synchronously (a
       // Curator already holds the free alliances read; a Viewer builds no controls).

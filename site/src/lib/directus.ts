@@ -195,6 +195,13 @@ export async function getActivePeriod(): Promise<TransferPeriod | null> {
   return rows[0] ?? null;
 }
 
+// All windows (id → name/active) — the candidate table groups rows by apply window.
+export function getPeriods() {
+  return client.request(
+    readItems('transfer_period', { fields: ['id', 'name', 'active'], limit: -1, sort: ['-id'] })
+  ) as Promise<Pick<TransferPeriod, 'id' | 'name' | 'active'>[]>;
+}
+
 /*
   --- Curator candidate write (Story 5.5) ---
   The FIRST Curator WRITE from the admin shell: advance status (Applied → Accepted →
