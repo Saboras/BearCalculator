@@ -334,14 +334,6 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-accent); /* teal (light) / royal-blue (dark) — theme-aware, never raw #2AA7B0 */
     margin-bottom: var(--space-3);
   }
-  .cap-chip {
-    background: rgba(42, 167, 176, .12); /* teal tint; dark override swaps to royal-blue */
-    color: var(--color-accent);
-    padding: 3px 9px;
-    border-radius: var(--radius-pill);
-    font-size: 10.5px;
-    white-space: nowrap;
-  }
   .cap-counters {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -490,10 +482,16 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-muted);
     background: rgba(138, 126, 107, .16);
   }
-  .badge-status--accepted,
-  .badge-status--transferred {
+  .badge-status--accepted {
     color: #2f8f52; /* darker green than the #46D17A token for readable text on a light tint */
     background: rgba(70, 209, 122, .16);
+  }
+  /* Transferred = done & moved on — accent family (teal light / royal-blue dark), so it
+     reads apart from the green "Accepted" at a glance. Text darker than the accent token
+     for contrast on the light tint (badge-category precedent). */
+  .badge-status--transferred {
+    color: #1c7c83;
+    background: rgba(42, 167, 176, .14);
   }
   .badge-status--rejected {
     color: var(--color-danger);
@@ -868,10 +866,13 @@ import Icon from '../../components/Icon.astro';
   :root[data-theme='dark'] .badge-status--applied {
     background: rgba(154, 163, 178, .18);
   }
-  :root[data-theme='dark'] .badge-status--accepted,
-  :root[data-theme='dark'] .badge-status--transferred {
+  :root[data-theme='dark'] .badge-status--accepted {
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
+  }
+  :root[data-theme='dark'] .badge-status--transferred {
+    color: #a7b8f5; /* lightened royal blue — the dark-mode accent family */
+    background: rgba(110, 140, 240, .18);
   }
   :root[data-theme='dark'] .badge-status--rejected,
   :root[data-theme='dark'] .badge-special-chip {
@@ -926,9 +927,6 @@ import Icon from '../../components/Icon.astro';
   }
   :root[data-theme='dark'] .cap-counter {
     background: rgba(255, 255, 255, .03);
-  }
-  :root[data-theme='dark'] .cap-chip {
-    background: rgba(110, 140, 240, .14); /* royal-blue tint — teal never appears in dark (AC2) */
   }
   :root[data-theme='dark'] .badge-carryover {
     color: var(--color-success);
@@ -1098,7 +1096,6 @@ import Icon from '../../components/Icon.astro';
       // Trusted CONSTANTS only (frame + states). Candidate ROWS are built later with
       // textContent/createElement in renderCandidateTable — never innerHTML with user data.
       return `<h2>Candidates</h2>
-<p class="cand-intro">Every transfer applicant, read-only. Curators change status, suggestions and groups; all leaders see the same list here for transparency.</p>
 <div class="cand-state" id="cand-loading" role="status"><p class="muted">Loading candidates…</p></div>
 <div class="cand-state" id="cand-error" hidden><p class="admin-msg" role="alert">Couldn’t load the candidate list. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="cand-retry">Retry</button></div>
 <div class="cand-state" id="cand-empty" hidden><p class="muted">No candidates yet — applications will appear here as they come in.</p></div>
@@ -1108,15 +1105,15 @@ import Icon from '../../components/Icon.astro';
       // Trusted CONSTANTS only. Guide ROWS are built with textContent in renderGuidesTable —
       // draft body HTML is NEVER rendered here (the 6.4 public reader owns sanitize+render).
       return `<h2>Guides</h2>
-<p class="cand-intro">Guide drafts and their published state. Editors author drafts in the Data Studio; a Senior or the Owner publishes here — publishing copies the draft verbatim to the public collection at the same address, and the public site rebuilds (~1–3 min).</p>
+<p class="cand-intro">Published changes reach the public site after ~1–3 min.</p>
 <div class="cand-state" id="guides-loading" role="status"><p class="muted">Loading guides…</p></div>
 <div class="cand-state" id="guides-error" hidden><p class="admin-msg" role="alert">Couldn’t load the guides list. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="guides-retry">Retry</button></div>
 <div class="cand-state" id="guides-empty" hidden><p class="muted">No guide drafts yet — Editors author drafts in the Data Studio and they appear here for review.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a></div>
 <div class="cand-table-wrap" id="guides-table-wrap" hidden></div>
-<p class="guides-studio-note">Drafts are authored in the Directus Data Studio — the ready-made editor, not a screen built here. <a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio</a></p>`;
+<p class="guides-studio-note"><a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Write drafts in the Data Studio</a></p>`;
     }
     const owner = area.ownerOnly ? ' (Owner only)' : '';
-    return `<h2>${area.label}</h2><p>${area.area}${owner} is managed in the Directus Data Studio — the ready-made admin, not a screen built here.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a>`;
+    return `<h2>${area.label}</h2><p>${area.area}${owner} is managed in the Data Studio.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a>`;
   }
 
   function selectTab(index: number, tabs: HTMLButtonElement[], panels: HTMLElement[]) {
@@ -1409,10 +1406,6 @@ import Icon from '../../components/Icon.astro';
     const title = document.createElement('div');
     title.className = 'cap-title';
     title.append(document.createTextNode('Capacity counters'));
-    const chip = document.createElement('span');
-    chip.className = 'cap-chip';
-    chip.textContent = 'Planning aids — never a gate';
-    title.append(chip);
     strip.append(title);
 
     const grid = document.createElement('div');
@@ -2420,7 +2413,7 @@ import Icon from '../../components/Icon.astro';
     const chip = document.createElement('span');
     const cls: Record<GuideState, string> = {
       'draft-only': 'badge-status badge-status--applied',
-      published: 'badge-status badge-status--transferred',
+      published: 'badge-status badge-status--accepted',
       'draft-newer': 'badge-status badge-status--draft-newer',
     };
     const label: Record<GuideState, string> = {
