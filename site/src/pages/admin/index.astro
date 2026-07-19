@@ -61,7 +61,7 @@ import Icon from '../../components/Icon.astro';
   </main>
 </Layout>
 
-<style>
+<style is:global>
   .admin {
     max-width: 960px;
     margin: 0 auto;
@@ -176,7 +176,7 @@ import Icon from '../../components/Icon.astro';
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-  .shell-logout :global(.icon) {
+  .shell-logout .icon {
     width: 15px;
     height: 15px;
     color: var(--color-accent);
@@ -220,7 +220,7 @@ import Icon from '../../components/Icon.astro';
     outline: 2px solid var(--color-primary);
     outline-offset: -2px;
   }
-  .tab :global(.icon) {
+  .tab .icon {
     width: 16px;
     height: 16px;
   }
@@ -277,7 +277,7 @@ import Icon from '../../components/Icon.astro';
     width: auto;
     margin-top: var(--space-4);
   }
-  .panel .btn-gold :global(.icon) {
+  .panel .btn-gold .icon {
     width: 16px;
     height: 16px;
   }
@@ -520,7 +520,7 @@ import Icon from '../../components/Icon.astro';
     white-space: nowrap;
     vertical-align: middle;
   }
-  .badge-special-chip :global(.icon) {
+  .badge-special-chip .icon {
     width: 12px;
     height: 12px;
   }
@@ -678,7 +678,7 @@ import Icon from '../../components/Icon.astro';
     display: inline-flex;
     flex: 0 0 auto;
   }
-  .cand-flag--divergent :global(.icon) {
+  .cand-flag--divergent .icon {
     width: 15px;
     height: 15px;
   }
@@ -698,7 +698,7 @@ import Icon from '../../components/Icon.astro';
     white-space: nowrap;
     vertical-align: middle;
   }
-  .cand-flag-chip :global(.icon) {
+  .cand-flag-chip .icon {
     width: 12px;
     height: 12px;
   }
@@ -848,14 +848,14 @@ import Icon from '../../components/Icon.astro';
   }
 
   /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
-  :global(:root[data-theme='dark']) .shell-head,
-  :global(:root[data-theme='dark']) .tabs {
+  :root[data-theme='dark'] .shell-head,
+  :root[data-theme='dark'] .tabs {
     background: linear-gradient(var(--color-surface), var(--color-bg));
   }
-  :global(:root[data-theme='dark']) .role-chip {
+  :root[data-theme='dark'] .role-chip {
     background: rgba(242, 169, 59, .14);
   }
-  :global(:root[data-theme='dark']) .panels {
+  :root[data-theme='dark'] .panels {
     background: linear-gradient(var(--color-surface), var(--color-bg));
     box-shadow:
       0 8px 20px rgba(0, 0, 0, .35),
@@ -863,77 +863,77 @@ import Icon from '../../components/Icon.astro';
       inset 0 0 22px rgba(242, 169, 59, .05);
   }
   /* Candidate chips — the light-baked tints wash out on the dark card. */
-  :global(:root[data-theme='dark']) .badge-status--applied {
+  :root[data-theme='dark'] .badge-status--applied {
     background: rgba(154, 163, 178, .18);
   }
-  :global(:root[data-theme='dark']) .badge-status--accepted,
-  :global(:root[data-theme='dark']) .badge-status--transferred {
+  :root[data-theme='dark'] .badge-status--accepted,
+  :root[data-theme='dark'] .badge-status--transferred {
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
   }
-  :global(:root[data-theme='dark']) .badge-status--rejected,
-  :global(:root[data-theme='dark']) .badge-special-chip {
+  :root[data-theme='dark'] .badge-status--rejected,
+  :root[data-theme='dark'] .badge-special-chip {
     color: var(--color-danger);
     background: rgba(216, 53, 42, .2);
     border-color: rgba(216, 53, 42, .5);
   }
   /* Story 6.3 — the light amber tint washes out on the dark card. */
-  :global(:root[data-theme='dark']) .badge-status--draft-newer {
+  :root[data-theme='dark'] .badge-status--draft-newer {
     color: #F2A93B;
     background: rgba(242, 169, 59, .16);
   }
-  :global(:root[data-theme='dark']) .cand-detail > td {
+  :root[data-theme='dark'] .cand-detail > td {
     background: rgba(242, 169, 59, .05);
   }
   /* Curator controls — the light gold gradient washes out on the dark card (btn-gold guard).
      --color-primary-foreground / --color-danger are already theme-aware, so only the
      literal gradients + rgba borders need a dark override. */
-  :global(:root[data-theme='dark']) .cand-btn--gold,
-  :global(:root[data-theme='dark']) .cand-btn--path-active {
+  :root[data-theme='dark'] .cand-btn--gold,
+  :root[data-theme='dark'] .cand-btn--path-active {
     background: linear-gradient(#F2A93B, #E0962A);
     text-shadow: none;
   }
-  :global(:root[data-theme='dark']) .cand-btn--gold:hover:not(:disabled),
-  :global(:root[data-theme='dark']) .cand-btn--path-active:hover:not(:disabled) {
+  :root[data-theme='dark'] .cand-btn--gold:hover:not(:disabled),
+  :root[data-theme='dark'] .cand-btn--path-active:hover:not(:disabled) {
     background: linear-gradient(#E0962A, #C9781F);
   }
-  :global(:root[data-theme='dark']) .cand-btn--danger {
+  :root[data-theme='dark'] .cand-btn--danger {
     border-color: rgba(242, 88, 77, .5);
   }
-  :global(:root[data-theme='dark']) .cand-btn--danger:hover:not(:disabled) {
+  :root[data-theme='dark'] .cand-btn--danger:hover:not(:disabled) {
     background: rgba(242, 88, 77, .12);
   }
   /* Story 5.6 — the light danger tints + parchment washes need dark overrides. */
-  :global(:root[data-theme='dark']) .cand-flag--divergent,
-  :global(:root[data-theme='dark']) .cand-flag-chip {
+  :root[data-theme='dark'] .cand-flag--divergent,
+  :root[data-theme='dark'] .cand-flag-chip {
     color: var(--color-danger);
     background: rgba(216, 53, 42, .2);
     border-color: rgba(216, 53, 42, .5);
   }
-  :global(:root[data-theme='dark']) .cand-linkpanel {
+  :root[data-theme='dark'] .cand-linkpanel {
     background: rgba(242, 169, 59, .05);
   }
-  :global(:root[data-theme='dark']) .cand-select {
+  :root[data-theme='dark'] .cand-select {
     background: var(--color-surface);
   }
   /* Story 5.7 — the light parchment/white literals + the teal chip tint need dark variants
      (--color-accent already swaps teal → royal-blue; --color-primary/--color-muted are theme-aware). */
-  :global(:root[data-theme='dark']) .cap-strip {
+  :root[data-theme='dark'] .cap-strip {
     background: linear-gradient(var(--color-surface), var(--color-bg));
     box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
   }
-  :global(:root[data-theme='dark']) .cap-counter {
+  :root[data-theme='dark'] .cap-counter {
     background: rgba(255, 255, 255, .03);
   }
-  :global(:root[data-theme='dark']) .cap-chip {
+  :root[data-theme='dark'] .cap-chip {
     background: rgba(110, 140, 240, .14); /* royal-blue tint — teal never appears in dark (AC2) */
   }
-  :global(:root[data-theme='dark']) .badge-carryover {
+  :root[data-theme='dark'] .badge-carryover {
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
   }
   /* Story 5.8 — the success-green carry-over pill washes out on the dark card. */
-  :global(:root[data-theme='dark']) .cand-cleared-pill {
+  :root[data-theme='dark'] .cand-cleared-pill {
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
   }
