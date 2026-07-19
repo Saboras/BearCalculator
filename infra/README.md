@@ -653,10 +653,13 @@ Core applicant fields + lifecycle + the two distinct-writer alliance relations +
 ### 10.2 `transfer_period` — per-window caps + active flag (AD-11 / AD-17)
 
 **Multi-row**, exactly **one `active`** at a time; **Owner-written** (no non-Owner write grant —
-§7 / roles-and-policies AD-9). Fields: `name` (window label), `invited_cap`, `random_cap`,
-`special_cap`, `active` (bool). **The available-special-count this period lives ONLY on
-`special_cap`** — never in the settings singleton, never a second store (AD-11). **No counter/tally
-field** — counters are edge-computed (5.7) and are **planning aids, never a gate**.
+§7 / roles-and-policies AD-9). Fields: `name` (window label), `starts_on` (date — when the window
+opens; drives the chronological group order in the admin candidate table), `invited_cap`,
+`random_cap`, `special_cap`, `active` (bool). **Naming convention: put the year in the name**
+(e.g. `July 2026 transfer window`) — names recur yearly and the admin table shows them as section
+headers. **The available-special-count this period lives ONLY on `special_cap`** — never in the
+settings singleton, never a second store (AD-11). **No counter/tally field** — counters are
+edge-computed (5.7) and are **planning aids, never a gate**.
 
 ### 10.3 `settings` — kingdom-wide thresholds (singleton)
 

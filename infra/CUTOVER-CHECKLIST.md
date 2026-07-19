@@ -45,7 +45,8 @@ in `infra/README.md` (§ references below).
 - [ ] Seed the 5 alliance rows via **JSON import** (never CSV — it numeric-coerces slug '516');
       then assign each row's `official` M2O (Osmo/Ritter/Liam1/NellyWonka/Nevada mapping).
 - [ ] Confirm 3 starter categories exist: `events` / `troops-heroes` / `alliance-transfer` (sort 1/2/3).
-- [ ] Author EXACTLY ONE `transfer_period` with `active=true`, incl. `invited_cap`/`special_cap`.
+- [ ] Author EXACTLY ONE `transfer_period` with `active=true`, incl. `invited_cap`/`special_cap`,
+      `starts_on` (date) and the year in the name (convention: `July 2026 transfer window`).
 - [ ] Author the `settings` singleton: `special_invite_power_threshold` in RAW units
       (**130000000**, not 130 — a units mis-entry passes the sign guard and flags everyone).
 - [ ] Re-apply the `alliances.slug` "lock after creation" Studio condition (not in the snapshot).

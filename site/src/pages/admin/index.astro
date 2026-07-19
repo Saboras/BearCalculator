@@ -1208,9 +1208,9 @@ import Icon from '../../components/Icon.astro';
   // strip degrades calmly (denominators "—", counts kept) instead of freezing at n/0 (Task 6).
   let activePeriod: TransferPeriod | null = null;
   let capsReadError = false;
-  // Apply-window labels for the grouped candidate table (id → name/active). A read
-  // failure degrades to "Window <id>" labels — never blocks the list.
-  let periodsById = new Map<number, { name: string | null; active: boolean }>();
+  // Apply-window labels for the grouped candidate table (id → name/active/starts_on).
+  // A read failure degrades to "Window <id>" labels — never blocks the list.
+  let periodsById = new Map<number, { name: string | null; active: boolean; starts_on: string | null }>();
   // Story 5.6 (review P3): one guard for ALL candidate writes (5.5 per-row + 5.6 table-wide).
   // A 5.6 write rebuilds the whole tbody, so writes must serialize — otherwise a rerender could
   // detach another row's in-flight write (silent failure) or a rebuilt panel be re-clicked mid-write.
@@ -2212,6 +2212,11 @@ import Icon from '../../components/Icon.astro';
       if (b === activeId) return 1;
       if (a === null) return 1;
       if (b === null) return -1;
+      // chronological (newest window first) via starts_on; windows without a date fall
+      // back to id order, which matches creation order
+      const da = periodsById.get(a as number)?.starts_on ?? null;
+      const db = periodsById.get(b as number)?.starts_on ?? null;
+      if (da && db && da !== db) return da < db ? 1 : -1;
       return (b as number) - (a as number);
     });
     const showWindowHeads = groupOrder.length > 1;
@@ -2389,7 +2394,7 @@ import Icon from '../../components/Icon.astro';
         capsReadError = true;
       }
       try {
-        periodsById = new Map((await getPeriods()).map((p) => [p.id, { name: p.name, active: p.active }]));
+        periodsById = new Map((await getPeriods()).map((p) => [p.id, { name: p.name, active: p.active, starts_on: p.starts_on }]));
       } catch (perr) {
         if (authRejected(perr)) throw perr;
         periodsById = new Map(); // group labels fall back to "Window <id>"

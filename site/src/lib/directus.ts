@@ -181,6 +181,7 @@ export interface TransferPeriod {
   random_cap: number | null;
   special_cap: number | null;
   active: boolean;
+  starts_on: string | null; // ISO date; null on windows from before the field existed
 }
 
 export async function getActivePeriod(): Promise<TransferPeriod | null> {
@@ -195,11 +196,12 @@ export async function getActivePeriod(): Promise<TransferPeriod | null> {
   return rows[0] ?? null;
 }
 
-// All windows (id → name/active) — the candidate table groups rows by apply window.
+// All windows (id → name/active/starts_on) — the candidate table groups rows by apply
+// window and orders the groups chronologically by starts_on (id as fallback).
 export function getPeriods() {
   return client.request(
-    readItems('transfer_period', { fields: ['id', 'name', 'active'], limit: -1, sort: ['-id'] })
-  ) as Promise<Pick<TransferPeriod, 'id' | 'name' | 'active'>[]>;
+    readItems('transfer_period', { fields: ['id', 'name', 'active', 'starts_on'], limit: -1, sort: ['-id'] })
+  ) as Promise<Pick<TransferPeriod, 'id' | 'name' | 'active' | 'starts_on'>[]>;
 }
 
 /*
