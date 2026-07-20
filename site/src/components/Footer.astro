@@ -5,12 +5,18 @@
   cheap; it reuses the nav-item shape but keeps its own small array (footer is a
   separate consumer; no premature extraction — Rule of Three).
 */
+import Icon from './Icon.astro';
+
 const links = [
   { label: 'Tools', href: '/tools' },
   { label: 'Alliance Finder', href: '/finder' },
   { label: 'Guides', href: '/guides' },
   { label: 'Join 1516', href: '/join' },
 ];
+
+// Donations stay strictly cost-covering (keeps the unofficial-fan-site posture).
+// PLACEHOLDER handle — swap for the real Ko-fi page before launch (cutover checklist).
+const COFFEE_URL = 'https://ko-fi.com/PLACEHOLDER-kingdom1516';
 ---
 
 <footer class="site-footer">
@@ -23,6 +29,11 @@ const links = [
       </Fragment>
     ))}
   </nav>
+  <p class="support">
+    <a href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
+      <Icon name="coffee" /> Buy me a coffee — helps keep the server &amp; domain running
+    </a>
+  </p>
 </footer>
 
 <style>
@@ -57,5 +68,17 @@ const links = [
   }
   .footer-links .sep {
     color: var(--color-border);
+  }
+  .support {
+    margin: var(--space-3) 0 0;
+    font-size: 12px;
+  }
+  .support a {
+    color: var(--color-muted);
+    text-decoration: none;
+  }
+  .support a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
   }
 </style>

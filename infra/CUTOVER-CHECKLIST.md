@@ -105,6 +105,12 @@ in `infra/README.md` (§ references below).
 
 ## Phase 8 — Public-surface smoke (live host)
 
+- [ ] ⭐ Footer coffee link: create the real Ko-fi page (pseudonym display name — no
+      legal name; mind the payout backend: Stripe or a PayPal business name keeps the
+      real name out of donor receipts) and replace the `PLACEHOLDER` handle in
+      `site/src/components/Footer.astro` (`COFFEE_URL`). Keep the cost-covering framing —
+      no perks/ads/paywalls (protects the unofficial-fan-site posture).
+
 - [ ] With Directus STOPPED: Home, /tools, calculator render fully (zero runtime backend dependency).
 - [ ] No requests to fonts.googleapis.com / gstatic (self-hosted fonts).
 - [ ] Calculator vs legacy oracle spot-check on live (the committed parity suite covers this too).
