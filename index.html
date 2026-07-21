@@ -491,6 +491,7 @@
             <select id="marshalTier">
               <option value="0">None</option>
               <option value="marshal">+2,500</option>
+              <option value="mid">+3,750</option>
               <option value="big">+5,000</option>
             </select>
           </div>
@@ -625,7 +626,7 @@
       </div>
 
       <div class="card">
-        <h2>All 9 squad sizes</h2>
+        <h2>All 12 squad sizes</h2>
         <div class="table-wrap">
           <table class="grid9">
             <thead>
@@ -660,7 +661,7 @@
     const JOINERS = 6;   // joiner rallies you join (your 6 marches)
     const SLOTS = 14;    // joiner slots in a full 15-member rally (host + 14)
 
-    const MARSHAL = { '0': 0, 'marshal': 2500, 'big': 5000 };
+    const MARSHAL = { '0': 0, 'marshal': 2500, 'mid': 3750, 'big': 5000 };
     function marshalFlat() { return MARSHAL[$('marshalTier').value] || 0; }
 
     // read & normalise a ratio (suffix 'A' | 'B' | 'C')
@@ -816,7 +817,7 @@
       const m = compute();
 
       // active squad
-      const tierLbl = { '0': 'no Marshal', 'marshal': '+' + fmt(2500), 'big': '+' + fmt(5000) }[$('marshalTier').value];
+      const tierLbl = { '0': 'no Marshal', 'marshal': '+' + fmt(2500), 'mid': '+' + fmt(3750), 'big': '+' + fmt(5000) }[$('marshalTier').value];
       $('squadFormula').textContent =
         `(${fmt(m.squadCore)} core, ${tierLbl}) × ${(1 + m.deploy).toFixed(2)}`;
       $('squadSize').textContent = fmt(m.activeSquad);
@@ -875,6 +876,7 @@
       const tiers = [
         { key: '0', label: 'None', flat: 0 },
         { key: 'marshal', label: 'Marshal', flat: 2500 },
+        { key: 'mid', label: 'Marshal +3,750', flat: 3750 },
         { key: 'big', label: 'Big Marshal', flat: 5000 }
       ];
       const selTier = $('marshalTier').value;
