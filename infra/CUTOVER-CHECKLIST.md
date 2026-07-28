@@ -7,8 +7,14 @@ in `infra/README.md` (§ references below).
 
 ## Phase 0 — Prerequisites
 
-- [ ] Procure the real domain; decide apex (`SITE_DOMAIN`) + admin subdomain (`DIRECTUS_DOMAIN`).
-- [ ] Create the dedicated Vultr VPS (isolated, not co-hosted with the Discord-bot box).
+- [x] ~~Procure the real domain~~ **DONE 2026-07-20: `kingdom1516.vip` (Porkbun, WHOIS privacy on).**
+      Apex `SITE_DOMAIN=kingdom1516.vip`, admin `DIRECTUS_DOMAIN=admin.kingdom1516.vip`.
+      Note: `.vip` renewal is currently discounted (~$5/yr, list ~$16) and NOT price-capped
+      like `.com` — enable auto-renew, expect the list price eventually.
+- [ ] Create the dedicated VPS (isolated, not co-hosted with the Discord-bot box).
+      Provider updated 2026-07-20: Hetzner is capacity-restricted (no new cloud servers since
+      2026-06-26) — recommended: Netcup VPS 200 / VPS 500 G12s (Nürnberg/Wien, no min term);
+      fallbacks IONOS / OVH / the originally assumed Vultr Frankfurt.
 - [ ] DNS A/AAAA for BOTH domains → VPS **before** first public `docker compose up`
       (Caddy must not burn ACME attempts against `.example` placeholders).
 - [ ] ⭐ **Seat-cap decision (README §19.4):** Directus Core refuses the 4th `app_access` user
