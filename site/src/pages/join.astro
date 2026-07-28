@@ -826,7 +826,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       const status = statusOf(err);
       showFormError(
         status && status >= 400 && status < 500
-          ? 'Please check your entries and try again.'
+          ? 'Please check your entries and try again. If everything looks right, reload the page — a new transfer window may have just opened.'
           : 'Couldn’t reach the server. Please try again in a moment.'
       );
     } finally {
