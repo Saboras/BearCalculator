@@ -22,7 +22,7 @@ Verwaltungsprogramm auf admin.kingdom1516.vip). Owner belegt einen. Nur Policies
 | `guides-editor` | Guide-**Entwürfe anlegen & bearbeiten** (Studio-Editor mit Bildern/Tabellen) | **veröffentlichen** — echte Server-Sperre (403) | ✅ ja |
 | `guides-senior` | **veröffentlichen** + bestehende Entwürfe bearbeiten | **neue Entwürfe anlegen** → braucht zusätzlich `guides-editor` | ✅ ja |
 | `alliances-official` | Allianz-Daten pflegen (Bärenfallen-Zeiten, Peak, Farm-Kürzel) | Allianzen anlegen/löschen (nur Owner) | ✅ ja |
-| `finder-build-read` | — Systemnutzer für den Website-Bau — | **niemals an Menschen vergeben** | ❌ nein |
+| `finder-build-read` | — hängt am Systemnutzer **„Finder Build"**, der die Website baut — | **niemals an Menschen vergeben — und den Nutzer NIEMALS löschen** (passiert am 2026-07-28: Website-Updates fielen aus, bis er neu angelegt war) | ❌ nein |
 | *(Public)* | unangemeldete Besucher: Bewerbung **absenden** | irgendetwas lesen | — |
 | *(Administrator-Rolle)* | **alles** — Konten, Fenster, Kategorien, Automatiken | — | ✅ ja |
 
