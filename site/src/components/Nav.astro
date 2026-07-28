@@ -52,9 +52,8 @@ const isTabActive = (t: { href: string; also?: string }) =>
       class:list={['login-link', { active: isActive(loginHref) }]}
       aria-current={isActive(loginHref) ? 'page' : undefined}
     ><Icon name="shield" /> Leader login</a>
-    <a class="icon-btn coffee-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer"
-      aria-label="Buy me a coffee — helps keep the server running"
-      title="Buy me a coffee — helps keep the server running"><Icon name="coffee" /></a>
+    <a class="coffee-link" href={COFFEE_URL} target="_blank" rel="noopener noreferrer"
+      title="Helps keep the server &amp; domain running"><Icon name="coffee" /> Buy me a coffee</a>
     <ThemeToggle />
   </div>
 </header>
@@ -69,9 +68,6 @@ const isTabActive = (t: { href: string; also?: string }) =>
       aria-label="Leader login"
       aria-current={isActive(loginHref) ? 'page' : undefined}
     ><Icon name="shield" /></a>
-    <a class="icon-btn coffee-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer"
-      aria-label="Buy me a coffee — helps keep the server running"
-      title="Buy me a coffee — helps keep the server running"><Icon name="coffee" /></a>
     <ThemeToggle />
   </div>
 </header>
@@ -108,14 +104,19 @@ const isTabActive = (t: { href: string; also?: string }) =>
   }
 
   /* ===== Shared icon button (mobile header leader-login shield) ===== */
-  /* Support link — quiet accent icon among the meta buttons (never gold; the
-     footer button carries the explanatory copy). */
-  .coffee-btn {
+  /* Support link — labeled so nobody lands on Ko-fi unwarned (desktop only;
+     mobile relies on the explanatory footer button). Never gold. */
+  .coffee-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     color: var(--color-accent);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
   }
-  .coffee-btn:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+  .coffee-link:hover {
+    text-decoration: underline;
   }
   .icon-btn {
     width: 34px;
