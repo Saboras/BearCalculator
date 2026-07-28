@@ -1374,6 +1374,49 @@ fields:
       has_auto_increment: false
       foreign_key_table: null
       foreign_key_column: null
+  - collection: candidates
+    field: current_alliance_tag
+    type: string
+    meta:
+      collection: candidates
+      conditions: null
+      display: null
+      display_options: null
+      field: current_alliance_tag
+      group: null
+      hidden: false
+      interface: input
+      note: >-
+        The applicant s CURRENT alliance tag in their home kingdom (no brackets
+        stored; the admin table renders [tag]Name). Null = no alliance /
+        predates the field.
+      options: null
+      readonly: false
+      required: false
+      searchable: true
+      sort: 21
+      special: null
+      translations: null
+      validation: null
+      validation_message: null
+      width: full
+    schema:
+      name: current_alliance_tag
+      table: candidates
+      data_type: varchar
+      default_value: null
+      max_length: 16
+      numeric_precision: null
+      numeric_scale: null
+      is_nullable: true
+      is_unique: false
+      is_indexed: false
+      is_primary_key: false
+      is_generated: false
+      generation_expression: null
+      has_auto_increment: false
+      foreign_key_table: null
+      foreign_key_column: null
   - collection: categories
     field: id
     type: integer

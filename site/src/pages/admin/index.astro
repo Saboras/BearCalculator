@@ -2260,7 +2260,9 @@ import Icon from '../../components/Icon.astro';
       toggle.setAttribute('aria-label', `Show details for ${r.character_name}`);
       toggle.textContent = '▸';
       if (isOpen) toggle.classList.add('cand-expand--open');
-      nameCell.append(toggle, document.createTextNode(' ' + dash(r.character_name)));
+      // [tag]Name — the applicant's current home-kingdom alliance tag (Owner request 2026-07-28)
+      const homeTag = (r.current_alliance_tag ?? '').trim();
+      nameCell.append(toggle, document.createTextNode(' ' + (homeTag ? `[${homeTag}]` : '') + dash(r.character_name)));
       if (r.needs_special_invite) nameCell.append(specialBadge());
       if (isCarryOver(r, activePeriod)) nameCell.append(carryOverBadge()); // AC-5: derived, sorted first
       tr.append(nameCell);

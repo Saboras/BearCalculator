@@ -80,6 +80,12 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
         </div>
 
         <div class="field">
+          <label for="f-current_alliance_tag">Your current alliance tag <span class="opt">(optional)</span></label>
+          <input type="text" id="f-current_alliance_tag" name="current_alliance_tag" autocomplete="off" maxlength="16" />
+          <p class="field-hint">e.g. ROK — leave empty if you're not in an alliance.</p>
+        </div>
+
+        <div class="field">
           <label for="f-player_id">Player ID</label>
           <input type="text" id="f-player_id" name="player_id" class="tabular" inputmode="numeric" autocomplete="off" required />
           <p class="field-hint">How leaders reach you in-game — required.</p>
@@ -812,6 +818,9 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       power: Math.round(powerToRaw(text('power'))),
       period: config.activePeriodId,
     };
+    // brackets stripped — the admin table adds them back when rendering [tag]Name
+    const allianceTag = text('current_alliance_tag').replace(/[\[\]]/g, '').trim();
+    if (allianceTag) payload.current_alliance_tag = allianceTag;
     if (text('what_you_seek')) payload.what_you_seek = text('what_you_seek');
     if (text('players_to_avoid')) payload.players_to_avoid = text('players_to_avoid');
     if (desiredId !== undefined) payload.desired_alliance = desiredId;

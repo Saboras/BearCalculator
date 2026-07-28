@@ -30,6 +30,7 @@ export interface CandidatePayload {
   day4_fcfs: boolean;
   needs_special_invite: boolean;
   power: number; // raw units — /join collects millions and sends ×1,000,000 (Owner decision 2026-07-18)
+  current_alliance_tag?: string; // no brackets — display renders [tag]Name
   what_you_seek?: string;
   players_to_avoid?: string;
   desired_alliance?: number;
