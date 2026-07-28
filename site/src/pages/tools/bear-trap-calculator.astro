@@ -10,12 +10,6 @@ import Icon from '../../components/Icon.astro';
       <p class="calc-sub">Plan your own rally + 6 joiner rallies.</p>
     </header>
 
-    <div class="disclaimer" role="note">
-      <strong>Honest disclaimer:</strong> This is a planning aid,
-      <strong>not an official combat simulator</strong> — validate against real Bear
-      Hunt results before relying on it for a serious run.
-    </div>
-
     <div class="calc-grid">
       <!-- ============ INPUTS ============ -->
       <section class="inputs" aria-label="Inputs">
@@ -230,21 +224,6 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-muted);
     font-size: 15px;
     margin: var(--space-2) 0 0;
-  }
-
-  /* ===== Honest disclaimer (danger-red block, UX-DR-21) ===== */
-  .disclaimer {
-    background: color-mix(in srgb, var(--color-danger) 8%, transparent);
-    border-left: 4px solid var(--color-danger);
-    border-radius: var(--radius-sm);
-    padding: var(--space-4) var(--space-5);
-    margin: var(--space-5) 0 var(--space-6);
-    color: var(--color-ink);
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  .disclaimer strong {
-    color: var(--color-danger);
   }
 
   /* ===== Layout: single-column mobile, Inputs/Results split on desktop ===== */
