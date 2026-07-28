@@ -86,6 +86,10 @@ in `infra/README.md` (§ references below).
       (§19.3, NEVER guide_drafts). **Swap the request URL from the SSRF-blocked localhost used in
       container verification to** `https://api.github.com/repos/<owner>/<repo>/dispatches`,
       body `{"event_type":"directus-publish"}`, fine-grained PAT as a Directus secret (never git).
+- [ ] ⭐ Extend the Flow trigger scope with `transfer_period` + `settings` (same pattern):
+      the active-window flip and the 130M threshold are build-baked into /join — without this,
+      a window change only reaches the public site on the next unrelated rebuild
+      (Sabo, 2026-07-19: public data changes must propagate automatically).
 - [ ] Fire each once end-to-end: edit → Flow → repository_dispatch → build → rsync (~1–3 min).
 - [ ] Confirm these are the ONLY custom Flows on the instance (AD-7).
 - [ ] Flip of active period / threshold → rebuild fires (both are build-baked into /join).
