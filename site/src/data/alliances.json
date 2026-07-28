@@ -18,15 +18,6 @@
     "official": "Ritter"
   },
   {
-    "name": "FOO",
-    "slug": "foo",
-    "bear_trap_1": "03:00",
-    "bear_trap_2": "19:00",
-    "peak": null,
-    "farm_alliance": "CAT",
-    "official": "Liam1"
-  },
-  {
     "name": "NRV",
     "slug": "nrv",
     "bear_trap_1": "13:30",
