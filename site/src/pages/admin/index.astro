@@ -979,6 +979,8 @@ import Icon from '../../components/Icon.astro';
     deleteCandidate,
     deleteCandidates,
     getAlliances,
+    getAllianceOverview,
+    getAccountsOverview,
     getGuideDrafts,
     getGuideDraft,
     getPublishedGuides,
@@ -1120,8 +1122,21 @@ import Icon from '../../components/Icon.astro';
 <div class="cand-table-wrap" id="guides-table-wrap" hidden></div>
 <p class="guides-studio-note"><a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Write drafts in the Data Studio</a></p>`;
     }
-    const owner = area.ownerOnly ? ' (Owner only)' : '';
-    return `<h2>${area.label}</h2><p>${area.area}${owner} is managed in the Data Studio.</p><a class="btn-gold" href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Open the Data Studio ${svg('arrow-up-right')}</a>`;
+    if (area.key === 'alliances') {
+      // Read-only overview (Owner request 2026-07-28) — editing stays in the Studio (AD-3).
+      return `<h2>Alliances</h2>
+<div class="cand-state" id="alli-loading" role="status"><p class="muted">Loading alliances…</p></div>
+<div class="cand-state" id="alli-error" hidden><p class="admin-msg" role="alert">Couldn’t load the alliances. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="alli-retry">Retry</button></div>
+<div class="cand-state" id="alli-empty" hidden><p class="muted">No alliances yet.</p></div>
+<div class="cand-table-wrap" id="alli-table-wrap" hidden></div>
+<p class="guides-studio-note"><a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Edit in the Data Studio</a></p>`;
+    }
+    // Accounts (Owner-only) — read-only roster; account edits stay in the Studio.
+    return `<h2>${area.label}</h2>
+<div class="cand-state" id="acct-loading" role="status"><p class="muted">Loading accounts…</p></div>
+<div class="cand-state" id="acct-error" hidden><p class="admin-msg" role="alert">Couldn’t load the accounts. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="acct-retry">Retry</button></div>
+<div class="cand-table-wrap" id="acct-table-wrap" hidden></div>
+<p class="guides-studio-note"><a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Manage accounts in the Data Studio</a></p>`;
   }
 
   function selectTab(index: number, tabs: HTMLButtonElement[], panels: HTMLElement[]) {
@@ -1160,6 +1175,8 @@ import Icon from '../../components/Icon.astro';
       tab.addEventListener('click', () => selectTab(i, tabs, panels));
       if (a.key === 'candidates') tab.addEventListener('click', () => maybeLoadCandidates());
       if (a.key === 'guides') tab.addEventListener('click', () => maybeLoadGuides());
+      if (a.key === 'alliances') tab.addEventListener('click', () => maybeLoadAlliancesPanel());
+      if (a.key === 'directus_users') tab.addEventListener('click', () => maybeLoadAccountsPanel());
       tab.addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         e.preventDefault();
@@ -1167,6 +1184,8 @@ import Icon from '../../components/Icon.astro';
         selectTab(next, tabs, panels);
         if (areas[next]?.key === 'candidates') maybeLoadCandidates(); // keyboard activation must load too (mirrors the click + boot triggers)
         if (areas[next]?.key === 'guides') maybeLoadGuides();
+        if (areas[next]?.key === 'alliances') maybeLoadAlliancesPanel();
+        if (areas[next]?.key === 'directus_users') maybeLoadAccountsPanel();
         tabs[next].focus();
       });
 
@@ -1179,6 +1198,8 @@ import Icon from '../../components/Icon.astro';
     selectTab(0, tabs, panels); // default to the first accessible tab (Candidates if present)
     if (areas[0]?.key === 'candidates') maybeLoadCandidates(); // lazy-load if Candidates is initial
     if (areas[0]?.key === 'guides') maybeLoadGuides(); // a Guides-only leader lands here (Story 6.3)
+    if (areas[0]?.key === 'alliances') maybeLoadAlliancesPanel(); // an Officials-only leader lands here
+    if (areas[0]?.key === 'directus_users') maybeLoadAccountsPanel();
   }
 
   // ===== Candidates panel (Story 5.4) — lazy-loaded, read-only calm table =====
@@ -2638,6 +2659,133 @@ import Icon from '../../components/Icon.astro';
     wrap.append(scroll);
   }
 
+  // ===== Alliances panel — read-only overview (Owner request 2026-07-28) =====
+  let alliLoaded = false;
+  let alliFetching = false;
+  function showAlliState(state: 'loading' | 'error' | 'empty' | 'table') {
+    for (const [id, on] of [['alli-loading', 'loading'], ['alli-error', 'error'], ['alli-empty', 'empty'], ['alli-table-wrap', 'table']] as const) {
+      document.getElementById(id)?.toggleAttribute('hidden', state !== on);
+    }
+  }
+  const hhmm = (t: string | null): string => (t ? t.slice(0, 5) : '—');
+  async function loadAlliancesPanel() {
+    if (alliFetching) return;
+    alliFetching = true;
+    showAlliState('loading');
+    try {
+      const rows = await getAllianceOverview();
+      if (!rows.length) { showAlliState('empty'); alliLoaded = true; return; }
+      const wrap = document.getElementById('alli-table-wrap');
+      if (!wrap) return;
+      wrap.textContent = '';
+      const scroll = document.createElement('div');
+      scroll.className = 'cand-table-scroll';
+      const table = document.createElement('table');
+      table.className = 'cand-table';
+      const thead = document.createElement('thead');
+      const htr = document.createElement('tr');
+      for (const c of ['Name', 'Tag', 'Bear Trap 1', 'Bear Trap 2', 'Peak', 'Farm']) {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = c;
+        htr.append(th);
+      }
+      thead.append(htr);
+      table.append(thead);
+      const tbody = document.createElement('tbody');
+      for (const a of rows) {
+        const tr = document.createElement('tr');
+        tr.append(td(dash(a.name)), td(a.slug, 'guide-slug'), td(hhmm(a.bear_trap_1)), td(hhmm(a.bear_trap_2)), td(hhmm(a.peak)), td(dash(a.farm_alliance)));
+        tbody.append(tr);
+      }
+      table.append(tbody);
+      scroll.append(table);
+      wrap.append(scroll);
+      showAlliState('table');
+      alliLoaded = true;
+    } catch (err) {
+      if (authRejected(err)) { window.location.replace('/leader'); return; }
+      showAlliState('error');
+    } finally {
+      alliFetching = false;
+    }
+  }
+  function maybeLoadAlliancesPanel() {
+    if (alliLoaded || alliFetching) return;
+    loadAlliancesPanel();
+  }
+
+  // ===== Accounts panel (Owner-only) — read-only roster =====
+  let acctLoaded = false;
+  let acctFetching = false;
+  function showAcctState(state: 'loading' | 'error' | 'table') {
+    for (const [id, on] of [['acct-loading', 'loading'], ['acct-error', 'error'], ['acct-table-wrap', 'table']] as const) {
+      document.getElementById(id)?.toggleAttribute('hidden', state !== on);
+    }
+  }
+  async function loadAccountsPanel() {
+    if (acctFetching) return;
+    acctFetching = true;
+    showAcctState('loading');
+    try {
+      const rows = await getAccountsOverview();
+      const wrap = document.getElementById('acct-table-wrap');
+      if (!wrap) return;
+      wrap.textContent = '';
+      const scroll = document.createElement('div');
+      scroll.className = 'cand-table-scroll';
+      const table = document.createElement('table');
+      table.className = 'cand-table';
+      const thead = document.createElement('thead');
+      const htr = document.createElement('tr');
+      for (const c of ['Name', 'Email', 'Role', 'Policies', 'Studio seat', 'Last login']) {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = c;
+        htr.append(th);
+      }
+      thead.append(htr);
+      table.append(thead);
+      const tbody = document.createElement('tbody');
+      let seats = 0;
+      for (const u of rows) {
+        const pols = (u.policies ?? []).map((p) => p.policy).filter((p): p is NonNullable<typeof p> => p != null);
+        const isAdmin = u.role?.name === 'Administrator';
+        const seat = isAdmin || pols.some((p) => p.app_access || p.admin_access);
+        if (seat) seats += 1;
+        const tr = document.createElement('tr');
+        tr.append(
+          td(dash(u.first_name)),
+          td(dash(u.email)),
+          td(dash(u.role?.name ?? null)),
+          td(isAdmin ? '— (admin override)' : pols.map((p) => p.name).join(', ') || '—'),
+          td(seat ? 'yes' : '—'),
+          td(isoDay(u.last_access))
+        );
+        tbody.append(tr);
+      }
+      table.append(tbody);
+      scroll.append(table);
+      wrap.append(scroll);
+      // Seat usage — the Core tier refuses the 4th Studio-capable account (README §19.4).
+      const note = document.createElement('p');
+      note.className = 'muted';
+      note.textContent = `Studio seats used: ${seats} of 3`;
+      wrap.append(note);
+      showAcctState('table');
+      acctLoaded = true;
+    } catch (err) {
+      if (authRejected(err)) { window.location.replace('/leader'); return; }
+      showAcctState('error');
+    } finally {
+      acctFetching = false;
+    }
+  }
+  function maybeLoadAccountsPanel() {
+    if (acctLoaded || acctFetching) return;
+    loadAccountsPanel();
+  }
+
   async function doLogout(btn: HTMLButtonElement) {
     if (btn.disabled) return;
     btn.disabled = true;
@@ -2727,6 +2875,8 @@ import Icon from '../../components/Icon.astro';
   panelsEl?.addEventListener('click', (e) => {
     if ((e.target as HTMLElement)?.closest?.('#cand-retry')) loadCandidates();
     if ((e.target as HTMLElement)?.closest?.('#guides-retry')) loadGuides();
+    if ((e.target as HTMLElement)?.closest?.('#alli-retry')) loadAlliancesPanel();
+    if ((e.target as HTMLElement)?.closest?.('#acct-retry')) loadAccountsPanel();
   });
 
   runBoot();

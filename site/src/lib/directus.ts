@@ -10,6 +10,7 @@ import {
   createItem,
   deleteItem,
   deleteItems,
+  readUsers,
 } from '@directus/sdk';
 
 /*
@@ -312,6 +313,50 @@ export function getAlliances() {
   return client.request(
     readItems('alliances', { fields: ['id', 'name'], limit: -1, sort: ['name'] })
   ) as Promise<AllianceOption[]>;
+}
+
+/*
+  --- Read-only admin panels (Owner request 2026-07-28) ---
+  The Alliances/Accounts tabs render a calm overview table instead of a bare
+  Studio hand-off. Presentation only — editing stays in the Data Studio (AD-3).
+  No `official` expansion here: non-admin readers hold no directus_users grant.
+*/
+export interface AllianceOverview {
+  id: number;
+  name: string;
+  slug: string;
+  bear_trap_1: string | null;
+  bear_trap_2: string | null;
+  peak: string | null;
+  farm_alliance: string | null;
+}
+export function getAllianceOverview() {
+  return client.request(
+    readItems('alliances', {
+      fields: ['id', 'name', 'slug', 'bear_trap_1', 'bear_trap_2', 'peak', 'farm_alliance'],
+      limit: -1,
+      sort: ['name'],
+    })
+  ) as Promise<AllianceOverview[]>;
+}
+
+// Owner-only (the Accounts tab is ownerOnly; only an admin session can read /users).
+export interface AccountOverview {
+  id: string;
+  first_name: string | null;
+  email: string | null;
+  last_access: string | null;
+  role: { name: string } | null;
+  policies: { policy: { name: string; app_access: boolean; admin_access: boolean } | null }[] | null;
+}
+export function getAccountsOverview() {
+  return client.request(
+    readUsers({
+      fields: ['id', 'first_name', 'email', 'last_access', { role: ['name'] }, { policies: [{ policy: ['name', 'app_access', 'admin_access'] }] }],
+      limit: -1,
+      sort: ['first_name'],
+    })
+  ) as Promise<AccountOverview[]>;
 }
 
 /*
