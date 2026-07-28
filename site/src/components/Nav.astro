@@ -20,6 +20,7 @@ const tabs = [
 ];
 const joinHref = '/join';
 const loginHref = '/leader';
+const COFFEE_URL = 'https://ko-fi.com/saboras'; // also in Footer.astro — extract on a third consumer
 
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const isActive = (href: string) =>
@@ -51,6 +52,9 @@ const isTabActive = (t: { href: string; also?: string }) =>
       class:list={['login-link', { active: isActive(loginHref) }]}
       aria-current={isActive(loginHref) ? 'page' : undefined}
     ><Icon name="shield" /> Leader login</a>
+    <a class="icon-btn coffee-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer"
+      aria-label="Buy me a coffee — helps keep the server running"
+      title="Buy me a coffee — helps keep the server running"><Icon name="coffee" /></a>
     <ThemeToggle />
   </div>
 </header>
@@ -65,6 +69,9 @@ const isTabActive = (t: { href: string; also?: string }) =>
       aria-label="Leader login"
       aria-current={isActive(loginHref) ? 'page' : undefined}
     ><Icon name="shield" /></a>
+    <a class="icon-btn coffee-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer"
+      aria-label="Buy me a coffee — helps keep the server running"
+      title="Buy me a coffee — helps keep the server running"><Icon name="coffee" /></a>
     <ThemeToggle />
   </div>
 </header>
@@ -101,6 +108,15 @@ const isTabActive = (t: { href: string; also?: string }) =>
   }
 
   /* ===== Shared icon button (mobile header leader-login shield) ===== */
+  /* Support link — quiet accent icon among the meta buttons (never gold; the
+     footer button carries the explanatory copy). */
+  .coffee-btn {
+    color: var(--color-accent);
+  }
+  .coffee-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
   .icon-btn {
     width: 34px;
     height: 34px;
