@@ -1,5 +1,21 @@
 # Live-Cutover Checklist — Kingdom 1516
 
+> ## ✅ CUTOVER COMPLETED 2026-07-28
+>
+> Executed end-to-end on the netcup VPS (188.68.35.71, `kingdom1516.vip`, Porkbun DNS):
+> Phases 0–7 all done and live-proven — HTTPS + security headers, schema applied
+> (dry-run clean), 8 policies / 34 grants / seeds, authorization matrix **28/28 PASS**,
+> CI deploy chain green (token-leak grep 0, CSS gate held), publish→rebuild Flow fired
+> live (**Studio edit → public in 33 s**), first B2 backup pushed + **restore-proven**
+> (integrity ok, all counts sane), daily 03:15 backup + Monday prune crons installed.
+> Bootstrap admin password rotated + removed from `.env`.
+>
+> **Deliberately still open:**
+> - ⭐ Seat-cap decision (Phase 0) — required before onboarding the ~10 leaders
+> - `transfer_groups` read for Viewers — deferred until group *names* are surfaced (§3)
+> - Token-rotation cadence for the build token + Flow PAT (runbook §9.5 covers minting)
+> - Sabo: one human click on the live Ko-fi link (bots can't verify through Cloudflare)
+
 Aggregated from the 2026-07-17 pre-cutover audit (9 audit areas, all epics). Every item
 here is **live-only**: it cannot be proven from the repo and must be performed/verified
 on the real VPS + Directus + GitHub. Order matters top-to-bottom. Detailed commands live
