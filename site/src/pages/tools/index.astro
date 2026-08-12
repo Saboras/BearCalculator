@@ -2,17 +2,28 @@
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
 
-// Featured: our own flagship calculator. Internal link (same tab) — we never
-// iframe our own page. Icon is an inline Lucide SVG via the shared <Icon>
-// component (currentColor, 1em), matching the index.astro / Nav.astro convention.
-const featured = {
-  icon: 'calculator',
-  name: 'Bear Trap Squad Calculator',
-  href: '/tools/bear-trap-calculator',
-  blurb:
-    'Plan your own rally + 6 joiner rallies — squad caps, buffs, and exactly what troops to send where.',
-  note: 'Ours · runs in your browser · no login',
-};
+// Ours: the calculators we build and run ourselves. Internal links (same tab) —
+// we never iframe our own pages. Icons are inline Lucide SVGs via the shared
+// <Icon> component (currentColor, 1em), matching the index.astro / Nav.astro
+// convention.
+const ours = [
+  {
+    icon: 'calculator',
+    name: 'Bear Trap Squad Calculator',
+    href: '/tools/bear-trap-calculator',
+    blurb:
+      'Plan your own rally + 6 joiner rallies — squad caps, buffs, and exactly what troops to send where.',
+    note: 'Ours · runs in your browser · no login',
+  },
+  {
+    icon: 'axe',
+    name: 'Vikings Vengeance Squad Calculator',
+    href: '/tools/vikings-vengeance-calculator',
+    blurb:
+      'Inverted priority for Vikings Vengeance — Infantry first, Cavalry second, archers only when nothing else is left.',
+    note: 'Ours · runs in your browser · no login',
+  },
+];
 
 /*
   Curated EXTERNAL tools (the kingdom's editorial pick — content, not logic).
@@ -68,23 +79,27 @@ const tools = [
     <header class="tools-header">
       <h1 class="tools-title">Tools</h1>
       <p class="tools-sub">
-        Our own Bear Trap calculator, plus a few community-built tools we think are
+        Our own event calculators, plus a few community-built tools we think are
         worth your time — most are external, all are vetted.
       </p>
     </header>
 
-    {/* ===== Featured: our flagship calculator (internal, whole-card link) ===== */}
+    {/* ===== Ours: the calculators we run (internal, whole-card links) ===== */}
     <section class="section" aria-labelledby="featured-heading">
-      <h2 id="featured-heading" class="section-title">Our calculator</h2>
-      <a class="featured-card" href={featured.href}>
-        <span class="featured-icon" aria-hidden="true"><Icon name={featured.icon} /></span>
-        <div class="featured-body">
-          <h3 class="featured-name">{featured.name}</h3>
-          <p class="featured-blurb">{featured.blurb}</p>
-          <span class="featured-note">{featured.note}</span>
-          <span class="featured-cta">Open the calculator <Icon name="arrow-right" /></span>
-        </div>
-      </a>
+      <h2 id="featured-heading" class="section-title">Our calculators</h2>
+      <div class="featured-grid">
+        {ours.map((f) => (
+          <a class="featured-card" href={f.href}>
+            <span class="featured-icon" aria-hidden="true"><Icon name={f.icon} /></span>
+            <div class="featured-body">
+              <h3 class="featured-name">{f.name}</h3>
+              <p class="featured-blurb">{f.blurb}</p>
+              <span class="featured-note">{f.note}</span>
+              <span class="featured-cta">Open the calculator <Icon name="arrow-right" /></span>
+            </div>
+          </a>
+        ))}
+      </div>
     </section>
 
     {/* ===== Honest external-tools note (AC-7: never overclaim) ===== */}
@@ -195,7 +210,13 @@ const tools = [
     margin-bottom: var(--space-4);
   }
 
-  /* ===== Featured card — gold-framed parchment, the flagship (copied from Home) ===== */
+  /* ===== Our calculators — gold-framed parchment (recipe copied from Home),
+     stacked on mobile and two equal cards side by side from 768px ===== */
+  .featured-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* mobile: stacked, like the curated grid */
+    gap: var(--space-5);
+  }
   .featured-card {
     display: flex;
     align-items: flex-start;
@@ -405,6 +426,9 @@ const tools = [
 
   /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
   @media (min-width: 768px) {
+    .featured-grid {
+      grid-template-columns: 1fr 1fr;
+    }
     .featured-card {
       padding: var(--space-7) var(--space-6);
     }

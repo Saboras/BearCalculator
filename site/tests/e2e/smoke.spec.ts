@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // Smoke suite for the public site. Works against BOTH build flavors:
 // unconfigured (no DIRECTUS_TOKEN — static seed, empty guides) and
@@ -72,6 +72,161 @@ test.describe('tools', () => {
     for (const rel of await external.evaluateAll(as => as.map(a => (a as HTMLAnchorElement).rel))) {
       expect(rel).toContain('noopener');
     }
+  });
+});
+
+// The two calculators below are guarded by number/text/localStorage assertions only,
+// never by CSS — the local Node-24 build ships no stylesheets (site/CLAUDE.md).
+const VIKINGS = '/tools/vikings-vengeance-calculator/';
+
+// One column of the send table for the JOINER rows only (0 = Inf, 1 = Cav, 2 = Arch,
+// 3 = Size). The own rally is excluded: it is a pool-independent target, so it is not
+// bound by the per-joiner budgets these tests pin down. Every caller must assert the
+// result is non-empty first — `[].every()` is vacuously true. The minus sign survives
+// parsing so a sign-flipped regression can't read as a valid count.
+const joinerCol = (page: Page, col: number) =>
+  page.locator('#sendTable tbody tr').evaluateAll((rows, c) =>
+    rows
+      .filter((r) => !r.classList.contains('own-row'))
+      .map((r) => Number(r.querySelectorAll('td')[c].textContent!.replace(/[^\d-]/g, ''))),
+    col);
+
+// The own-rally row as [Inf, Cav, Arch, Size].
+const ownRow = (page: Page) =>
+  page.locator('#sendTable tbody tr.own-row td').evaluateAll((tds) =>
+    tds.map((td) => Number(td.textContent!.replace(/[^\d-]/g, ''))));
+
+async function setNum(page: Page, id: string, value: string) {
+  const el = page.locator('#' + id);
+  await el.fill(value);
+  await el.dispatchEvent('input');
+  await el.dispatchEvent('change');
+}
+
+test.describe('vikings vengeance calculator', () => {
+  test('loads and deploys zero archers at defaults', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await expect(page.getByRole('heading', { name: 'Vikings Vengeance Squad Calculator' })).toBeVisible();
+    const arch = await joinerCol(page, 2);
+    expect(arch.length).toBeGreaterThan(0);
+    expect(arch.every((v) => v === 0)).toBeTruthy();
+    expect((await ownRow(page))[2]).toBe(0);
+  });
+
+  test('a join cap that does not divide evenly still deploys zero archers', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'joinCap', '80001');
+    const arch = await joinerCol(page, 2);
+    expect(arch.length).toBeGreaterThan(0);
+    expect(arch.every((v) => v === 0)).toBeTruthy();
+  });
+
+  test('a tight infantry budget hands the rounding remainder to cavalry, not archers', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'tInf', '300000');
+    await setNum(page, 'joinCap', '80001');
+    const arch = await joinerCol(page, 2);
+    const size = await joinerCol(page, 3);
+    expect(arch.length).toBeGreaterThan(0);
+    expect(arch.every((v) => v === 0)).toBeTruthy();
+    expect(size.every((v) => v === 80001)).toBeTruthy();
+  });
+
+  test('spare infantry absorbs a total cavalry shortfall', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'tCav', '0');
+    await setNum(page, 'tInf', '900000');
+    const [inf, cav, arch] = [await joinerCol(page, 0), await joinerCol(page, 1), await joinerCol(page, 2)];
+    expect(inf.length).toBeGreaterThan(0);
+    expect(inf.every((v) => v === 80000)).toBeTruthy();
+    expect(cav.every((v) => v === 0)).toBeTruthy();
+    expect(arch.every((v) => v === 0)).toBeTruthy();
+  });
+
+  test('archers deploy only as a last resort — and the page says so', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'tCav', '0');
+    await setNum(page, 'tInf', '200000');
+    const arch = await joinerCol(page, 2);
+    expect(arch.length).toBeGreaterThan(0);
+    expect(arch.every((v) => v > 0)).toBeTruthy();
+    await expect(page.locator('#warnings')).toContainText(/last resort/i);
+  });
+
+  test('an archer share the pool cannot deliver is released, joiners still reach the cap', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'rInfA', '50');
+    await setNum(page, 'rCavA', '30');
+    await setNum(page, 'rArchA', '20');
+    await setNum(page, 'tArch', '0');
+    await setNum(page, 'tInf', '900000');
+    const arch = await joinerCol(page, 2);
+    const size = await joinerCol(page, 3);
+    expect(size.length).toBeGreaterThan(0);
+    expect(size.every((v) => v === 80000)).toBeTruthy();
+    expect(arch.every((v) => v === 0)).toBeTruthy();
+  });
+
+  test('an odd squad size at ratio 0/50/50 renders no negative own-rally cell', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'squadBase', '130711');
+    await setNum(page, 'rInfA', '0');
+    await setNum(page, 'rCavA', '50');
+    await setNum(page, 'rArchA', '50');
+    // Cav and Arch each round UP here, so their sum overshoots the squad by 1 and
+    // Infantry would render as −1. The exact triple pins the trim that gives the
+    // extra troop back from Archers, in both the plain and the whole-percent path.
+    expect(await ownRow(page)).toEqual([0, 65356, 65355, 130711]);
+    await page.locator('#usePct').check();
+    expect(await ownRow(page)).toEqual([0, 65356, 65355, 130711]);
+  });
+
+  test('thirds split renders three joiner groups, all at the cap with zero archers', async ({ page }) => {
+    await page.goto(VIKINGS);
+    // The segmented control hides its radios visually (the label is the hit target),
+    // so drive the input directly instead of clicking it.
+    await page.locator('input[name="splitMode"][value="thirds"]').evaluate((n) => (n as HTMLElement).click());
+    await expect(page.locator('#ratioB')).toBeVisible();
+    await expect(page.locator('#ratioC')).toBeVisible();
+    expect(await page.locator('#sendTable tbody tr.own-row').count()).toBe(1);
+    expect(await page.locator('#sendTable tbody tr:not(.own-row) th').allInnerTexts())
+      .toEqual(['Joiners A ×2', 'Joiners B ×2', 'Joiners C ×2']);
+    const arch = await joinerCol(page, 2);
+    const size = await joinerCol(page, 3);
+    expect(arch.length).toBe(3);
+    expect(arch.every((v) => v === 0)).toBeTruthy();
+    expect(size.every((v) => v === 80000)).toBeTruthy();
+  });
+
+  test('has no Valora and no Max Archer controls', async ({ page }) => {
+    await page.goto(VIKINGS);
+    expect(await page.locator('#valoraOn').count()).toBe(0);
+    expect(await page.locator('#valoraSquad').count()).toBe(0);
+    expect(await page.locator('#valoraRally').count()).toBe(0);
+    expect(await page.locator('#maxArcher').count()).toBe(0);
+  });
+
+  test('state persists under its own key, never the bear key', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'squadBase', '123456');
+    expect(await page.evaluate(() => localStorage.getItem('vikingcalc.state'))).toContain('123456');
+    await page.reload();
+    await expect(page.locator('#squadBase')).toHaveValue('123456');
+    expect(await page.evaluate(() => localStorage.getItem('bearcalc.state'))).toBeNull();
+  });
+});
+
+test.describe('bear trap calculator', () => {
+  test('Mighty Bison Lv 10 adds exactly 15,000 and survives a reload', async ({ page }) => {
+    await page.goto('/tools/bear-trap-calculator/');
+    const squad = async () => Number((await page.locator('#squadSize').innerText()).replace(/[^\d]/g, ''));
+    const before = await squad();
+    expect(before).toBeGreaterThan(0);
+    await page.locator('#bisonLevel').selectOption('15000');
+    await expect.poll(squad).toBe(before + 15000);
+    await page.reload();
+    await expect(page.locator('#bisonLevel')).toHaveValue('15000');
+    await expect.poll(squad).toBe(before + 15000);
   });
 });
 
