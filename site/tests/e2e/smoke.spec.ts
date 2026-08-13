@@ -79,10 +79,11 @@ test.describe('tools', () => {
 // never by CSS — the local Node-24 build ships no stylesheets (site/CLAUDE.md).
 const VIKINGS = '/tools/vikings-vengeance-calculator/';
 
-// One column of the send table across every march-group row (0 = Inf, 1 = Cav,
-// 2 = Arch, 3 = Size). Every caller must assert the result is non-empty first —
-// `[].every()` is vacuously true. The minus sign survives parsing so a sign-flipped
-// regression can't read as a valid count.
+// One column of the send table, which holds exactly one row — the formation all 6
+// identical marches share (0 = Inf, 1 = Cav, 2 = Arch, 3 = Size). It stays an array so
+// every assertion pins the row COUNT too: `toEqual([x])` fails on an empty or split
+// table where `.every()` would pass vacuously. The minus sign survives parsing so a
+// sign-flipped regression can't read as a valid count.
 const marchCol = (page: Page, col: number) =>
   page.locator('#sendTable tbody tr').evaluateAll((rows, c) =>
     rows.map((r) => Number(r.querySelectorAll('td')[c].textContent!.replace(/[^\d-]/g, ''))),
@@ -107,11 +108,10 @@ test.describe('vikings vengeance calculator', () => {
     await page.goto(VIKINGS);
     await expect(page.getByRole('heading', { name: 'Vikings Vengeance Squad Calculator' })).toBeVisible();
     expect(await page.locator('#sendTable tbody tr th').allInnerTexts()).toEqual(['Marches ×6']);
-    const arch = await marchCol(page, 2);
-    const size = await marchCol(page, 3);
-    expect(arch.length).toBeGreaterThan(0);
-    expect(arch.every((v) => v === 0)).toBeTruthy();
-    expect(size.every((v) => v === MARCH_SIZE)).toBeTruthy();
+    expect(await marchCol(page, 0)).toEqual([78426]);
+    expect(await marchCol(page, 1)).toEqual([52284]);
+    expect(await marchCol(page, 2)).toEqual([0]);
+    expect(await marchCol(page, 3)).toEqual([MARCH_SIZE]);
     // The default pool fills all 6 marches exactly, so NEITHER warning may fire —
     // without this the under-fill trigger could be `<=` and still pass everywhere.
     await expect(page.locator('#warnings')).toBeEmpty();
@@ -129,7 +129,7 @@ test.describe('vikings vengeance calculator', () => {
     await setNum(page, 'tInf', '470556');
     await setNum(page, 'tCav', '313704');
     await setNum(page, 'tArch', '0');
-    expect((await marchCol(page, 3)).every((v) => v === MARCH_SIZE)).toBeTruthy();
+    expect(await marchCol(page, 3)).toEqual([MARCH_SIZE]);
     await expect(page.locator('#warnings')).toBeEmpty();
     // One infantry short: floor(470,555 / 6) = 78,425, so every march loses a troop.
     await setNum(page, 'tInf', '470555');
@@ -152,20 +152,33 @@ test.describe('vikings vengeance calculator', () => {
     await page.goto(VIKINGS);
     await setNum(page, 'tCav', '0');
     await setNum(page, 'tInf', '900000');
-    const [inf, cav, arch] = [await marchCol(page, 0), await marchCol(page, 1), await marchCol(page, 2)];
-    expect(inf.length).toBeGreaterThan(0);
-    expect(inf.every((v) => v === MARCH_SIZE)).toBeTruthy();
-    expect(cav.every((v) => v === 0)).toBeTruthy();
-    expect(arch.every((v) => v === 0)).toBeTruthy();
+    expect(await marchCol(page, 0)).toEqual([MARCH_SIZE]);
+    expect(await marchCol(page, 1)).toEqual([0]);
+    expect(await marchCol(page, 2)).toEqual([0]);
+  });
+
+  test('a budget-capped priority type spills to Cavalry, never to Archers', async ({ page }) => {
+    await page.goto(VIKINGS);
+    // At 70/30/0 the ideal march is 91,497 Inf, but a march may only draw
+    // floor(480,000 / 6) = 80,000 — so pass 1 stops 11,497 short of the march size and
+    // pass 2 must hand that gap to Cavalry (39,213 + 11,497), leaving archers at zero
+    // even though 71,517 of them are budgeted and idle.
+    await setNum(page, 'rInfA', '70');
+    await setNum(page, 'rCavA', '30');
+    expect(await marchCol(page, 0)).toEqual([80000]);
+    expect(await marchCol(page, 1)).toEqual([50710]);
+    expect(await marchCol(page, 2)).toEqual([0]);
+    expect(await marchCol(page, 3)).toEqual([MARCH_SIZE]);
+    await expect(page.locator('#warnings')).toBeEmpty();
   });
 
   test('archers deploy only as a last resort — and the page says so', async ({ page }) => {
     await page.goto(VIKINGS);
     await setNum(page, 'tCav', '0');
     await setNum(page, 'tInf', '200000');
-    const arch = await marchCol(page, 2);
-    expect(arch.length).toBeGreaterThan(0);
-    expect(arch.every((v) => v > 0)).toBeTruthy();
+    // No cavalry and only floor(200,000 / 6) infantry per march, so the whole archer
+    // budget floor(429,106 / 6) is drafted into the gap.
+    expect(await marchCol(page, 2)).toEqual([71517]);
     await expect(page.locator('#warnings')).toContainText(/last resort/i);
     // 6 × floor(429,106 / 6) archers — the warning must name the formatted total,
     // not just admit that something happened.
@@ -179,44 +192,8 @@ test.describe('vikings vengeance calculator', () => {
     await setNum(page, 'rArchA', '20');
     await setNum(page, 'tArch', '0');
     await setNum(page, 'tInf', '900000');
-    const arch = await marchCol(page, 2);
-    const size = await marchCol(page, 3);
-    expect(size.length).toBeGreaterThan(0);
-    expect(size.every((v) => v === MARCH_SIZE)).toBeTruthy();
-    expect(arch.every((v) => v === 0)).toBeTruthy();
-  });
-
-  test('half & half split renders two groups of three, each drawing its own sixth', async ({ page }) => {
-    await page.goto(VIKINGS);
-    // The segmented control hides its radios visually (the label is the hit target),
-    // so drive the input directly instead of clicking it.
-    await page.locator('input[name="splitMode"][value="half"]').evaluate((n) => (n as HTMLElement).click());
-    await expect(page.locator('#ratioB')).toBeVisible();
-    await expect(page.locator('#ratioC')).toBeHidden();
-    expect(await page.locator('#sendTable tbody tr th').allInnerTexts())
-      .toEqual(['Marches A ×3', 'Marches B ×3']);
-    // Every march gets floor(pool / 6) regardless of its group, so ratio B (70/30/0)
-    // hits its 80,000 infantry budget and the gap falls to Cavalry — never Archers.
-    expect(await marchCol(page, 0)).toEqual([78426, 80000]);
-    expect(await marchCol(page, 1)).toEqual([52284, 50710]);
-    expect(await marchCol(page, 2)).toEqual([0, 0]);
-    expect(await marchCol(page, 3)).toEqual([MARCH_SIZE, MARCH_SIZE]);
-  });
-
-  test('thirds split renders three march groups, all full with zero archers', async ({ page }) => {
-    await page.goto(VIKINGS);
-    // The segmented control hides its radios visually (the label is the hit target),
-    // so drive the input directly instead of clicking it.
-    await page.locator('input[name="splitMode"][value="thirds"]').evaluate((n) => (n as HTMLElement).click());
-    await expect(page.locator('#ratioB')).toBeVisible();
-    await expect(page.locator('#ratioC')).toBeVisible();
-    expect(await page.locator('#sendTable tbody tr th').allInnerTexts())
-      .toEqual(['Marches A ×2', 'Marches B ×2', 'Marches C ×2']);
-    const arch = await marchCol(page, 2);
-    const size = await marchCol(page, 3);
-    expect(arch.length).toBe(3);
-    expect(arch.every((v) => v === 0)).toBeTruthy();
-    expect(size.every((v) => v === MARCH_SIZE)).toBeTruthy();
+    expect(await marchCol(page, 2)).toEqual([0]);
+    expect(await marchCol(page, 3)).toEqual([MARCH_SIZE]);
   });
 
   test('a pool too small for 6 full marches shrinks them and says so', async ({ page }) => {
@@ -226,12 +203,36 @@ test.describe('vikings vengeance calculator', () => {
     await setNum(page, 'tArch', '0');
     await expect(page.locator('#warnings')).toContainText(/not enough troops/i);
     // floor(200,000/6) Inf + floor(60,000/6) Cav is all a march can draw on.
-    const size = await marchCol(page, 3);
-    expect(size.length).toBeGreaterThan(0);
-    expect(size.every((v) => v === 43333)).toBeTruthy();
+    expect(await marchCol(page, 3)).toEqual([43333]);
   });
 
-  test('has no rally, join-cap, Valora or Max Archer controls', async ({ page }) => {
+  test('the ratio warnings name the one ratio, empty or off-100', async ({ page }) => {
+    await page.goto(VIKINGS);
+    await setNum(page, 'rInfA', '0');
+    await setNum(page, 'rCavA', '0');
+    await setNum(page, 'rArchA', '0');
+    await expect(page.locator('#warnings')).toContainText('Ratio is empty');
+    // A ratio that misses 100 is normalized, not rejected — and the banner says so
+    // without naming a group letter, because there is only one ratio.
+    await setNum(page, 'rInfA', '50');
+    await setNum(page, 'rCavA', '30');
+    await setNum(page, 'rArchA', '30');
+    await expect(page.locator('#warnings')).toContainText('sums to 110%');
+    await expect(page.locator('#warnings')).not.toContainText('is empty');
+  });
+
+  test('copy formation and copy share link both confirm, neither throws', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(VIKINGS);
+    await page.locator('#copyBtn').click();
+    await expect(page.locator('#copyBtn .btn-label')).toHaveText('Copied');
+    await page.locator('#shareBtn').click();
+    await expect(page.locator('#shareBtn .btn-label')).toHaveText('Copied');
+    expect(errors).toEqual([]);
+  });
+
+  test('has no rally, join-cap, Valora, Max Archer or split-mode controls', async ({ page }) => {
     await page.goto(VIKINGS);
     expect(await page.locator('#rallySize').count()).toBe(0);
     expect(await page.locator('#joinCap').count()).toBe(0);
@@ -240,31 +241,52 @@ test.describe('vikings vengeance calculator', () => {
     expect(await page.locator('#valoraSquad').count()).toBe(0);
     expect(await page.locator('#valoraRally').count()).toBe(0);
     expect(await page.locator('#maxArcher').count()).toBe(0);
+    // The event sends 6 identical marches: one ratio, no split modes, no ratio B/C.
+    // The wrappers AND the six inputs must be gone — the inputs are what an engine
+    // regression would read.
+    expect(await page.locator('input[name="splitMode"]').count()).toBe(0);
+    expect(await page.locator('#ratioB').count()).toBe(0);
+    expect(await page.locator('#ratioC').count()).toBe(0);
+    for (const id of ['rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC']) {
+      expect(await page.locator('#' + id).count()).toBe(0);
+    }
   });
 
   test('a saved state or share link carrying removed ids still loads', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto(VIKINGS);
-    // A state written by the rally-era version: the live ids must apply, the three
-    // obsolete ones must be ignored rather than throwing.
+    // A state written by the rally-era, split-mode version: the live ids must apply,
+    // every obsolete one must be ignored rather than throwing.
     await page.evaluate(() => localStorage.setItem('vikingcalc.state', JSON.stringify({
       tInf: '480000', tCav: '320000', tArch: '429106', squadBase: '200000',
-      marshalTier: '0', deploy: '0', bisonLevel: '0', splitMode: 'uniform',
-      rInfA: '60', rCavA: '40', rArchA: '0', rInfB: '70', rCavB: '30', rArchB: '0',
+      marshalTier: '0', deploy: '0', bisonLevel: '0', splitMode: 'thirds',
+      rInfA: '70', rCavA: '30', rArchA: '0', rInfB: '99', rCavB: '1', rArchB: '0',
       rInfC: '100', rCavC: '0', rArchC: '0',
       rallySize: '1022710', joinCap: '80000', usePct: '1',
     })));
     await page.reload();
     await expect(page.locator('#squadBase')).toHaveValue('200000');
     await expect(page.locator('#squadSize')).toHaveText('200,000');
-    expect((await marchCol(page, 3)).length).toBeGreaterThan(0);
+    // The seeded ratio must actually land, not just leave the defaults standing.
+    await expect(page.locator('#rInfA')).toHaveValue('70');
+    await expect(page.locator('#rCavA')).toHaveValue('30');
+    // The dead splitMode value must not resurrect a split UI: one row, the march size
+    // comes from the seeded squad base, and its fill is the seeded ratio bounded by
+    // floor(pool / 6) — 80,000 Inf + 53,333 Cav, archers drafted for the rest.
+    expect(await page.locator('#sendTable tbody tr th').allInnerTexts()).toEqual(['Marches ×6']);
+    expect(await marchCol(page, 0)).toEqual([80000]);
+    expect(await marchCol(page, 1)).toEqual([53333]);
+    expect(await marchCol(page, 2)).toEqual([66667]);
+    expect(await marchCol(page, 3)).toEqual([200000]);
 
-    // Same for a shared link: the known id applies, the obsolete one is dropped.
+    // Same for a shared link: the known id applies, the obsolete one is dropped. The
+    // march size is left unpinned here — the size depends on whether the browser
+    // treats a fragment-only navigation as a reload — but the row COUNT must be 1.
     await page.goto(VIKINGS + '#joinCap=80000&tInf=480000');
     await expect(page.locator('#tInf')).toHaveValue('480000');
     expect(await page.locator('#joinCap').count()).toBe(0);
-    expect((await marchCol(page, 3)).length).toBeGreaterThan(0);
+    expect((await marchCol(page, 3)).length).toBe(1);
     expect(errors).toEqual([]);
   });
 

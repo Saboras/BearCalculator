@@ -71,37 +71,12 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
         <div class="calc-card">
           <h2 class="card-title">Distribution</h2>
 
-          <fieldset class="segmented-field">
-            <legend class="field-label">March split mode</legend>
-            <div class="segmented" id="splitMode">
-              <label class="seg" title="Uniform — all 6 marches same ratio"><input type="radio" name="splitMode" value="uniform" checked> Uniform</label>
-              <label class="seg" title="Half &amp; half — 3 + 3"><input type="radio" name="splitMode" value="half"> Half &amp; half</label>
-              <label class="seg" title="Thirds — 2 + 2 + 2"><input type="radio" name="splitMode" value="thirds"> Thirds</label>
-            </div>
-          </fieldset>
-
-          <div id="ratioA" class="ratio">
-            <span class="field-label">Ratio A <span class="tag" id="ratioAtag">all 6 marches</span> — Inf / Cav / Arch (%)</span>
+          <div class="ratio">
+            <span class="field-label">Ratio <span class="tag">all 6 marches</span> — Inf / Cav / Arch (%)</span>
             <div class="row3">
-              <span class="num-suffix" data-suffix="%"><input id="rInfA" type="number" min="0" value="60" aria-label="Ratio A Infantry percent"></span>
-              <span class="num-suffix" data-suffix="%"><input id="rCavA" type="number" min="0" value="40" aria-label="Ratio A Cavalry percent"></span>
-              <span class="num-suffix" data-suffix="%"><input id="rArchA" type="number" min="0" value="0" aria-label="Ratio A Archer percent"></span>
-            </div>
-          </div>
-          <div id="ratioB" class="ratio">
-            <span class="field-label">Ratio B <span class="tag" id="ratioBtag">3 marches</span> — Inf / Cav / Arch (%)</span>
-            <div class="row3">
-              <span class="num-suffix" data-suffix="%"><input id="rInfB" type="number" min="0" value="70" aria-label="Ratio B Infantry percent"></span>
-              <span class="num-suffix" data-suffix="%"><input id="rCavB" type="number" min="0" value="30" aria-label="Ratio B Cavalry percent"></span>
-              <span class="num-suffix" data-suffix="%"><input id="rArchB" type="number" min="0" value="0" aria-label="Ratio B Archer percent"></span>
-            </div>
-          </div>
-          <div id="ratioC" class="ratio">
-            <span class="field-label">Ratio C <span class="tag" id="ratioCtag">2 marches</span> — Inf / Cav / Arch (%)</span>
-            <div class="row3">
-              <span class="num-suffix" data-suffix="%"><input id="rInfC" type="number" min="0" value="100" aria-label="Ratio C Infantry percent"></span>
-              <span class="num-suffix" data-suffix="%"><input id="rCavC" type="number" min="0" value="0" aria-label="Ratio C Cavalry percent"></span>
-              <span class="num-suffix" data-suffix="%"><input id="rArchC" type="number" min="0" value="0" aria-label="Ratio C Archer percent"></span>
+              <span class="num-suffix" data-suffix="%"><input id="rInfA" type="number" min="0" value="60" aria-label="Ratio Infantry percent"></span>
+              <span class="num-suffix" data-suffix="%"><input id="rCavA" type="number" min="0" value="40" aria-label="Ratio Cavalry percent"></span>
+              <span class="num-suffix" data-suffix="%"><input id="rArchA" type="number" min="0" value="0" aria-label="Ratio Archer percent"></span>
             </div>
           </div>
 
@@ -176,7 +151,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
         <ol class="how">
           <li>Start from your <strong>squad base cap</strong>, then apply Mighty Bison, Marshal and Deployment buffs to find your true <strong>march size</strong>.</li>
           <li>Split your troop pool into <strong>6 equal budgets</strong> — one per march, a sixth of every troop type.</li>
-          <li>Fill each march up to the march size with your <strong>Inf / Cav / Arch ratio</strong>, archer share included, using the split mode you chose (Uniform, Half &amp; half, or Thirds) — then fill any gap by priority: <strong>Infantry, then Cavalry</strong>, archers beyond your share only once both are exhausted.</li>
+          <li>Fill each march up to the march size with your <strong>Inf / Cav / Arch ratio</strong>, archer share included — then fill any gap by priority: <strong>Infantry, then Cavalry</strong>, archers beyond your share only once both are exhausted.</li>
           <li>Report leftover troops, any shortfall against a perfect ratio, and a warning whenever the pool cannot fill all 6 marches.</li>
         </ol>
       </div>
@@ -353,58 +328,6 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   .calculator :global(.t-inf) { color: var(--inf); }
   .calculator :global(.t-cav) { color: var(--cav); }
   .calculator :global(.t-arch) { color: var(--arch); }
-
-  /* ===== Segmented control (replaces the legacy split-mode <select>) ===== */
-  .segmented-field {
-    border: 0;
-    padding: 0;
-    margin: var(--space-3) 0 var(--space-2);
-    min-inline-size: 0;
-  }
-  .segmented-field legend {
-    padding: 0;
-    margin-bottom: var(--space-2);
-  }
-  .segmented {
-    display: flex;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-button);
-    overflow: hidden;
-  }
-  .seg {
-    flex: 1;
-    position: relative;
-    text-align: center;
-    font-size: 12.5px;
-    font-weight: 600;
-    padding: var(--space-3) var(--space-2);
-    color: var(--color-ink);
-    border-right: 1px solid var(--color-border);
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-  }
-  .seg:last-child {
-    border-right: 0;
-  }
-  /* native radio kept for semantics + keyboard, hidden visually (still focusable) */
-  .seg input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  .seg:has(input:checked) {
-    background: var(--color-accent);
-    color: var(--color-accent-foreground);
-  }
-  .seg:hover:not(:has(input:checked)) {
-    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  }
-  .seg:has(input:focus-visible) {
-    outline: 2px solid var(--color-primary);
-    outline-offset: -2px;
-  }
 
   .ratio {
     margin-top: var(--space-2);
@@ -715,9 +638,11 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   // the OK diagnostics state is set via innerHTML, where the build-time <Icon> can't run.
   const CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
+  // The 'A' in the ratio ids is invisible to users and must stay: saved states and
+  // share links already out there carry these exact ids, and a rename would silently
+  // drop the ratio they hold.
   const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'marshalTier', 'deploy', 'bisonLevel',
-    'splitMode',
-    'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC'];
+    'rInfA', 'rCavA', 'rArchA'];
 
   // fixed game constant
   const MARCHES = 6;   // the 6 full marches you send yourself
@@ -725,20 +650,9 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   const MARSHAL: Record<string, number> = { '0': 0, 'marshal': 2500, 'mid': 3750, 'big': 5000 };
   function marshalFlat() { return MARSHAL[($('marshalTier') as unknown as HTMLSelectElement).value] || 0; }
 
-  // split mode is a radio group (segmented control), not a <select>
-  function getSplitMode() {
-    const c = document.querySelector('input[name="splitMode"]:checked') as HTMLInputElement | null;
-    return c ? c.value : 'uniform';
-  }
-  function setSplitMode(v: string) {
-    if (v !== 'uniform' && v !== 'half' && v !== 'thirds') v = 'uniform';
-    const r = document.querySelector(`input[name="splitMode"][value="${v}"]`) as HTMLInputElement | null;
-    if (r) r.checked = true;
-  }
-
-  // read & normalise a ratio (suffix 'A' | 'B' | 'C')
-  function readRatio(s: string) {
-    const i = num('rInf' + s), c = num('rCav' + s), a = num('rArch' + s), sum = i + c + a;
+  // read & normalise the one ratio every march follows
+  function readRatio() {
+    const i = num('rInfA'), c = num('rCavA'), a = num('rArchA'), sum = i + c + a;
     return sum > 0 ? { inf: i / sum, cav: c / sum, arch: a / sum } : { inf: 0, cav: 0, arch: 0 };
   }
 
@@ -763,21 +677,13 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
     return { inf: inf1 + inf2, cav: cav1 + cav2, arch: arch1 + arch2, lastResort: arch2 };
   }
 
-  // split mode -> march groups (counts always sum to MARCHES)
-  function groupsFor(mode: string) {
-    if (mode === 'half') return [{ key: 'A', count: 3 }, { key: 'B', count: 3 }];
-    if (mode === 'thirds') return [{ key: 'A', count: 2 }, { key: 'B', count: 2 }, { key: 'C', count: 2 }];
-    return [{ key: 'A', count: 6 }];
-  }
-
   function compute() {
     const troops = { inf: num('tInf'), cav: num('tCav'), arch: num('tArch') };
     const squadCore = num('squadBase') + num('bisonLevel');
     const deploy = num('deploy');
     const activeMarch = Math.round((squadCore + marshalFlat()) * (1 + deploy));
 
-    const mode = getSplitMode();
-    const ratios: any = { A: readRatio('A'), B: readRatio('B'), C: readRatio('C') };
+    const ratio = readRatio();
 
     // Every march draws on an equal sixth of each troop type and is capped by the
     // march size. A budget that runs dry shows up as a march below that size — the
@@ -788,19 +694,15 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
       arch: Math.floor(troops.arch / MARCHES)
     };
 
-    // march groups: identical within a group
-    const groups: any[] = groupsFor(mode).map(g => {
-      const ratio = ratios[g.key];
-      const march = fillJoiner(per, ratio, activeMarch);
-      const target = { inf: Math.round(activeMarch * ratio.inf), cav: Math.round(activeMarch * ratio.cav), arch: Math.round(activeMarch * ratio.arch) };
-      return { ...g, ratio, march, target };
-    });
+    // All 6 marches are identical — same budget, same ratio, so one fill describes
+    // every one of them and the totals are just ×6.
+    const march = fillJoiner(per, ratio, activeMarch);
+    const target = { inf: Math.round(activeMarch * ratio.inf), cav: Math.round(activeMarch * ratio.cav), arch: Math.round(activeMarch * ratio.arch) };
 
-    // Archers nobody wanted: the waterfall's pass-2 amount, summed over all 6 marches.
-    const archBackfill = groups.reduce((t, g) => t + g.count * g.march.lastResort, 0);
+    // Archers nobody wanted: the waterfall's pass-2 amount, across all 6 marches.
+    const archBackfill = MARCHES * march.lastResort;
 
-    const sumSel = (sel: 'inf' | 'cav' | 'arch') => groups.reduce((t, g) => t + g.count * g.march[sel], 0);
-    const used = { inf: sumSel('inf'), cav: sumSel('cav'), arch: sumSel('arch') };
+    const used = { inf: MARCHES * march.inf, cav: MARCHES * march.cav, arch: MARCHES * march.arch };
     const unused = {
       inf: troops.inf - used.inf,
       cav: troops.cav - used.cav,
@@ -808,25 +710,24 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
     };
 
     // missing to send the full ideal target in all 6 marches
-    const need = (sel: 'inf' | 'cav' | 'arch') => groups.reduce((t, g) => t + g.count * g.target[sel], 0);
     const missing = {
-      inf: Math.max(0, need('inf') - troops.inf),
-      cav: Math.max(0, need('cav') - troops.cav),
-      arch: Math.max(0, need('arch') - troops.arch)
+      inf: Math.max(0, MARCHES * target.inf - troops.inf),
+      cav: Math.max(0, MARCHES * target.cav - troops.cav),
+      arch: Math.max(0, MARCHES * target.arch - troops.arch)
     };
 
     // A march is short only when one of its budgets ran dry — the waterfall fills to
-    // the cap otherwise, so testing the group's size is enough.
-    const underfilled = groups.some(g => g.march.inf + g.march.cav + g.march.arch < activeMarch);
+    // the cap otherwise, so testing the march size is enough.
+    const underfilled = march.inf + march.cav + march.arch < activeMarch;
 
-    return { squadCore, activeMarch, deploy, mode, groups, used, unused, missing, archBackfill, underfilled };
+    return { squadCore, activeMarch, deploy, march, used, unused, missing, archBackfill, underfilled };
   }
 
-  // One row per march GROUP (identical marches collapsed): uniform -> "Marches ×6";
-  // half -> "Marches A ×3" + "Marches B ×3"; thirds -> A/B/C ×2. Cells show ONE
-  // march's troops; ×N = how many marches carry that formation.
+  // The 6 identical marches collapse into ONE row: its cells are what a single march
+  // sends, ×6 says how many marches carry that formation. The total row is the pool
+  // actually spent.
   function renderTable(m: any) {
-    const sz = (d: any) => d.inf + d.cav + d.arch;
+    const d = m.march;
     let h = '<thead><tr>'
       + '<th scope="col">March</th>'
       + '<th scope="col" class="t-inf">Infantry</th>'
@@ -835,13 +736,9 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
       + '<th scope="col">Size</th>'
       + '</tr></thead><tbody>';
 
-    m.groups.forEach((g: any) => {
-      const label = m.groups.length === 1 ? `Marches ×${g.count}` : `Marches ${g.key} ×${g.count}`;
-      const d = g.march;
-      h += `<tr><th scope="row">${label}</th>`
-        + `<td>${fmt(d.inf)}</td><td>${fmt(d.cav)}</td><td>${fmt(d.arch)}</td>`
-        + `<td>${fmt(sz(d))}</td></tr>`;
-    });
+    h += `<tr><th scope="row">Marches ×${MARCHES}</th>`
+      + `<td>${fmt(d.inf)}</td><td>${fmt(d.cav)}</td><td>${fmt(d.arch)}</td>`
+      + `<td>${fmt(d.inf + d.cav + d.arch)}</td></tr>`;
 
     h += '</tbody><tfoot><tr class="total-row">'
       + '<th scope="row">Total used</th>'
@@ -861,15 +758,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
     $('squadSize').textContent = fmt(m.activeMarch);
     $('marchesTotal').textContent = fmt(m.activeMarch * MARCHES);
 
-    // split-mode UI: show/hide ratio B & C, update their march-count tags
-    const mode = m.mode;
-    ($('ratioB') as unknown as HTMLElement).style.display = (mode === 'half' || mode === 'thirds') ? '' : 'none';
-    ($('ratioC') as unknown as HTMLElement).style.display = (mode === 'thirds') ? '' : 'none';
-    $('ratioAtag').textContent = mode === 'uniform' ? 'all 6 marches' : m.groups[0].count + ' marches';
-    if (m.groups[1]) $('ratioBtag').textContent = m.groups[1].count + ' marches';
-    if (m.groups[2]) $('ratioCtag').textContent = m.groups[2].count + ' marches';
-
-    // results table (one row per march group + total)
+    // results table (the shared march formation + total)
     renderTable(m);
 
     // diagnostics
@@ -899,13 +788,11 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
 
     // warnings
     const w: string[] = [];
-    m.groups.forEach((g: any) => {
-      const s = num('rInf' + g.key) + num('rCav' + g.key) + num('rArch' + g.key);
-      // A zero ratio normalizes to nothing at all — say what actually happens instead
-      // of claiming a normalization the engine never performs.
-      if (s === 0) w.push(`Ratio ${g.key} is empty — marches fill by priority instead (Infantry → Cavalry → Archers).`);
-      else if (Math.abs(s - 100) > 0.001) w.push(`Ratio ${g.key} sums to ${fmt(s)}% instead of 100% — normalized automatically.`);
-    });
+    const ratioSum = num('rInfA') + num('rCavA') + num('rArchA');
+    // A zero ratio normalizes to nothing at all — say what actually happens instead
+    // of claiming a normalization the engine never performs.
+    if (ratioSum === 0) w.push('Ratio is empty — marches fill by priority instead (Infantry → Cavalry → Archers).');
+    else if (Math.abs(ratioSum - 100) > 0.001) w.push(`Ratio sums to ${fmt(ratioSum)}% instead of 100% — normalized automatically.`);
     if (m.underfilled)
       w.push('Not enough troops to fill all 6 full marches — they run smaller.');
     if (m.archBackfill > 0)
@@ -920,45 +807,36 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   const STORAGE_KEY = 'vikingcalc.state';
   let lastModel: any = null;
 
-  // Every INPUTS id except splitMode is a number input or a <select>, so `.value`
-  // round-trips all of them.
-  const readEl = (id: string) => (id === 'splitMode' ? getSplitMode() : $(id).value);
-  const writeEl = (id: string, v: any) => {
-    if (id === 'splitMode') setSplitMode(v);
-    else $(id).value = v;
-  };
-
+  // Every INPUTS id is a number input or a <select>, so `.value` round-trips all of
+  // them. Ids an older stored state or share link carries that this page no longer has
+  // are simply absent from INPUTS and get ignored instead of throwing.
   function saveState() {
-    const s: Record<string, any> = {}; INPUTS.forEach(id => s[id] = readEl(id));
+    const s: Record<string, any> = {}; INPUTS.forEach(id => s[id] = $(id).value);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) { }
   }
   function loadLocal() {
     try {
       const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (s) { INPUTS.forEach(id => { if (id in s) writeEl(id, s[id]); }); return true; }
+      if (s) { INPUTS.forEach(id => { if (id in s) $(id).value = s[id]; }); return true; }
     } catch (e) { }
     return false;
   }
   function applyHash() {
     const h = location.hash.replace(/^#/, ''); if (!h) return false;
     const p = new URLSearchParams(h); let any = false;
-    INPUTS.forEach(id => { if (p.has(id)) { writeEl(id, p.get(id)); any = true; } });
+    INPUTS.forEach(id => { if (p.has(id)) { $(id).value = p.get(id) ?? ''; any = true; } });
     return any;
   }
   function shareURL() {
-    const p = new URLSearchParams(); INPUTS.forEach(id => p.set(id, readEl(id)));
+    const p = new URLSearchParams(); INPUTS.forEach(id => p.set(id, $(id).value));
     return location.origin + location.pathname + '#' + p.toString();
   }
 
   function formationText() {
     const m = lastModel; if (!m) return '';
-    const tri = (d: any) => `${fmt(d.inf)} / ${fmt(d.cav)} / ${fmt(d.arch)}`;
-    const out = ['🪓 Vikings Vengeance — 6 marches, Inf / Cav / Arch'];
-    m.groups.forEach((g: any) => {
-      const lbl = m.groups.length === 1 ? `Marches (×${g.count})` : `Marches ${g.key} (×${g.count})`;
-      out.push(`${lbl}: ${tri(g.march)}`);
-    });
-    return out.join('\n');
+    const d = m.march;
+    return [`🪓 Vikings Vengeance — ${MARCHES} marches, Inf / Cav / Arch`,
+      `Marches: ${fmt(d.inf)} / ${fmt(d.cav)} / ${fmt(d.arch)}`].join('\n');
   }
 
   function copyText(text: string, btn: HTMLElement) {
@@ -992,13 +870,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   const fromHash = applyHash();
   if (!fromHash) loadLocal();
   INPUTS.forEach(id => {
-    if (id === 'splitMode') {
-      document.querySelectorAll('input[name="splitMode"]').forEach(r => {
-        r.addEventListener('input', render); r.addEventListener('change', render);
-      });
-    } else {
-      const el = $(id); el.addEventListener('input', render); el.addEventListener('change', render);
-    }
+    const el = $(id); el.addEventListener('input', render); el.addEventListener('change', render);
   });
   render();
   // Consume the shared link: drop the #hash so live edits & refreshes use localStorage, not the stale snapshot.
