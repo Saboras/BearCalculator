@@ -79,22 +79,14 @@ test.describe('tools', () => {
 // never by CSS — the local Node-24 build ships no stylesheets (site/CLAUDE.md).
 const VIKINGS = '/tools/vikings-vengeance-calculator/';
 
-// One column of the send table for the JOINER rows only (0 = Inf, 1 = Cav, 2 = Arch,
-// 3 = Size). The own rally is excluded: it is a pool-independent target, so it is not
-// bound by the per-joiner budgets these tests pin down. Every caller must assert the
-// result is non-empty first — `[].every()` is vacuously true. The minus sign survives
-// parsing so a sign-flipped regression can't read as a valid count.
-const joinerCol = (page: Page, col: number) =>
+// One column of the send table across every march-group row (0 = Inf, 1 = Cav,
+// 2 = Arch, 3 = Size). Every caller must assert the result is non-empty first —
+// `[].every()` is vacuously true. The minus sign survives parsing so a sign-flipped
+// regression can't read as a valid count.
+const marchCol = (page: Page, col: number) =>
   page.locator('#sendTable tbody tr').evaluateAll((rows, c) =>
-    rows
-      .filter((r) => !r.classList.contains('own-row'))
-      .map((r) => Number(r.querySelectorAll('td')[c].textContent!.replace(/[^\d-]/g, ''))),
+    rows.map((r) => Number(r.querySelectorAll('td')[c].textContent!.replace(/[^\d-]/g, ''))),
     col);
-
-// The own-rally row as [Inf, Cav, Arch, Size].
-const ownRow = (page: Page) =>
-  page.locator('#sendTable tbody tr.own-row td').evaluateAll((tds) =>
-    tds.map((td) => Number(td.textContent!.replace(/[^\d-]/g, ''))));
 
 async function setNum(page: Page, id: string, value: string) {
   const el = page.locator('#' + id);
@@ -103,42 +95,66 @@ async function setNum(page: Page, id: string, value: string) {
   await el.dispatchEvent('change');
 }
 
+// The event sends 6 FULL marches of the active march size. That size is
+// round((squad base + Bison + Marshal) × (1 + deploy)) — it does NOT depend on the
+// troop pool; at the default squad base with no buffs it is 130,710. The pool only
+// bounds the fill: each march draws on floor(pool / 6) of every troop type, so at
+// the default 60/40/0 ratio a full march is 78,426 Inf + 52,284 Cav.
+const MARCH_SIZE = 130710;
+
 test.describe('vikings vengeance calculator', () => {
-  test('loads and deploys zero archers at defaults', async ({ page }) => {
+  test('fills all 6 marches and deploys zero archers at defaults', async ({ page }) => {
     await page.goto(VIKINGS);
     await expect(page.getByRole('heading', { name: 'Vikings Vengeance Squad Calculator' })).toBeVisible();
-    const arch = await joinerCol(page, 2);
+    expect(await page.locator('#sendTable tbody tr th').allInnerTexts()).toEqual(['Marches ×6']);
+    const arch = await marchCol(page, 2);
+    const size = await marchCol(page, 3);
     expect(arch.length).toBeGreaterThan(0);
     expect(arch.every((v) => v === 0)).toBeTruthy();
-    expect((await ownRow(page))[2]).toBe(0);
+    expect(size.every((v) => v === MARCH_SIZE)).toBeTruthy();
+    // The default pool fills all 6 marches exactly, so NEITHER warning may fire —
+    // without this the under-fill trigger could be `<=` and still pass everywhere.
+    await expect(page.locator('#warnings')).toBeEmpty();
+    // 6 × 130,710: the requirement stat and the total actually used agree here.
+    await expect(page.locator('#marchesTotal')).toHaveText('784,260');
+    expect(await page.locator('#sendTable tfoot tr th').innerText()).toBe('Total used');
+    const foot = await page.locator('#sendTable tfoot tr td').allInnerTexts();
+    expect(foot[foot.length - 1]).toBe('784,260');
   });
 
-  test('a join cap that does not divide evenly still deploys zero archers', async ({ page }) => {
+  test('the exact under-fill boundary: one troop short flips the warning on', async ({ page }) => {
     await page.goto(VIKINGS);
-    await setNum(page, 'joinCap', '80001');
-    const arch = await joinerCol(page, 2);
-    expect(arch.length).toBeGreaterThan(0);
-    expect(arch.every((v) => v === 0)).toBeTruthy();
+    // 6 × 78,426 Inf and 6 × 52,284 Cav is the precise requirement for 6 full
+    // marches at 60/40/0 — no leftovers, no warning.
+    await setNum(page, 'tInf', '470556');
+    await setNum(page, 'tCav', '313704');
+    await setNum(page, 'tArch', '0');
+    expect((await marchCol(page, 3)).every((v) => v === MARCH_SIZE)).toBeTruthy();
+    await expect(page.locator('#warnings')).toBeEmpty();
+    // One infantry short: floor(470,555 / 6) = 78,425, so every march loses a troop.
+    await setNum(page, 'tInf', '470555');
+    await expect(page.locator('#warnings')).toContainText(/not enough troops/i);
+    expect(await marchCol(page, 3)).toEqual([130709]);
   });
 
-  test('a tight infantry budget hands the rounding remainder to cavalry, not archers', async ({ page }) => {
+  test('a march size that does not divide evenly hands the remainder to infantry', async ({ page }) => {
     await page.goto(VIKINGS);
-    await setNum(page, 'tInf', '300000');
-    await setNum(page, 'joinCap', '80001');
-    const arch = await joinerCol(page, 2);
-    const size = await joinerCol(page, 3);
-    expect(arch.length).toBeGreaterThan(0);
-    expect(arch.every((v) => v === 0)).toBeTruthy();
-    expect(size.every((v) => v === 80001)).toBeTruthy();
+    await setNum(page, 'squadBase', '130711');
+    // floor(130,711 × 0.6) + floor(130,711 × 0.4) = 78,426 + 52,284 leaves the odd
+    // troop over; priority pass 2 must give it to Infantry, never to Archers.
+    expect(await marchCol(page, 0)).toEqual([78427]);
+    expect(await marchCol(page, 1)).toEqual([52284]);
+    expect(await marchCol(page, 2)).toEqual([0]);
+    expect(await marchCol(page, 3)).toEqual([130711]);
   });
 
   test('spare infantry absorbs a total cavalry shortfall', async ({ page }) => {
     await page.goto(VIKINGS);
     await setNum(page, 'tCav', '0');
     await setNum(page, 'tInf', '900000');
-    const [inf, cav, arch] = [await joinerCol(page, 0), await joinerCol(page, 1), await joinerCol(page, 2)];
+    const [inf, cav, arch] = [await marchCol(page, 0), await marchCol(page, 1), await marchCol(page, 2)];
     expect(inf.length).toBeGreaterThan(0);
-    expect(inf.every((v) => v === 80000)).toBeTruthy();
+    expect(inf.every((v) => v === MARCH_SIZE)).toBeTruthy();
     expect(cav.every((v) => v === 0)).toBeTruthy();
     expect(arch.every((v) => v === 0)).toBeTruthy();
   });
@@ -147,63 +163,109 @@ test.describe('vikings vengeance calculator', () => {
     await page.goto(VIKINGS);
     await setNum(page, 'tCav', '0');
     await setNum(page, 'tInf', '200000');
-    const arch = await joinerCol(page, 2);
+    const arch = await marchCol(page, 2);
     expect(arch.length).toBeGreaterThan(0);
     expect(arch.every((v) => v > 0)).toBeTruthy();
     await expect(page.locator('#warnings')).toContainText(/last resort/i);
+    // 6 × floor(429,106 / 6) archers — the warning must name the formatted total,
+    // not just admit that something happened.
+    await expect(page.locator('#warnings')).toContainText('429,102');
   });
 
-  test('an archer share the pool cannot deliver is released, joiners still reach the cap', async ({ page }) => {
+  test('an archer share the pool cannot deliver is released, marches still fill', async ({ page }) => {
     await page.goto(VIKINGS);
     await setNum(page, 'rInfA', '50');
     await setNum(page, 'rCavA', '30');
     await setNum(page, 'rArchA', '20');
     await setNum(page, 'tArch', '0');
     await setNum(page, 'tInf', '900000');
-    const arch = await joinerCol(page, 2);
-    const size = await joinerCol(page, 3);
+    const arch = await marchCol(page, 2);
+    const size = await marchCol(page, 3);
     expect(size.length).toBeGreaterThan(0);
-    expect(size.every((v) => v === 80000)).toBeTruthy();
+    expect(size.every((v) => v === MARCH_SIZE)).toBeTruthy();
     expect(arch.every((v) => v === 0)).toBeTruthy();
   });
 
-  test('an odd squad size at ratio 0/50/50 renders no negative own-rally cell', async ({ page }) => {
+  test('half & half split renders two groups of three, each drawing its own sixth', async ({ page }) => {
     await page.goto(VIKINGS);
-    await setNum(page, 'squadBase', '130711');
-    await setNum(page, 'rInfA', '0');
-    await setNum(page, 'rCavA', '50');
-    await setNum(page, 'rArchA', '50');
-    // Cav and Arch each round UP here, so their sum overshoots the squad by 1 and
-    // Infantry would render as −1. The exact triple pins the trim that gives the
-    // extra troop back from Archers, in both the plain and the whole-percent path.
-    expect(await ownRow(page)).toEqual([0, 65356, 65355, 130711]);
-    await page.locator('#usePct').check();
-    expect(await ownRow(page)).toEqual([0, 65356, 65355, 130711]);
+    // The segmented control hides its radios visually (the label is the hit target),
+    // so drive the input directly instead of clicking it.
+    await page.locator('input[name="splitMode"][value="half"]').evaluate((n) => (n as HTMLElement).click());
+    await expect(page.locator('#ratioB')).toBeVisible();
+    await expect(page.locator('#ratioC')).toBeHidden();
+    expect(await page.locator('#sendTable tbody tr th').allInnerTexts())
+      .toEqual(['Marches A ×3', 'Marches B ×3']);
+    // Every march gets floor(pool / 6) regardless of its group, so ratio B (70/30/0)
+    // hits its 80,000 infantry budget and the gap falls to Cavalry — never Archers.
+    expect(await marchCol(page, 0)).toEqual([78426, 80000]);
+    expect(await marchCol(page, 1)).toEqual([52284, 50710]);
+    expect(await marchCol(page, 2)).toEqual([0, 0]);
+    expect(await marchCol(page, 3)).toEqual([MARCH_SIZE, MARCH_SIZE]);
   });
 
-  test('thirds split renders three joiner groups, all at the cap with zero archers', async ({ page }) => {
+  test('thirds split renders three march groups, all full with zero archers', async ({ page }) => {
     await page.goto(VIKINGS);
     // The segmented control hides its radios visually (the label is the hit target),
     // so drive the input directly instead of clicking it.
     await page.locator('input[name="splitMode"][value="thirds"]').evaluate((n) => (n as HTMLElement).click());
     await expect(page.locator('#ratioB')).toBeVisible();
     await expect(page.locator('#ratioC')).toBeVisible();
-    expect(await page.locator('#sendTable tbody tr.own-row').count()).toBe(1);
-    expect(await page.locator('#sendTable tbody tr:not(.own-row) th').allInnerTexts())
-      .toEqual(['Joiners A ×2', 'Joiners B ×2', 'Joiners C ×2']);
-    const arch = await joinerCol(page, 2);
-    const size = await joinerCol(page, 3);
+    expect(await page.locator('#sendTable tbody tr th').allInnerTexts())
+      .toEqual(['Marches A ×2', 'Marches B ×2', 'Marches C ×2']);
+    const arch = await marchCol(page, 2);
+    const size = await marchCol(page, 3);
     expect(arch.length).toBe(3);
     expect(arch.every((v) => v === 0)).toBeTruthy();
-    expect(size.every((v) => v === 80000)).toBeTruthy();
+    expect(size.every((v) => v === MARCH_SIZE)).toBeTruthy();
   });
 
-  test('has no Valora and no Max Archer controls', async ({ page }) => {
+  test('a pool too small for 6 full marches shrinks them and says so', async ({ page }) => {
     await page.goto(VIKINGS);
+    await setNum(page, 'tInf', '200000');
+    await setNum(page, 'tCav', '60000');
+    await setNum(page, 'tArch', '0');
+    await expect(page.locator('#warnings')).toContainText(/not enough troops/i);
+    // floor(200,000/6) Inf + floor(60,000/6) Cav is all a march can draw on.
+    const size = await marchCol(page, 3);
+    expect(size.length).toBeGreaterThan(0);
+    expect(size.every((v) => v === 43333)).toBeTruthy();
+  });
+
+  test('has no rally, join-cap, Valora or Max Archer controls', async ({ page }) => {
+    await page.goto(VIKINGS);
+    expect(await page.locator('#rallySize').count()).toBe(0);
+    expect(await page.locator('#joinCap').count()).toBe(0);
+    expect(await page.locator('#usePct').count()).toBe(0);
     expect(await page.locator('#valoraOn').count()).toBe(0);
     expect(await page.locator('#valoraSquad').count()).toBe(0);
     expect(await page.locator('#valoraRally').count()).toBe(0);
     expect(await page.locator('#maxArcher').count()).toBe(0);
+  });
+
+  test('a saved state or share link carrying removed ids still loads', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.goto(VIKINGS);
+    // A state written by the rally-era version: the live ids must apply, the three
+    // obsolete ones must be ignored rather than throwing.
+    await page.evaluate(() => localStorage.setItem('vikingcalc.state', JSON.stringify({
+      tInf: '480000', tCav: '320000', tArch: '429106', squadBase: '200000',
+      marshalTier: '0', deploy: '0', bisonLevel: '0', splitMode: 'uniform',
+      rInfA: '60', rCavA: '40', rArchA: '0', rInfB: '70', rCavB: '30', rArchB: '0',
+      rInfC: '100', rCavC: '0', rArchC: '0',
+      rallySize: '1022710', joinCap: '80000', usePct: '1',
+    })));
+    await page.reload();
+    await expect(page.locator('#squadBase')).toHaveValue('200000');
+    await expect(page.locator('#squadSize')).toHaveText('200,000');
+    expect((await marchCol(page, 3)).length).toBeGreaterThan(0);
+
+    // Same for a shared link: the known id applies, the obsolete one is dropped.
+    await page.goto(VIKINGS + '#joinCap=80000&tInf=480000');
+    await expect(page.locator('#tInf')).toHaveValue('480000');
+    expect(await page.locator('#joinCap').count()).toBe(0);
+    expect((await marchCol(page, 3)).length).toBeGreaterThan(0);
+    expect(errors).toEqual([]);
   });
 
   test('state persists under its own key, never the bear key', async ({ page }) => {

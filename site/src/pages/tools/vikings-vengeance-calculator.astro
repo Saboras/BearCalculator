@@ -16,7 +16,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   <main class="calculator">
     <header class="calc-header">
       <h1 class="calc-title">Vikings Vengeance Squad Calculator</h1>
-      <p class="calc-sub">Plan your own rally + 6 joiner rallies.</p>
+      <p class="calc-sub">Plan your 6 full marches.</p>
     </header>
 
     <div class="calc-grid">
@@ -24,23 +24,21 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
       <section class="inputs" aria-label="Inputs">
         <div class="calc-card">
           <h2 class="card-title">Troop Pool</h2>
-          <!-- Cavalry starts higher than on the bear page on purpose: with the bear's
-               sample cavalry pool the default 60/40/0 ratio runs out of cavalry mid-fill
-               and deploys a few hundred archers per joiner, which contradicts the whole
-               point of the event at untouched defaults. -->
+          <!-- Sample pools sized for what the event actually asks for: 6 full marches
+               of 130,710 at the default 60/40/0 ratio need 470,556 Infantry and
+               313,704 Cavalry. Smaller pools run a budget dry mid-fill and deploy
+               archers at untouched defaults, which contradicts the whole point of
+               the event. -->
           <div class="row3">
-            <div class="field"><label class="field-label t-inf" for="tInf">Infantry</label><input id="tInf" type="number" min="0" value="391047"></div>
-            <div class="field"><label class="field-label t-cav" for="tCav">Cavalry</label><input id="tCav" type="number" min="0" value="315928"></div>
+            <div class="field"><label class="field-label t-inf" for="tInf">Infantry</label><input id="tInf" type="number" min="0" value="480000"></div>
+            <div class="field"><label class="field-label t-cav" for="tCav">Cavalry</label><input id="tCav" type="number" min="0" value="320000"></div>
             <div class="field"><label class="field-label t-arch" for="tArch">Archers</label><input id="tArch" type="number" min="0" value="429106"></div>
           </div>
         </div>
 
         <div class="calc-card">
-          <h2 class="card-title">Squad, Rally &amp; Buffs</h2>
-          <div class="row2">
-            <div class="field"><label class="field-label" for="squadBase">Squad base cap</label><input id="squadBase" type="number" min="0" value="130710"></div>
-            <div class="field"><label class="field-label" for="rallySize">Rally size</label><input id="rallySize" type="number" min="0" value="1022710"></div>
-          </div>
+          <h2 class="card-title">March &amp; Buffs</h2>
+          <div class="field"><label class="field-label" for="squadBase">Squad base cap</label><input id="squadBase" type="number" min="0" value="130710"></div>
           <div class="row2">
             <div class="field">
               <label class="field-label" for="marshalTier">Marshal buff <span class="tag">temporary</span></label>
@@ -72,24 +70,18 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
 
         <div class="calc-card">
           <h2 class="card-title">Distribution</h2>
-          <div class="field">
-            <label class="field-label" for="joinCap">Join cap (per joiner) <span class="tag">× 6 joiner rallies</span></label>
-            <input id="joinCap" type="number" min="0" value="80000">
-          </div>
-
-          <label class="check"><input type="checkbox" id="usePct"> Own rally as % <span class="tag">pre-built, rounded</span></label>
 
           <fieldset class="segmented-field">
-            <legend class="field-label">Joiner split mode</legend>
+            <legend class="field-label">March split mode</legend>
             <div class="segmented" id="splitMode">
-              <label class="seg" title="Uniform — all 6 joiners same ratio"><input type="radio" name="splitMode" value="uniform" checked> Uniform</label>
+              <label class="seg" title="Uniform — all 6 marches same ratio"><input type="radio" name="splitMode" value="uniform" checked> Uniform</label>
               <label class="seg" title="Half &amp; half — 3 + 3"><input type="radio" name="splitMode" value="half"> Half &amp; half</label>
               <label class="seg" title="Thirds — 2 + 2 + 2"><input type="radio" name="splitMode" value="thirds"> Thirds</label>
             </div>
           </fieldset>
 
           <div id="ratioA" class="ratio">
-            <span class="field-label">Ratio A <span class="tag" id="ratioAtag">own + 6 joiners</span> — Inf / Cav / Arch (%)</span>
+            <span class="field-label">Ratio A <span class="tag" id="ratioAtag">all 6 marches</span> — Inf / Cav / Arch (%)</span>
             <div class="row3">
               <span class="num-suffix" data-suffix="%"><input id="rInfA" type="number" min="0" value="60" aria-label="Ratio A Infantry percent"></span>
               <span class="num-suffix" data-suffix="%"><input id="rCavA" type="number" min="0" value="40" aria-label="Ratio A Cavalry percent"></span>
@@ -97,7 +89,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
             </div>
           </div>
           <div id="ratioB" class="ratio">
-            <span class="field-label">Ratio B <span class="tag" id="ratioBtag">3 joiners</span> — Inf / Cav / Arch (%)</span>
+            <span class="field-label">Ratio B <span class="tag" id="ratioBtag">3 marches</span> — Inf / Cav / Arch (%)</span>
             <div class="row3">
               <span class="num-suffix" data-suffix="%"><input id="rInfB" type="number" min="0" value="70" aria-label="Ratio B Infantry percent"></span>
               <span class="num-suffix" data-suffix="%"><input id="rCavB" type="number" min="0" value="30" aria-label="Ratio B Cavalry percent"></span>
@@ -105,7 +97,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
             </div>
           </div>
           <div id="ratioC" class="ratio">
-            <span class="field-label">Ratio C <span class="tag" id="ratioCtag">2 joiners</span> — Inf / Cav / Arch (%)</span>
+            <span class="field-label">Ratio C <span class="tag" id="ratioCtag">2 marches</span> — Inf / Cav / Arch (%)</span>
             <div class="row3">
               <span class="num-suffix" data-suffix="%"><input id="rInfC" type="number" min="0" value="100" aria-label="Ratio C Infantry percent"></span>
               <span class="num-suffix" data-suffix="%"><input id="rCavC" type="number" min="0" value="0" aria-label="Ratio C Cavalry percent"></span>
@@ -113,7 +105,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
             </div>
           </div>
 
-          <p class="hint">Each squad gets the Inf / Cav / Arch split you set, so an archer share you ask for is sent as asked. Any gap fills Infantry first, then Cavalry — archers beyond your share only once both of those budgets are exhausted, and you get a warning when that happens. The own rally uses Ratio A.</p>
+          <p class="hint">Each march gets the Inf / Cav / Arch split you set, so an archer share you ask for is sent as asked. Any gap fills Infantry first, then Cavalry — archers beyond your share only once both of those budgets are exhausted, and you get a warning when that happens.</p>
         </div>
       </section>
 
@@ -123,21 +115,14 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
 
         <div class="calc-card stats">
           <div class="stat">
-            <span class="stat-label">Active squad size</span>
+            <span class="stat-label">March size</span>
             <span class="stat-formula" id="squadFormula"></span>
             <span class="stat-value"><span id="squadSize"></span> <small>troops</small></span>
           </div>
           <div class="stat">
-            <span class="stat-label">Total rally size</span>
-            <!-- Nothing enlarges a Vikings rally, so there is no formula to show —
-                 the empty line keeps all three stat values on a shared baseline. -->
-            <span class="stat-formula"></span>
-            <span class="stat-value"><span id="rallySizeTotal"></span> <small>troops</small></span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Personal Joiner Size</span>
-            <span class="stat-formula">(rally − active squad) ÷ 14</span>
-            <span class="stat-value" id="pjs"></span>
+            <span class="stat-label">Troops for 6 full marches</span>
+            <span class="stat-formula">6 × march size</span>
+            <span class="stat-value"><span id="marchesTotal"></span> <small>troops</small></span>
           </div>
         </div>
 
@@ -146,7 +131,6 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
           <div class="table-wrap">
             <table class="result-table" id="sendTable"></table>
           </div>
-          <p class="own-pct" id="ownPct"></p>
           <div class="btnrow">
             <button type="button" class="btn" id="copyBtn"><Icon name="clipboard" /> <span class="btn-label">Copy formation</span></button>
             <button type="button" class="btn" id="shareBtn"><Icon name="link" /> <span class="btn-label">Copy share link</span></button>
@@ -190,18 +174,16 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
       <div class="calc-card">
         <h2 class="card-title">How this calculator works</h2>
         <ol class="how">
-          <li>Start from your <strong>squad base cap</strong>, then apply Mighty Bison, Marshal and Deployment buffs to find your true per-squad capacity.</li>
-          <li>Reserve your <strong>own rally</strong> at full squad cap — that's the rally you lead.</li>
-          <li>Fill <strong>6 joiner rallies</strong> using your join cap, applying the chosen split mode (Uniform, Half &amp; half, or Thirds).</li>
-          <li>Give each squad your <strong>Inf / Cav / Arch ratio</strong>, archer share included — then fill any gap by priority: <strong>Infantry, then Cavalry</strong>, archers beyond your share only once both are exhausted. Finally report leftover troops and any shortfall against a perfect ratio.</li>
+          <li>Start from your <strong>squad base cap</strong>, then apply Mighty Bison, Marshal and Deployment buffs to find your true <strong>march size</strong>.</li>
+          <li>Split your troop pool into <strong>6 equal budgets</strong> — one per march, a sixth of every troop type.</li>
+          <li>Fill each march up to the march size with your <strong>Inf / Cav / Arch ratio</strong>, archer share included, using the split mode you chose (Uniform, Half &amp; half, or Thirds) — then fill any gap by priority: <strong>Infantry, then Cavalry</strong>, archers beyond your share only once both are exhausted.</li>
+          <li>Report leftover troops, any shortfall against a perfect ratio, and a warning whenever the pool cannot fill all 6 marches.</li>
         </ol>
       </div>
 
       <div class="calc-card">
         <h2 class="card-title">FAQ</h2>
         <div class="faq">
-          <h3 class="faq-q">Why is my own rally bigger than the joiners?</h3>
-          <p class="faq-a">The rally leader fields a full squad at base cap, while joiners are limited by the lower join cap set on the rally.</p>
           <h3 class="faq-q">Does the ratio have to add up to 100?</h3>
           <p class="faq-a">It doesn't have to — the calculator normalizes your Inf / Cav / Arch values, so 50 / 30 / 20 and 5 / 3 / 2 give the same split.</p>
           <h3 class="faq-q">Can I really send 0 archers?</h3>
@@ -372,22 +354,6 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   .calculator :global(.t-cav) { color: var(--cav); }
   .calculator :global(.t-arch) { color: var(--arch); }
 
-  .check {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin: var(--space-3) 0;
-    font-size: 13.5px;
-    color: var(--color-ink);
-    cursor: pointer;
-    flex-wrap: wrap;
-  }
-  .check input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--color-primary);
-  }
-
   /* ===== Segmented control (replaces the legacy split-mode <select>) ===== */
   .segmented-field {
     border: 0;
@@ -533,37 +499,10 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   .calculator :global(.result-table tbody td) {
     border-bottom: 1px solid var(--color-border);
   }
-  .calculator :global(.own-row th[scope="row"]),
-  .calculator :global(.own-row td) {
-    background: var(--color-highlight);
-  }
-  .calculator :global(.you-pill) {
-    display: inline-block;
-    background: var(--color-accent);
-    color: var(--color-accent-foreground);
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    padding: 1px 7px;
-    border-radius: var(--radius-pill);
-    margin-right: 6px;
-  }
   .calculator :global(.total-row th),
   .calculator :global(.total-row td) {
     font-weight: 700;
     border-top: 1.5px solid var(--color-border);
-  }
-
-  .own-pct {
-    display: none;
-    font-size: 12.5px;
-    color: var(--color-muted);
-    line-height: 1.5;
-    margin: var(--space-3) 0 0;
-  }
-  .calculator :global(.own-pct strong) {
-    color: var(--color-ink);
   }
 
   .btnrow {
@@ -722,7 +661,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
   @media (min-width: 520px) {
     .stats {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
     }
     .diag {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -750,13 +689,16 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
 
 <script>
   /*
-    Vikings Vengeance squad calculator — a clone of the Bear Trap engine with the
-    troop priority INVERTED: every squad fills Infantry → Cavalry → Archers in a
-    strict waterfall, so archers only ever deploy once both other budgets are spent.
-    Deliberately absent (not forgotten): Valora, which is a bear-only buff, so the
-    rally size has no bonuses at all; and the bear's 5,000 Inf/Cav floor with its
-    Max-Archer mode — this event's target ratios (60/40/0, 70/30/0, 100/0/0) contain
-    hard zeros that a floor would make unreachable.
+    Vikings Vengeance squad calculator. The event model: every player sends their
+    OWN 6 FULL MARCHES — no rally, no joiners, no join cap. The troop pool splits
+    into 6 equal per-type budgets and each march is filled up to the march size.
+    Troop priority is INVERTED versus the Bear Trap: every march fills
+    Infantry → Cavalry → Archers in a strict waterfall, so archers only ever
+    deploy once both other budgets are spent.
+    Deliberately absent (not forgotten): Valora, which is a bear-only buff; and
+    the bear's 5,000 Inf/Cav floor with its Max-Archer mode — this event's target
+    ratios (60/40/0, 70/30/0, 100/0/0) contain hard zeros that a floor would make
+    unreachable.
   */
   const $ = (id: string) => document.getElementById(id) as HTMLInputElement;
   // Every input here is a count or percentage — none may be negative. Clamp at the
@@ -774,13 +716,11 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   const CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
   const INPUTS = ['tInf', 'tCav', 'tArch', 'squadBase', 'marshalTier', 'deploy', 'bisonLevel',
-    'joinCap', 'usePct', 'splitMode',
-    'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
-    'rallySize'];
+    'splitMode',
+    'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC'];
 
-  // fixed game constants
-  const JOINERS = 6;   // joiner rallies you join (your 6 marches)
-  const SLOTS = 14;    // joiner slots in a full 15-member rally (host + 14)
+  // fixed game constant
+  const MARCHES = 6;   // the 6 full marches you send yourself
 
   const MARSHAL: Record<string, number> = { '0': 0, 'marshal': 2500, 'mid': 3750, 'big': 5000 };
   function marshalFlat() { return MARSHAL[($('marshalTier') as unknown as HTMLSelectElement).value] || 0; }
@@ -802,14 +742,15 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
     return sum > 0 ? { inf: i / sum, cav: c / sum, arch: a / sum } : { inf: 0, cav: 0, arch: 0 };
   }
 
-  // One joiner, filled in two passes so archers are a STRICT last resort. Pass 1 hands
+  // One march, filled in two passes so archers are a STRICT last resort. Pass 1 hands
   // every type its deliberate ratio share, bounded by its budget. Pass 2 places what
   // pass 1 could not — a shortfall of any type, an archer share the archer pool can't
   // deliver, or the floor() rounding remainder — strictly by priority, so archers get
   // the gap only after BOTH the infantry and the cavalry budget are exhausted. An empty
   // ratio (all three zero) therefore degrades to Infantry-then-Cavalry instead of
   // dumping the whole cap on archers. `lastResort` is the pass-2 archer amount, i.e.
-  // exactly the archers deployed against your will.
+  // exactly the archers deployed against your will. Name kept from the fuzz-proven
+  // round-3 waterfall: only its budget and cap changed, never the fill itself.
   function fillJoiner(budget: any, ratio: any, cap: number) {
     const capInf = Math.floor(cap * ratio.inf), capCav = Math.floor(cap * ratio.cav),
       capArch = Math.floor(cap * ratio.arch);
@@ -822,21 +763,7 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
     return { inf: inf1 + inf2, cav: cav1 + cav2, arch: arch1 + arch2, lastResort: arch2 };
   }
 
-  // Cav & Arch are rounded from their shares, Inf takes the remainder — two roundings
-  // can overshoot the squad by 1 (ratio 0/50/50 at an odd squad size), which would
-  // render Infantry as −1. The bear absorbs the same overshoot inside its 5,000-floor
-  // clamp; without a floor the correction has to be explicit. Give the overshoot back
-  // from Archers first, then Cavalry, so the row still sums exactly to the squad size.
-  function trimOvershoot(cav: number, arch: number, total: number) {
-    let over = cav + arch - total;
-    if (over > 0) {
-      const fromArch = Math.min(arch, over); arch -= fromArch; over -= fromArch;
-      cav -= Math.min(cav, over);
-    }
-    return { inf: total - cav - arch, cav, arch };
-  }
-
-  // split mode -> joiner groups (counts sum to JOINERS); own rally always uses ratio A
+  // split mode -> march groups (counts always sum to MARCHES)
   function groupsFor(mode: string) {
     if (mode === 'half') return [{ key: 'A', count: 3 }, { key: 'B', count: 3 }];
     if (mode === 'thirds') return [{ key: 'A', count: 2 }, { key: 'B', count: 2 }, { key: 'C', count: 2 }];
@@ -847,64 +774,32 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
     const troops = { inf: num('tInf'), cav: num('tCav'), arch: num('tArch') };
     const squadCore = num('squadBase') + num('bisonLevel');
     const deploy = num('deploy');
-    const activeSquad = Math.round((squadCore + marshalFlat()) * (1 + deploy));
+    const activeMarch = Math.round((squadCore + marshalFlat()) * (1 + deploy));
 
     const mode = getSplitMode();
     const ratios: any = { A: readRatio('A'), B: readRatio('B'), C: readRatio('C') };
-    const rA = ratios.A;
-    const joinCap = num('joinCap');
 
-    // Own rally = a full active squad at ratio A. It is a TARGET the pool has to
-    // supply, not a budget-bounded fill: a shortage is reported by the "Not enough
-    // troops" warning rather than silently shrinking the rally you lead.
-    let own = trimOvershoot(Math.round(activeSquad * rA.cav), Math.round(activeSquad * rA.arch), activeSquad);
-    const ownTarget = { ...own };     // the own-rally target, taken from the trimmed split
-
-    // Own-rally composition as whole %. Cav & Arch round, Infantry takes the remainder —
-    // infantry is the priority type here, so it also absorbs the rounding error.
-    const ownSum = own.inf + own.cav + own.arch;
-    const ownPct: any = {
-      cav: ownSum ? Math.round(100 * own.cav / ownSum) : 0,
-      arch: ownSum ? Math.round(100 * own.arch / ownSum) : 0
-    };
-    ownPct.inf = Math.max(0, 100 - ownPct.cav - ownPct.arch);
-
-    // "Own rally as %": the rally is pre-built as percentages, so exact counts can't be
-    // pre-set in game. Recompute its counts from the rounded % — with the same overshoot
-    // trim — so the leftover pool & joiners stay consistent with what is actually
-    // deployed (no phantom leftover troops, no row that exceeds the squad size).
-    const usePct = $('usePct').checked;
-    if (usePct) {
-      own = trimOvershoot(Math.round(ownPct.cav / 100 * activeSquad), Math.round(ownPct.arch / 100 * activeSquad), activeSquad);
-    }
-
-    // leftover pool after own rally; every joiner gets an equal 1/6 budget
-    const left = {
-      inf: troops.inf - own.inf,
-      cav: troops.cav - own.cav,
-      arch: troops.arch - own.arch
-    };
+    // Every march draws on an equal sixth of each troop type and is capped by the
+    // march size. A budget that runs dry shows up as a march below that size — the
+    // under-fill warning names it rather than the page failing silently.
     const per = {
-      inf: Math.max(0, Math.floor(left.inf / JOINERS)),
-      cav: Math.max(0, Math.floor(left.cav / JOINERS)),
-      arch: Math.max(0, Math.floor(left.arch / JOINERS))
+      inf: Math.floor(troops.inf / MARCHES),
+      cav: Math.floor(troops.cav / MARCHES),
+      arch: Math.floor(troops.arch / MARCHES)
     };
 
-    // joiner groups: identical within a group
+    // march groups: identical within a group
     const groups: any[] = groupsFor(mode).map(g => {
       const ratio = ratios[g.key];
-      const joiner = fillJoiner(per, ratio, joinCap);
-      const target = { inf: Math.round(joinCap * ratio.inf), cav: Math.round(joinCap * ratio.cav), arch: Math.round(joinCap * ratio.arch) };
-      return { ...g, ratio, joiner, target };
+      const march = fillJoiner(per, ratio, activeMarch);
+      const target = { inf: Math.round(activeMarch * ratio.inf), cav: Math.round(activeMarch * ratio.cav), arch: Math.round(activeMarch * ratio.arch) };
+      return { ...g, ratio, march, target };
     });
 
-    // Archers nobody wanted: the waterfall's pass-2 amount, summed over all joiners.
-    // The own rally is excluded on purpose — it draws on no budget, and its whole-%
-    // recompute can round archers past the ratio ideal, which is a rounding artifact
-    // and not a genuine last resort.
-    const archBackfill = groups.reduce((t, g) => t + g.count * g.joiner.lastResort, 0);
+    // Archers nobody wanted: the waterfall's pass-2 amount, summed over all 6 marches.
+    const archBackfill = groups.reduce((t, g) => t + g.count * g.march.lastResort, 0);
 
-    const sumSel = (sel: 'inf' | 'cav' | 'arch') => own[sel] + groups.reduce((t, g) => t + g.count * g.joiner[sel], 0);
+    const sumSel = (sel: 'inf' | 'cav' | 'arch') => groups.reduce((t, g) => t + g.count * g.march[sel], 0);
     const used = { inf: sumSel('inf'), cav: sumSel('cav'), arch: sumSel('arch') };
     const unused = {
       inf: troops.inf - used.inf,
@@ -912,41 +807,37 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
       arch: troops.arch - used.arch
     };
 
-    // missing to send the full ideal target to own rally + all joiners
-    const need = (sel: 'inf' | 'cav' | 'arch') => ownTarget[sel] + groups.reduce((t, g) => t + g.count * g.target[sel], 0);
+    // missing to send the full ideal target in all 6 marches
+    const need = (sel: 'inf' | 'cav' | 'arch') => groups.reduce((t, g) => t + g.count * g.target[sel], 0);
     const missing = {
       inf: Math.max(0, need('inf') - troops.inf),
       cav: Math.max(0, need('cav') - troops.cav),
       arch: Math.max(0, need('arch') - troops.arch)
     };
 
-    const rallyTotal = num('rallySize');
-    const pjs = Math.max(0, Math.floor((rallyTotal - activeSquad) / SLOTS));
+    // A march is short only when one of its budgets ran dry — the waterfall fills to
+    // the cap otherwise, so testing the group's size is enough.
+    const underfilled = groups.some(g => g.march.inf + g.march.cav + g.march.arch < activeMarch);
 
-    return { troops, squadCore, activeSquad, deploy, mode, usePct, own, groups, used, unused, missing, pjs, rallyTotal, archBackfill, ownPct };
+    return { squadCore, activeMarch, deploy, mode, groups, used, unused, missing, archBackfill, underfilled };
   }
 
-  // One row per joiner GROUP (identical joiners collapsed, like the legacy
-  // "Per joiner (×6)" column): uniform -> "Joiners ×6"; half -> "Joiners A ×3"
-  // + "Joiners B ×3"; thirds -> A/B/C ×2. Cells show ONE joiner's troops; ×N = how many.
+  // One row per march GROUP (identical marches collapsed): uniform -> "Marches ×6";
+  // half -> "Marches A ×3" + "Marches B ×3"; thirds -> A/B/C ×2. Cells show ONE
+  // march's troops; ×N = how many marches carry that formation.
   function renderTable(m: any) {
     const sz = (d: any) => d.inf + d.cav + d.arch;
     let h = '<thead><tr>'
-      + '<th scope="col">Rally</th>'
+      + '<th scope="col">March</th>'
       + '<th scope="col" class="t-inf">Infantry</th>'
       + '<th scope="col" class="t-cav">Cavalry</th>'
       + '<th scope="col" class="t-arch">Archer</th>'
       + '<th scope="col">Size</th>'
       + '</tr></thead><tbody>';
 
-    h += '<tr class="own-row">'
-      + '<th scope="row"><span class="you-pill">You</span>Own rally</th>'
-      + `<td>${fmt(m.own.inf)}</td><td>${fmt(m.own.cav)}</td><td>${fmt(m.own.arch)}</td>`
-      + `<td>${fmt(sz(m.own))}</td></tr>`;
-
     m.groups.forEach((g: any) => {
-      const label = m.groups.length === 1 ? `Joiners ×${g.count}` : `Joiners ${g.key} ×${g.count}`;
-      const d = g.joiner;
+      const label = m.groups.length === 1 ? `Marches ×${g.count}` : `Marches ${g.key} ×${g.count}`;
+      const d = g.march;
       h += `<tr><th scope="row">${label}</th>`
         + `<td>${fmt(d.inf)}</td><td>${fmt(d.cav)}</td><td>${fmt(d.arch)}</td>`
         + `<td>${fmt(sz(d))}</td></tr>`;
@@ -963,30 +854,23 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   function render() {
     const m = compute();
 
-    // active squad + totals
+    // march size + totals
     const tierLbl: Record<string, string> = { '0': 'no Marshal', 'marshal': '+' + fmt(2500), 'mid': '+' + fmt(3750), 'big': '+' + fmt(5000) };
     $('squadFormula').textContent =
       `(${fmt(m.squadCore)} core, ${tierLbl[($('marshalTier') as unknown as HTMLSelectElement).value]}) × ${(1 + m.deploy).toFixed(2)}`;
-    $('squadSize').textContent = fmt(m.activeSquad);
-    $('rallySizeTotal').textContent = fmt(m.rallyTotal);
-    $('pjs').textContent = fmt(m.pjs);
+    $('squadSize').textContent = fmt(m.activeMarch);
+    $('marchesTotal').textContent = fmt(m.activeMarch * MARCHES);
 
-    // split-mode UI: show/hide ratio B & C, update their joiner-count tags
+    // split-mode UI: show/hide ratio B & C, update their march-count tags
     const mode = m.mode;
     ($('ratioB') as unknown as HTMLElement).style.display = (mode === 'half' || mode === 'thirds') ? '' : 'none';
     ($('ratioC') as unknown as HTMLElement).style.display = (mode === 'thirds') ? '' : 'none';
-    $('ratioAtag').textContent = mode === 'uniform' ? 'own + 6 joiners' : 'own + ' + m.groups[0].count + ' joiners';
-    if (m.groups[1]) $('ratioBtag').textContent = m.groups[1].count + ' joiners';
-    if (m.groups[2]) $('ratioCtag').textContent = m.groups[2].count + ' joiners';
+    $('ratioAtag').textContent = mode === 'uniform' ? 'all 6 marches' : m.groups[0].count + ' marches';
+    if (m.groups[1]) $('ratioBtag').textContent = m.groups[1].count + ' marches';
+    if (m.groups[2]) $('ratioCtag').textContent = m.groups[2].count + ' marches';
 
-    // results table (own rally + 6 joiner rows)
+    // results table (one row per march group + total)
     renderTable(m);
-
-    // own-rally % readout: shown when "Own rally as %" is on (counts are then derived from these %)
-    ($('ownPct') as unknown as HTMLElement).style.display = m.usePct ? 'block' : 'none';
-    $('ownPct').innerHTML = m.usePct
-      ? `<strong>Own rally — set this formation in-game</strong> (rounded): <strong>${m.ownPct.inf}% Inf / ${m.ownPct.cav}% Cav / ${m.ownPct.arch}% Arch</strong>`
-      : '';
 
     // diagnostics
     const setMiss = (id: string, v: number) => { const e = $(id); e.innerHTML = v > 0 ? '−' + fmt(v) : CHECK_ICON + ' 0'; e.className = 'v ' + (v > 0 ? 'short' : 'ok'); };
@@ -1019,13 +903,13 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
       const s = num('rInf' + g.key) + num('rCav' + g.key) + num('rArch' + g.key);
       // A zero ratio normalizes to nothing at all — say what actually happens instead
       // of claiming a normalization the engine never performs.
-      if (s === 0) w.push(`Ratio ${g.key} is empty — squads fill by priority instead (Infantry → Cavalry → Archers).`);
+      if (s === 0) w.push(`Ratio ${g.key} is empty — marches fill by priority instead (Infantry → Cavalry → Archers).`);
       else if (Math.abs(s - 100) > 0.001) w.push(`Ratio ${g.key} sums to ${fmt(s)}% instead of 100% — normalized automatically.`);
     });
-    if (m.own.inf > m.troops.inf || m.own.cav > m.troops.cav || m.own.arch > m.troops.arch)
-      w.push('Not enough troops for a full own squad — joiners get correspondingly less.');
+    if (m.underfilled)
+      w.push('Not enough troops to fill all 6 full marches — they run smaller.');
     if (m.archBackfill > 0)
-      w.push(`Archers had to deploy as a last resort: ${fmt(m.archBackfill)} across your ${JOINERS} joiner rallies, because the Infantry and Cavalry budgets ran out.`);
+      w.push(`Archers had to deploy as a last resort: ${fmt(m.archBackfill)} across your ${MARCHES} marches, because the Infantry and Cavalry budgets ran out.`);
     $('warnings').innerHTML = w.map(x => `<div class="warn">${WARN_ICON} ${x}</div>`).join('');
 
     lastModel = m;
@@ -1036,13 +920,12 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   const STORAGE_KEY = 'vikingcalc.state';
   let lastModel: any = null;
 
-  const readEl = (id: string) => {
-    if (id === 'splitMode') return getSplitMode();
-    const el = $(id); return el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value;
-  };
+  // Every INPUTS id except splitMode is a number input or a <select>, so `.value`
+  // round-trips all of them.
+  const readEl = (id: string) => (id === 'splitMode' ? getSplitMode() : $(id).value);
   const writeEl = (id: string, v: any) => {
-    if (id === 'splitMode') { setSplitMode(v); return; }
-    const el = $(id); if (el.type === 'checkbox') el.checked = (v === '1' || v === true); else el.value = v;
+    if (id === 'splitMode') setSplitMode(v);
+    else $(id).value = v;
   };
 
   function saveState() {
@@ -1070,13 +953,10 @@ const BISON_LEVELS = Array.from({ length: 10 }, (_, i) => {
   function formationText() {
     const m = lastModel; if (!m) return '';
     const tri = (d: any) => `${fmt(d.inf)} / ${fmt(d.cav)} / ${fmt(d.arch)}`;
-    const out = ['🪓 Vikings Vengeance formation — Inf / Cav / Arch'];
-    out.push(m.usePct
-      ? `Own rally (set in-game): ${m.ownPct.inf}% / ${m.ownPct.cav}% / ${m.ownPct.arch}%`
-      : `Own rally: ${tri(m.own)}`);
+    const out = ['🪓 Vikings Vengeance — 6 marches, Inf / Cav / Arch'];
     m.groups.forEach((g: any) => {
-      const lbl = m.groups.length === 1 ? `Joiners (×${g.count})` : `Joiners ${g.key} (×${g.count})`;
-      out.push(`${lbl}: ${tri(g.joiner)}`);
+      const lbl = m.groups.length === 1 ? `Marches (×${g.count})` : `Marches ${g.key} (×${g.count})`;
+      out.push(`${lbl}: ${tri(g.march)}`);
     });
     return out.join('\n');
   }
