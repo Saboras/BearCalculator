@@ -4,21 +4,26 @@
   the only required element (UX-DR-6) — verbatim text, em-dash. The nav link row
   is gone (redundant with the top bar + mobile tab bar); the Ko-fi support link
   is a proper button so it is actually seen. Donations stay strictly
-  cost-covering (keeps the unofficial-fan-site posture).
+  cost-covering (keeps the unofficial-fan-site posture). The kingdom Discord
+  joined the row 2026-08-25 (Owner request) — the site-wide home for the link.
 */
 import Icon from './Icon.astro';
 
 const COFFEE_URL = 'https://ko-fi.com/saboras';
+const DISCORD_URL = 'https://discord.gg/UvTNZyZvZd';
 ---
 
 <footer class="site-footer">
   <p class="disclaimer">Unofficial fan site — not affiliated with or endorsed by Century Games.</p>
   <p class="support">
+    <a class="support-btn" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+      <Icon name="message-circle" /> Join the 1516 Discord
+    </a>
     <a class="support-btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
       <Icon name="coffee" /> Buy me a coffee
     </a>
   </p>
-  <p class="support-note">Helps keep the server &amp; domain running.</p>
+  <p class="support-note">Donations help keep the server &amp; domain running.</p>
 </footer>
 
 <style>
@@ -40,6 +45,10 @@ const COFFEE_URL = 'https://ko-fi.com/saboras';
     margin: 0;
   }
   .support {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
     margin: var(--space-4) 0 0;
   }
   /* Quiet-outline button (DESIGN button-secondary family) — visible, but never

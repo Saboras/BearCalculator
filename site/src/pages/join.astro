@@ -23,6 +23,10 @@ import { loadApplyFormData } from '../lib/transfer-build';
 */
 const { alliances, activePeriodId, specialInvitePowerThreshold } = await loadApplyFormData();
 
+// The kingdom Discord invite (Owner request 2026-08-25) — asked for right after a
+// successful application, where joining it is the natural next step. Also in the Footer.
+const DISCORD_URL = 'https://discord.gg/UvTNZyZvZd';
+
 /*
   Curated IANA timezone list (mirrors TimezoneRow.astro — a native <select>, no tz
   library, KISS). The client pre-selects the visitor's detected zone; a no-JS
@@ -211,6 +215,10 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
           You're set. A leader will reach you in-game via your Player ID before the next transfer window.
         </p>
         <p class="confirm-sub">You applied as <b>Applied</b> — the leaders take it from here.</p>
+        <p class="confirm-sub confirm-discord-ask">Transfer talk happens on the kingdom Discord — join so the leaders can reach you there too.</p>
+        <a class="btn-gold confirm-discord-btn" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+          <Icon name="message-circle" /> Join the 1516 Discord
+        </a>
       </div>
     </section>
 
@@ -524,6 +532,12 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   }
   .confirm-sub b {
     color: var(--color-ink);
+  }
+  .confirm-discord-ask {
+    margin-top: var(--space-3);
+  }
+  .confirm-discord-btn {
+    margin-top: var(--space-3);
   }
 
   /* ===== Desktop enhancement (single 768px breakpoint) ===== */
