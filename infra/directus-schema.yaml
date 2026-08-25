@@ -17,9 +17,7 @@ collections:
       hidden: false
       icon: groups
       item_duplication_fields: null
-      note: >-
-        Kingdom 1516 alliances (canonical AD-18 shape). CRUD via Data Studio
-        (AD-3).
+      note: Edits go live on the public site automatically after a rebuild (~1–3 min).
       preview_url: null
       singleton: false
       sort: null
@@ -45,11 +43,7 @@ collections:
       hidden: false
       icon: how_to_reg
       item_duplication_fields: null
-      note: >-
-        Transfer applicants (FR-4). Core fields + status/planned_path +
-        desired/suggested alliance (distinct writers, AD-8) + group + period
-        (stamped-on-create, never re-stamped, AD-17). No entry_route / no stored
-        counters (AR-19).
+      note: Applications from the public /join form. Day-to-day work happens in the site's /admin area, not here.
       preview_url: null
       singleton: false
       sort: null
@@ -75,9 +69,7 @@ collections:
       hidden: false
       icon: category
       item_duplication_fields: null
-      note: >-
-        Guide categories (UX-DR-18). Leader-extensible. CRUD via Data Studio
-        (AD-3), Owner-only (Story 6.1).
+      note: Created and managed by the Owner; guide authors only pick from them.
       preview_url: null
       singleton: false
       sort: null
@@ -103,9 +95,7 @@ collections:
       hidden: false
       icon: edit_note
       item_duplication_fields: null
-      note: >-
-        Editor-writable guide DRAFTS (Option 2 split; Story 6.1). Membership =
-        draft state. Editor writes here (6.2); publish = copy to guides (6.3).
+      note: Working copies — never public. Publishing copies a draft into Guides.
       preview_url: null
       singleton: false
       sort: null
@@ -131,10 +121,7 @@ collections:
       hidden: false
       icon: menu_book
       item_duplication_fields: null
-      note: >-
-        PUBLISHED guides (Option 2 split; Story 6.1). Membership = published
-        state. Senior/Owner writes here (6.3). Public build reads this. Same
-        shape as guide_drafts, joined by slug.
+      note: Published guides — the public site is built from these rows. Filled via Publish in the site's /admin area.
       preview_url: null
       singleton: false
       sort: null
@@ -160,9 +147,7 @@ collections:
       hidden: false
       icon: settings
       item_duplication_fields: null
-      note: >-
-        Kingdom-wide game-rule thresholds (130M power, ~8-week cadence). Never a
-        special count (AD-11). Editable config, never hardcoded (NFR-17).
+      note: Kingdom-wide numbers the site bakes in at build time — changes reach the public site only after the next rebuild.
       preview_url: null
       singleton: true
       sort: null
@@ -188,10 +173,7 @@ collections:
       hidden: false
       icon: group_work
       item_duplication_fields: null
-      note: >-
-        Friend-group linking (Story 5.6). Group-level suggestion is a UI fan-out
-        to each member's candidates.suggested_alliance (AR-10). NO
-        suggested_alliance column here.
+      note: Friend groups of transfer candidates — managed from the site's /admin area. Membership lives on each candidate.
       preview_url: null
       singleton: false
       sort: null
@@ -217,9 +199,7 @@ collections:
       hidden: false
       icon: event_repeat
       item_duplication_fields: null
-      note: >-
-        One row per transfer window; exactly one active. Owner-written caps +
-        active flag (AD-11/AD-17). No stored counters.
+      note: One row per transfer window; exactly one active. After switching the active window, rebuild the site — the public form bakes it in.
       preview_url: null
       singleton: false
       sort: null
@@ -323,7 +303,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Immutable kebab-case public address (AR-18). Set once at creation.
+      note: Public web address of the alliance page — lowercase-with-dashes, set once and never changed (shared links depend on it).
       options: null
       readonly: false
       required: true
@@ -363,7 +343,7 @@ fields:
       group: null
       hidden: false
       interface: datetime
-      note: UTC time-of-day (AR-12/AD-10).
+      note: Time of day in UTC.
       options: null
       readonly: false
       required: false
@@ -403,7 +383,7 @@ fields:
       group: null
       hidden: false
       interface: datetime
-      note: UTC time-of-day (AR-12/AD-10).
+      note: Time of day in UTC.
       options: null
       readonly: false
       required: false
@@ -443,7 +423,7 @@ fields:
       group: null
       hidden: false
       interface: datetime
-      note: UTC time-of-day, nullable.
+      note: Time of day in UTC.
       options: null
       readonly: false
       required: false
@@ -483,7 +463,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Optional in-game farm-alliance tag; case preserved verbatim.
+      note: Shown exactly as typed (upper/lower case kept).
       options: null
       readonly: false
       required: false
@@ -523,7 +503,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: The alliance's leader account. Owner assigns (FR-3).
+      note: The leader account that maintains this alliance — assigned by the Owner.
       options: null
       readonly: false
       required: false
@@ -604,7 +584,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: In-game character name (required).
+      note: null
       options: null
       readonly: false
       required: true
@@ -644,7 +624,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: In-game contact key (FR-4, required).
+      note: In-game player ID — how leaders find and contact the applicant.
       options: null
       readonly: false
       required: true
@@ -684,7 +664,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: 'Current kingdom # (required).'
+      note: null
       options: null
       readonly: false
       required: true
@@ -724,7 +704,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Local timezone IANA/offset (required; new vs old form).
+      note: null
       options: null
       readonly: false
       required: true
@@ -764,7 +744,7 @@ fields:
       group: null
       hidden: false
       interface: input-multiline
-      note: Who invited / know someone (required).
+      note: null
       options: null
       readonly: false
       required: true
@@ -804,7 +784,7 @@ fields:
       group: null
       hidden: false
       interface: input-multiline
-      note: Why leaving (required).
+      note: null
       options: null
       readonly: false
       required: true
@@ -844,7 +824,7 @@ fields:
       group: null
       hidden: false
       interface: boolean
-      note: KvK/save-troops willingness (required).
+      note: 'Form question: willing to play as a team in KvK / save troops.'
       options: null
       readonly: false
       required: true
@@ -884,7 +864,7 @@ fields:
       group: null
       hidden: false
       interface: input-multiline
-      note: Others transferring with; seeds group linking (required).
+      note: Free text from the form — the basis for linking friend groups.
       options: null
       readonly: false
       required: true
@@ -924,7 +904,7 @@ fields:
       group: null
       hidden: false
       interface: boolean
-      note: Day-4 FCFS / Random-ask readiness (required).
+      note: 'Form question: ready on day 4 for the first-come-first-served / random path.'
       options: null
       readonly: false
       required: true
@@ -964,7 +944,7 @@ fields:
       group: null
       hidden: false
       interface: boolean
-      note: '>130M special-invite flag (FR-5). Required.'
+      note: Set by the form when the applicant's power is above the special-invite threshold (see Settings) at apply time.
       options: null
       readonly: false
       required: true
@@ -1004,7 +984,7 @@ fields:
       group: null
       hidden: false
       interface: input-multiline
-      note: Optional.
+      note: null
       options: null
       readonly: false
       required: false
@@ -1044,7 +1024,7 @@ fields:
       group: null
       hidden: false
       interface: input-multiline
-      note: Optional.
+      note: null
       options: null
       readonly: false
       required: false
@@ -1084,7 +1064,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown
-      note: Lifecycle (UI-guided, AR-9). Default Applied.
+      note: null
       options:
         choices:
           - text: Applied
@@ -1133,7 +1113,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown
-      note: Set by Curator on Accept (5.5). Nullable.
+      note: Planned entry route, set during curation.
       options:
         choices:
           - text: Invite
@@ -1180,7 +1160,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: Player's choice (public form only, AD-8).
+      note: The applicant's own wish — never overwrite; the leader pick goes into Suggested alliance.
       options: null
       readonly: false
       required: false
@@ -1221,7 +1201,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: Leader recommendation (Curator only, AD-8). Separate relation.
+      note: The leaders' recommendation — kept separate from the applicant's wish.
       options: null
       readonly: false
       required: false
@@ -1262,7 +1242,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: Friend-group link (Curator, 5.6).
+      note: null
       options: null
       readonly: false
       required: false
@@ -1303,7 +1283,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: Stamped to active period at create; never re-stamped (AD-17). Required.
+      note: Stamped automatically with the window active when the application arrived — never change it; carry-overs keep their original window.
       options: null
       readonly: false
       required: true
@@ -1344,9 +1324,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: >-
-        Raw power at apply time — /join collects millions and stores x1,000,000.
-        Null on rows created before the field existed.
+      note: Raw number — the form asks for millions and stores ×1,000,000. Empty on applications older than this field.
       options: null
       readonly: false
       required: false
@@ -1386,10 +1364,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: >-
-        The applicant s CURRENT alliance tag in their home kingdom (no brackets
-        stored; the admin table renders [tag]Name). Null = no alliance /
-        predates the field.
+      note: Alliance tag in their home kingdom, stored without brackets. Empty = no alliance or an old application.
       options: null
       readonly: false
       required: false
@@ -1469,7 +1444,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Display label (e.g. Events)
+      note: null
       options: null
       readonly: false
       required: true
@@ -1515,7 +1490,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Immutable kebab-case browse URL segment (AR-18). Set once at creation.
+      note: Public web address of the category page — lowercase-with-dashes, set once and never changed.
       options: null
       readonly: false
       required: true
@@ -1555,7 +1530,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Optional manual order for the KB (Story 6.4)
+      note: Manual order on the public guides page.
       options: null
       readonly: false
       required: false
@@ -1635,7 +1610,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Guide title (card + h1)
+      note: null
       options: null
       readonly: false
       required: true
@@ -1681,9 +1656,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: >-
-        Immutable kebab-case public address (AR-18). Set once at draft creation;
-        join key to guides.
+      note: The guide's public web address — lowercase-with-dashes, set once and never changed (shared links depend on it).
       options: null
       readonly: false
       required: true
@@ -1723,9 +1696,7 @@ fields:
       group: null
       hidden: false
       interface: input-rich-text-html
-      note: >-
-        Rich content: tables/images/embedded video (FR-16). Semantic HTML for
-        translatability (UX-DR-22).
+      note: Write in plain English — visitors translate via their browser. Images are optimized automatically at publish; YouTube embeds work.
       options:
         toolbar:
           - bold
@@ -1783,7 +1754,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: One category per guide (M2O to categories)
+      note: null
       options: null
       readonly: false
       required: false
@@ -1824,7 +1795,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Attribution (e.g. Strat Game Sloth) - UX-DR-21
+      note: Shown publicly as the guide's author — use the in-game name.
       options: null
       readonly: false
       required: false
@@ -1990,7 +1961,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Guide title (card + h1)
+      note: null
       options: null
       readonly: false
       required: true
@@ -2036,9 +2007,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: >-
-        Immutable kebab-case public address (AR-18). Must equal the draft slug
-        (no link-rot). Join key to guide_drafts.
+      note: Must match the draft's slug — the /admin Publish panel guarantees this. Never edit by hand.
       options: null
       readonly: false
       required: true
@@ -2078,9 +2047,7 @@ fields:
       group: null
       hidden: false
       interface: input-rich-text-html
-      note: >-
-        Rich content: tables/images/embedded video (FR-16). Semantic HTML
-        (UX-DR-22).
+      note: Copied from the draft on Publish — edit the draft and re-publish instead; direct edits here are overwritten by the next re-publish.
       options:
         toolbar:
           - bold
@@ -2138,7 +2105,7 @@ fields:
       group: null
       hidden: false
       interface: select-dropdown-m2o
-      note: One category per guide (M2O to categories)
+      note: null
       options: null
       readonly: false
       required: false
@@ -2179,7 +2146,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Attribution (e.g. Strat Game Sloth) - UX-DR-21
+      note: Shown publicly as the guide's author — use the in-game name.
       options: null
       readonly: false
       required: false
@@ -2345,7 +2312,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: 130M special-invite power threshold (FR-5). Never hardcoded (NFR-17).
+      note: Power above which an applicant needs a special invite — raw number (e.g. 150M = 150000000). Reaches the public form only after the next site rebuild.
       options: null
       readonly: false
       required: false
@@ -2385,7 +2352,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: ~8-week transfer cadence. Never hardcoded (NFR-17).
+      note: Typical number of weeks between transfer windows.
       options: null
       readonly: false
       required: false
@@ -2545,7 +2512,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Window label, e.g. 2026-07-19
+      note: Label shown in lists — include month and year (e.g. July 2026).
       options: null
       readonly: false
       required: false
@@ -2585,9 +2552,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: >-
-        Invite-planned denominator (currently 35). Owner-written config
-        (NFR-17).
+      note: Invite slots this window — the denominator of the /admin counters.
       options: null
       readonly: false
       required: false
@@ -2627,7 +2592,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: Random denominator (currently 20, kingdom-wide).
+      note: Kingdom-wide random-transfer slots this window.
       options: null
       readonly: false
       required: false
@@ -2667,9 +2632,7 @@ fields:
       group: null
       hidden: false
       interface: input
-      note: >-
-        THE ONLY home of available-special-count this period (currently 2).
-        AD-11.
+      note: Special-invite slots this window.
       options: null
       readonly: false
       required: false
@@ -2709,7 +2672,7 @@ fields:
       group: null
       hidden: false
       interface: boolean
-      note: Exactly one row true at a time (AD-17). Owner-written.
+      note: Marks the current window — exactly one row may be active at a time.
       options: null
       readonly: false
       required: false
@@ -2749,10 +2712,7 @@ fields:
       group: null
       hidden: false
       interface: datetime
-      note: >-
-        When this window opens. Drives chronological ordering in the admin
-        candidate table. Naming convention: put the year in the name (e.g. July
-        2026 transfer window).
+      note: Opening date — orders candidates chronologically in /admin.
       options: null
       readonly: false
       required: false
