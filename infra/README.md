@@ -354,9 +354,11 @@ policy.
 ### 8.3 Change a leader's roles later (AC3)
 
 Add or remove a policy on the account; the union **recomputes** on the next request and areas
-stay **independent** — e.g. promoting a Guides Editor to Senior is *swap `guides-editor` →
-`guides-senior`*, and it leaves their Transfer access untouched. No account is ever rebuilt; you
-only edit the attached policy set.
+stay **independent** — e.g. promoting a Guides Editor to Senior is *add `guides-senior` on top
+of `guides-editor`* (NOT a swap: the Senior policy carries the `guides` publish writes plus a
+`guide_drafts` **update**, but no `guide_drafts` **create** — the Editor policy stays attached so
+the Senior can still author new drafts; see `roles-and-policies.md` §2/§3), and it leaves their
+Transfer access untouched. No account is ever rebuilt; you only edit the attached policy set.
 
 ### 8.4 Owner-driven password reset (resolves the Story 3.2 deferral)
 
