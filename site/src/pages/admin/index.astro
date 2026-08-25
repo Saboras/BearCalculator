@@ -336,7 +336,7 @@ import Icon from '../../components/Icon.astro';
   }
   .cap-counters {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-3);
   }
   .cap-counter {
@@ -1397,20 +1397,24 @@ import Icon from '../../components/Icon.astro';
     return card;
   }
 
-  // The Random-ask card: a bare list count with no denominator — AR-19 removed the random counter,
-  // the 20 random slots are out of scope (OQ-5). `random_cap` stays stored-but-unshown config.
-  function randomCard(value: number): HTMLElement {
+  // A bare list-count card, no capacity denominator: the total-applicants card (Owner request
+  // 2026-08-25 — the list size was invisible until planned paths bucketed it) and the Random-ask
+  // card (AR-19 removed the random counter, the 20 random slots are out of scope — OQ-5;
+  // `random_cap` stays stored-but-unshown config).
+  function listCard(label: string, value: number, suffix: string | null): HTMLElement {
     const card = document.createElement('div');
     card.className = 'cap-counter';
     const cl = document.createElement('div');
     cl.className = 'cap-cl';
-    cl.textContent = 'Random-ask';
+    cl.textContent = label; // trusted constant label
     const cv = document.createElement('div');
     cv.className = 'cap-cv';
     cv.append(document.createTextNode(String(value)));
-    const small = document.createElement('small');
-    small.textContent = ' queued'; // list count, not a capacity ratio
-    cv.append(small);
+    if (suffix) {
+      const small = document.createElement('small');
+      small.textContent = suffix; // list count, not a capacity ratio
+      cv.append(small);
+    }
     card.append(cl, cv);
     return card;
   }
@@ -1429,7 +1433,8 @@ import Icon from '../../components/Icon.astro';
   // never gated. Rebuilt on every render so the counters recompute after each write (Task 5). role=
   // status keeps the a11y floor minimal (it recomputes after writes; the shell already uses it).
   function buildCapStrip(rows: Candidate[], period: TransferPeriod | null): HTMLElement {
-    const c = computeCounters(activeWindowRows(rows, period), period);
+    const windowRows = activeWindowRows(rows, period);
+    const c = computeCounters(windowRows, period);
 
     const strip = document.createElement('div');
     strip.className = 'cap-strip';
@@ -1442,9 +1447,13 @@ import Icon from '../../components/Icon.astro';
 
     const grid = document.createElement('div');
     grid.className = 'cap-counters';
+    // Total FIRST: the active-window list size (Rejected rows included — they are still in the
+    // list). Window-scoped like every counter here, even while the 5.8 reachability toggle
+    // temporarily broadens the TABLE to closed-window rows.
+    grid.append(listCard('Applicants', windowRows.length, null));
     grid.append(counterCard('Invite-planned', c.invitePlanned, c.invitedCap, false));
     grid.append(counterCard('Special-planned', c.specialPlanned, c.specialCap, true)); // gold, live cap
-    grid.append(randomCard(c.randomAsk));
+    grid.append(listCard('Random-ask', c.randomAsk, ' queued'));
     strip.append(grid);
 
     // A muted "Accepted · no path: N" line, only when N>0 (OQ-3) — surfaces an occupied slot that
