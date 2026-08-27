@@ -468,7 +468,6 @@
   </header>
 
   <main>
-    <!-- ============ INPUTS ============ -->
     <section>
       <div class="card">
         <h2>Troop Pool</h2>
@@ -561,7 +560,6 @@
       </div>
     </section>
 
-    <!-- ============ RESULTS ============ -->
     <section>
       <div id="warnings"></div>
 
@@ -657,14 +655,12 @@
       'rInfA', 'rCavA', 'rArchA', 'rInfB', 'rCavB', 'rArchB', 'rInfC', 'rCavC', 'rArchC',
       'rallySize', 'valoraRally'];
 
-    // fixed game constants
     const JOINERS = 6;   // joiner rallies you join (your 6 marches)
     const SLOTS = 14;    // joiner slots in a full 15-member rally (host + 14)
 
     const MARSHAL = { '0': 0, 'marshal': 2500, 'mid': 3750, 'big': 5000 };
     function marshalFlat() { return MARSHAL[$('marshalTier').value] || 0; }
 
-    // read & normalise a ratio (suffix 'A' | 'B' | 'C')
     function readRatio(s) {
       const i = num('rInf' + s), c = num('rCav' + s), a = num('rArch' + s), sum = i + c + a;
       return sum > 0 ? { inf: i / sum, cav: c / sum, arch: a / sum } : { inf: 0, cav: 0, arch: 0 };
@@ -781,7 +777,6 @@
         });
       }
 
-      // floor diagnostics
       const floorUnmet = [own, ...groups.map(g => g.joiner)].some(d => d.inf < FLOOR || d.cav < FLOOR);
       const floorApplied = !maxArcher && groups.some(g => g.joiner.inf > g.raw.inf || g.joiner.cav > g.raw.cav);
 
@@ -816,7 +811,6 @@
 
       const m = compute();
 
-      // active squad
       const tierLbl = { '0': 'no Marshal', 'marshal': '+' + fmt(2500), 'mid': '+' + fmt(3750), 'big': '+' + fmt(5000) }[$('marshalTier').value];
       $('squadFormula').textContent =
         `(${fmt(m.squadCore)} core, ${tierLbl}) × ${(1 + m.deploy).toFixed(2)}`;
@@ -824,13 +818,11 @@
       $('rallyFormula').textContent = `${fmt(m.rallyTotal - m.rallyBonuses)} base + ${fmt(m.rallyBonuses)} bonuses`;
       $('rallySizeTotal').textContent = fmt(m.rallyTotal);
 
-      // distribution mode UI (Max Archer hides split + ratios)
       $('ratioControls').style.display = m.maxArcher ? 'none' : '';
       $('distHint').textContent = m.maxArcher
         ? 'Max Archer: Inf 5,000 / Cav 5,000 / rest Archers per deployment; shortfall backfills Cav then Inf. Split & ratios disabled.'
         : 'Backfill when archers run short: Archers → Cav → Inf (Inf last). The own rally uses Ratio A. Inf & Cav are clamped to a 5,000 floor.';
 
-      // split-mode UI: show/hide ratio B & C, update their joiner-count tags
       const mode = m.mode;
       $('ratioB').style.display = (mode === 'half' || mode === 'thirds') ? '' : 'none';
       $('ratioC').style.display = (mode === 'thirds') ? '' : 'none';
@@ -838,7 +830,6 @@
       if (m.groups[1]) $('ratioBtag').textContent = m.groups[1].count + ' joiners';
       if (m.groups[2]) $('ratioCtag').textContent = m.groups[2].count + ' joiners';
 
-      // distribution table (dynamic columns: own rally + one per group)
       const trows = [
         { key: 'inf', label: 'Infantry', cls: 't-inf' },
         { key: 'cav', label: 'Cavalry', cls: 't-cav' },
@@ -858,20 +849,17 @@
         + `<td class="num">${fmt(tot(m.used))}</td></tr></tbody>`;
       $('sendTable').innerHTML = html;
 
-      // own-rally % readout: shown when "Own rally as %" is on (counts are then derived from these %)
       $('ownPct').style.display = m.usePct ? '' : 'none';
       $('ownPct').innerHTML = m.usePct
         ? `<strong>Own rally — set this formation in-game</strong> (rounded so Inf/Cav stay ≥ 5,000): <strong>${m.ownPct.inf}% Inf / ${m.ownPct.cav}% Cav / ${m.ownPct.arch}% Arch</strong>`
         : '';
 
-      // diagnostics
       const setMiss = (id, v) => { const e = $(id); e.textContent = v > 0 ? '−' + fmt(v) : '✓ 0'; e.className = 'v ' + (v > 0 ? 'short' : 'ok'); };
       setMiss('mInf', m.missing.inf); setMiss('mCav', m.missing.cav); setMiss('mArch', m.missing.arch);
       const setLeft = (id, v) => { const e = $(id); e.textContent = fmt(v); e.className = 'v ' + (v < 0 ? 'short' : ''); };
       setLeft('lInf', m.unused.inf); setLeft('lCav', m.unused.cav); setLeft('lArch', m.unused.arch);
       $('pjs').textContent = fmt(m.pjs);
 
-      // 9-grid
       const deploys = [0, 0.1, 0.2];
       const tiers = [
         { key: '0', label: 'None', flat: 0 },
@@ -890,7 +878,6 @@
         return `<tr><td>${t.label}</td>${cells}</tr>`;
       }).join('');
 
-      // warnings
       const w = [];
       if (!m.maxArcher) m.groups.forEach(g => {
         const s = num('rInf' + g.key) + num('rCav' + g.key) + num('rArch' + g.key);
@@ -908,7 +895,6 @@
       saveState();
     }
 
-    // ---- persistence (localStorage) + share link + copy-to-clipboard ----
     const STORAGE_KEY = 'bearcalc.state';
     let lastModel = null;
 
@@ -967,7 +953,6 @@
     $('copyBtn').addEventListener('click', () => copyText(formationText(), $('copyBtn')));
     $('shareBtn').addEventListener('click', () => copyText(shareURL(), $('shareBtn')));
 
-    // ---- init ----
     // A shared #hash pre-fills the app once; otherwise restore the last saved state.
     const fromHash = applyHash();
     if (!fromHash) loadLocal();

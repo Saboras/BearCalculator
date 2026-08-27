@@ -3,14 +3,13 @@ import Icon from './Icon.astro';
 ---
 
 {/*
-  Personal peak-window input (Story 2.5). Sits next to the timezone control —
-  windows are read in the visitor's LOCAL time, so they belong with the tz row.
-  One empty row is server-rendered (no-JS honesty: inert inputs that do nothing
-  with JS off, never a broken/blocking state). The finder client script
-  (src/scripts/finder/index.ts) wires add/remove, validation, persistence, and
-  windows-aware re-ranking. The remove <button> ships hidden on this first row;
-  new rows clone it (carrying the inline Lucide "x" SVG — one icon mechanism, no
-  emoji).
+  Sits next to the timezone control — windows are read in the visitor's LOCAL
+  time, so they belong with the tz row. One empty row is server-rendered (no-JS
+  honesty: inert inputs that do nothing with JS off, never a broken/blocking
+  state). The finder client script (src/scripts/finder/index.ts) wires
+  add/remove, validation, persistence, and windows-aware re-ranking. The remove
+  <button> ships hidden on this first row; new rows clone it (carrying the
+  inline Lucide "x" SVG — one icon mechanism, no emoji).
 */}
 <section class="peak-row" aria-labelledby="peak-q">
   <div class="peak-head">
@@ -38,8 +37,7 @@ import Icon from './Icon.astro';
 
 <style>
   /* Backgrounds use role tokens only, so both themes flip automatically: no baked
-     light gradient → no dark variant needed (the 1.3/1.4 wash-out guard is honored
-     by avoiding the problem). */
+     light gradient → no dark variant needed. */
   .peak-row {
     margin: 0 0 var(--space-2);
     padding: var(--space-3) var(--space-4);

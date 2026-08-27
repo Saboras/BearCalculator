@@ -3,22 +3,21 @@ import alliancesData from '../data/alliances.json';
 import { isDirectusConfigured } from './directus-build';
 
 /*
-  Build-time-only reader for the public apply form (Story 5.2).
+  Build-time-only reader for the public apply form.
 
   SEPARATE from directus-build.ts (the Finder's reader) on purpose. The apply form
   needs two things the Finder's reader deliberately withholds:
     - the alliance NUMERIC id — to write candidates.desired_alliance, an M2O → alliances.id
-    - the active transfer_period id — to stamp candidates.period (AD-17)
+    - the active transfer_period id — to stamp candidates.period
   The public POST is create-only with NO read, so the browser can resolve neither
-  at runtime; both are baked here at build time (SSG), exactly like the Finder bakes
-  alliance data in 4.3. Keeping this in its own module leaves the reviewed 4.3 Finder
-  path (directus-build.ts / alliances.ts) byte-for-byte untouched — the Finder still
-  addresses alliances by slug only (AR-18), and no internal id leaks into its output.
+  at runtime; both are baked here at build time (SSG). Keeping this in its own module
+  leaves the Finder path (directus-build.ts / alliances.ts) untouched — the Finder
+  still addresses alliances by slug only, and no internal id leaks into its output.
 
   Like directus-build.ts this runs ONLY at build time (imported from Astro
   frontmatter), so the read token never reaches a client bundle. The URL/token reads
-  mirror directus-build.ts (the canonical copy) and are re-read locally rather than
-  imported, so this story does not modify the fenced Finder module.
+  mirror directus-build.ts (the canonical copy) and are deliberately re-read locally
+  rather than imported.
 */
 const DIRECTUS_URL_PLACEHOLDER = 'https://admin.kingdom1516.example';
 const DIRECTUS_URL = import.meta.env.PUBLIC_DIRECTUS_URL || DIRECTUS_URL_PLACEHOLDER;
@@ -37,9 +36,9 @@ export interface ApplyFormData {
   // null in seed mode; the single active transfer_period id when configured.
   activePeriodId: number | null;
   // The >130M special-invite power threshold in RAW units (settings singleton, e.g.
-  // 130000000) — Story 5.3. null ONLY in seed mode; a configured build with a
-  // null / non-positive value THROWS (a null threshold would silently misclassify
-  // every high-power applicant, so the classifier must fail loud at build).
+  // 130000000). null ONLY in seed mode; a configured build with a null / non-positive
+  // value THROWS (a null threshold would silently misclassify every high-power
+  // applicant, so the classifier must fail loud at build).
   specialInvitePowerThreshold: number | null;
 }
 
@@ -92,29 +91,29 @@ export async function loadApplyFormData(): Promise<ApplyFormData> {
   )) as DirectusAllianceIdRow[];
 
   // Whole-collection read (the build token's finder-build-read policy grants read
-  // on transfer_period too — free on Core; a field subset would be 🔒 licensed).
+  // on transfer_period too — free on Core; a field subset would be licensed).
   const periodRows = (await client.request(
     readItems('transfer_period', { fields: ['id'], filter: { active: { _eq: true } }, limit: 2 })
   )) as DirectusPeriodRow[];
 
   if (periodRows.length !== 1) {
     throw new Error(
-      `Expected exactly one active transfer_period, found ${periodRows.length}. The apply form stamps candidates.period with the single active period (AD-17); fix the active flag in the Data Studio (README §10.5) and rebuild.`
+      `Expected exactly one active transfer_period, found ${periodRows.length}. The apply form stamps candidates.period with the single active period; fix the active flag in the Data Studio (README §10.5) and rebuild.`
     );
   }
 
-  // Story 5.3: the >130M special-invite threshold, baked so the /join form can
-  // classify power at the edge (the create-only public role has no runtime read).
-  // A whole-collection read on the finder-build-read token's `settings` grant is free
-  // on Core; the `fields` here is a client PROJECTION, not a 🔒 permission field-subset.
+  // The >130M special-invite threshold, baked so the /join form can classify power
+  // at the edge (the create-only public role has no runtime read). A whole-collection
+  // read on the finder-build-read token's `settings` grant is free on Core; the
+  // `fields` here is a client PROJECTION, not a permission field-subset.
   const settings = (await client.request(
     readSingleton('settings', { fields: ['special_invite_power_threshold'] })
   )) as DirectusSettingsRow;
 
   const threshold = settings.special_invite_power_threshold;
   if (typeof threshold !== 'number' || !Number.isFinite(threshold) || threshold <= 0) {
-    // Fail LOUD (deferred item D3): a null / non-positive threshold poisons the client
-    // compare `power > threshold` — `power > null` coerces null → 0, so every positive
+    // Fail LOUD: a null / non-positive threshold poisons the client compare
+    // `power > threshold` — `power > null` coerces null → 0, so every positive
     // power reads as over the limit and is silently flagged special (a non-positive
     // threshold is just as wrong). Either way it is a silent misclassifier: don't build.
     throw new Error(

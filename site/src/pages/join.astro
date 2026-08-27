@@ -4,18 +4,16 @@ import Icon from '../components/Icon.astro';
 import { loadApplyFormData } from '../lib/transfer-build';
 
 /*
-  /join — the public on-site transfer application (Story 5.2). It REPLACES the
-  MVP-1 Google-Form hand-off: the form posts a new `candidates` row directly to
-  the Directus API as the create-only unauthenticated role (AD-12), no custom
-  backend. This is AR-3's one permitted additive public-flow change (swap the
-  apply step); the Finder's outbound /join?alliance=<slug> contract is unchanged.
+  /join — the public on-site transfer application. The form posts a new
+  `candidates` row directly to the Directus API as the create-only
+  unauthenticated role, no custom backend. The Finder's outbound
+  /join?alliance=<slug> contract is unchanged.
 
   Two things a candidate row needs — the desired-alliance id (M2O → alliances.id)
   and the active period id (M2O → transfer_period.id, NOT NULL) — cannot be read
-  at runtime (the public role has no read; no public page fetches Directus, NFR-3).
-  Both are baked here at BUILD time via loadApplyFormData() and embedded as trusted
-  JSON, resolved client-side at submit — the same "embed trusted data at build,
-  resolve client-side" pattern the old page used for the slug→name map.
+  at runtime (the public role has no read; no public page fetches Directus).
+  Both are baked here at BUILD time via loadApplyFormData() and embedded as
+  trusted JSON, resolved client-side at submit.
 
   Seed/pre-launch (no token): the form renders from the seed alliance list with no
   ids and no active period, so it cannot POST — expected (there are no public users
@@ -23,8 +21,8 @@ import { loadApplyFormData } from '../lib/transfer-build';
 */
 const { alliances, activePeriodId, specialInvitePowerThreshold } = await loadApplyFormData();
 
-// The kingdom Discord invite (Owner request 2026-08-25) — asked for right after a
-// successful application, where joining it is the natural next step. Also in the Footer.
+// Asked for right after a successful application, where joining the kingdom
+// Discord is the natural next step. Also in the Footer.
 const DISCORD_URL = 'https://discord.gg/UvTNZyZvZd';
 
 /*
@@ -43,7 +41,7 @@ const TZ_OPTIONS = [
 
 /*
   Trusted build-time config for the client: the active period id (stamped into
-  candidates.period, AD-17) and the slug → alliance-id map (resolves the desired
+  candidates.period) and the slug → alliance-id map (resolves the desired
   <select> to an M2O id at submit). Only alliances that actually have an id (i.e.
   sourced from Directus, not the idless seed) go into the map.
 */
@@ -52,7 +50,7 @@ const slugToId: Record<string, number> = Object.fromEntries(
 );
 
 // Escape `<` so a CMS-editable value containing </script> cannot break out of the
-// inline JSON <script> sink (the same guard the old page used for editable names).
+// inline JSON <script> sink.
 const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/</g, '\\u003c');
 ---
 
@@ -166,11 +164,11 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
         </fieldset>
 
         {/*
-          Power drives the special-invite flag (Story 5.3): entered IN MILLIONS, the
-          client multiplies ×1,000,000 and compares to the build-baked threshold — over
-          it, the badge shows and needs_special_invite is recorded true. Since 2026-07-18
-          the raw value is also stored (`power` column) so Curators see it in the
-          candidate table — Owner decision superseding the original never-stored choice.
+          Power drives the special-invite flag: entered IN MILLIONS, the client
+          multiplies ×1,000,000 and compares to the build-baked threshold — over
+          it, the badge shows and needs_special_invite is recorded true. The raw
+          value is also stored (`power` column) so Curators see it in the
+          candidate table.
         */}
         <div class="field">
           <label for="f-power">Your power (in millions)</label>
@@ -186,7 +184,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
           Honeypot — a real bot fills every field, a human never sees this one. If it
           arrives non-empty the client silently drops the submit (best-effort; a
           direct API poster bypasses it — the server-side rate limit is the real
-          floor, AD-12). Hidden from sight, tab order, and assistive tech.
+          floor). Hidden from sight, tab order, and assistive tech.
         */}
         <div class="hp" aria-hidden="true">
           {/* Non-semantic name + label: dodge the "website"/"url" autofill heuristics that would
@@ -205,9 +203,9 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       </form>
 
       {/*
-        Confirmation climax — hidden until a successful create. Copy is fixed per the
-        UX spec (references the next window + the in-game contact via Player ID, without
-        hardcoding a date). Never the banned bare "submitted successfully".
+        Confirmation climax — hidden until a successful create. Copy references the
+        next window + the in-game contact via Player ID without hardcoding a date;
+        never a bare "submitted successfully".
       */}
       <div class="confirm" id="apply-confirm" role="status" tabindex="-1" hidden>
         <p class="confirm-line">
@@ -230,8 +228,8 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
 <style>
   /*
     Join-only recipes. The gold-button + parchment-card idioms mirror Finder / Leader
-    (each surface diverges, so KISS keeps them copied per the established default).
-    Every light-baked gradient gets a dark "Royal Court" variant (the 1.3/1.4 wash-out guard).
+    (each surface diverges, so KISS keeps them copied). Every light-baked gradient
+    gets a dark "Royal Court" variant.
   */
   .join {
     max-width: 640px;
@@ -239,7 +237,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     padding: var(--space-7) var(--space-5) var(--space-9);
   }
 
-  /* ===== Heading + ribbon (recipe mirrors Home / Finder / Leader) ===== */
   .join-head {
     position: relative;
     text-align: center;
@@ -294,7 +291,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     margin: 0;
   }
 
-  /* ===== Apply card — gold-framed parchment ===== */
   .apply-card {
     margin-top: var(--space-6);
     background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
@@ -307,7 +303,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       inset 0 0 22px rgba(224, 138, 43, .06);
   }
 
-  /* ===== Reassurance (reuses the Finder's .reassure idiom) ===== */
   .reassure {
     display: flex;
     align-items: center;
@@ -321,7 +316,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     display: inline-flex;
   }
 
-  /* ===== Form fields ===== */
   .field {
     margin: 0 0 var(--space-5);
     border: 0;
@@ -364,7 +358,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     font-feature-settings: "tnum";
     text-align: right;
   }
-  /* Gold focus ring (DESIGN input spec: border → primary + soft gold glow). */
   .field input:not([type="radio"]):focus-visible,
   .field textarea:focus-visible,
   .field select:focus-visible {
@@ -387,7 +380,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     display: none;
   }
 
-  /* ===== Special-invite warning (DESIGN `badge-special` — reserved danger token) ===== */
   .badge-special {
     display: flex;
     align-items: flex-start;
@@ -410,7 +402,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     margin-top: 1px;
   }
 
-  /* ===== Yes/No segmented control ===== */
   .yn-opts {
     display: flex;
     gap: var(--space-3);
@@ -442,7 +433,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     outline-offset: 2px;
   }
 
-  /* ===== Honeypot — visually + assistively hidden, still in the DOM ===== */
+  /* Off-screen, not display:none — the honeypot must stay fillable for bots. */
   .hp {
     position: absolute;
     left: -9999px;
@@ -451,7 +442,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     overflow: hidden;
   }
 
-  /* ===== Inline, plain-language form-level error (never the raw Directus envelope) ===== */
   .form-error {
     margin: 0 0 var(--space-4);
     padding: var(--space-3) var(--space-4);
@@ -464,7 +454,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     display: none;
   }
 
-  /* ===== Apply button (local recipe + :disabled, mirrors Leader) ===== */
   .btn-gold {
     display: inline-flex;
     align-items: center;
@@ -508,7 +497,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     display: none;
   }
 
-  /* ===== Confirmation climax ===== */
   .confirm[hidden] {
     display: none;
   }
@@ -540,7 +528,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     margin-top: var(--space-3);
   }
 
-  /* ===== Desktop enhancement (single 768px breakpoint) ===== */
   @media (min-width: 768px) {
     .ribbon::before,
     .ribbon::after {
@@ -548,7 +535,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     }
   }
 
-  /* ===== Dark "Royal Court" — every light-baked gradient needs a dark variant ===== */
+  /* Dark "Royal Court": every light-baked gradient needs a dark variant. */
   :global(:root[data-theme="dark"]) .ribbon-band {
     background: linear-gradient(#F2A93B, #E0962A);
     text-shadow: none;
@@ -588,10 +575,7 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
 
 <script>
   /*
-    /join client logic — a bundled module (imports the create-only Directus client).
-    It: (1) auto-detects the timezone, (2) pre-fills the desired alliance from the
-    Finder's ?alliance=<slug>, (3) validates required fields inline, (4) POSTs a new
-    candidate as the unauthenticated create-only role, (5) shows the confirmation.
+    Bundled module (imports the create-only Directus client).
 
     Security: the ?alliance param is attacker-controllable, but it is only ever
     matched against the trusted baked <option> slugs to pick a select value — no
@@ -628,8 +612,8 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   // JS is on → the real submit works, so the "needs JavaScript" note is no longer true.
   jsNote?.setAttribute('hidden', '');
 
-  // --- (1) Auto-detect timezone: select the visitor's zone, prepending it if the
-  //     curated list doesn't include it (so the stored value is always accurate).
+  // Prepend the detected zone if the curated list doesn't include it, so the
+  // stored value is always accurate.
   const tzSelect = document.getElementById('f-timezone') as HTMLSelectElement | null;
   try {
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -647,16 +631,14 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     /* Intl unavailable — keep the UTC default */
   }
 
-  // --- (2) Pre-fill desired alliance from ?alliance=<slug> (only if it's a known option).
   const desiredSelect = document.getElementById('f-desired_alliance') as HTMLSelectElement | null;
   const slugParam = new URLSearchParams(location.search).get('alliance');
   if (desiredSelect && slugParam && Array.from(desiredSelect.options).some((o) => o.value === slugParam)) {
     desiredSelect.value = slugParam; // matched against trusted baked options, never rendered from the URL
   }
 
-  // --- (3) Special-invite flag (Story 5.3): the applicant enters power IN MILLIONS;
-  //     the flag is derived by comparing (power × 1,000,000) to the build-baked
-  //     threshold (raw units). Power is a client-side classifier only — never sent.
+  // The applicant enters power IN MILLIONS; the flag is derived by comparing
+  // (power × 1,000,000) to the build-baked threshold (raw units).
   const powerInput = document.getElementById('f-power') as HTMLInputElement | null;
   const specialBadge = document.getElementById('special-invite-badge');
   const specialText = document.getElementById('special-invite-text');
@@ -697,7 +679,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   refreshSpecialBadge();
   window.addEventListener('pageshow', refreshSpecialBadge);
 
-  // --- Inline field-level errors (AC6) ---
   function setFieldError(name: string, message: string) {
     const el = document.getElementById(`err-${name}`);
     if (!el) return;
@@ -727,7 +708,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
   ];
   const REQUIRED_YESNO = ['team_player_kvk', 'day4_fcfs'];
 
-  // Returns the first invalid field name, or null when everything is valid.
   function validate(fd: FormData): string | null {
     let firstInvalid: string | null = null;
     const flag = (name: string, bad: boolean, msg: string) => {
@@ -746,7 +726,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
     if (kn !== '' && (!/^\d+$/.test(kn) || Number(kn) < 1)) {
       flag('kingdom_number', true, 'Enter a valid kingdom number.');
     }
-    // power (in millions) is required and must be a positive number (decimals allowed)
     const pw = String(fd.get('power') ?? '').trim();
     if (pw === '') {
       flag('power', true, 'This field is required.');
@@ -825,9 +804,6 @@ const jsonForScript = (data: unknown): string => JSON.stringify(data).replace(/<
       team_player_kvk: yesno('team_player_kvk'),
       others_transferring: text('others_transferring'),
       day4_fcfs: yesno('day4_fcfs'),
-      // The flag stays derived (millions → raw vs the build-baked threshold, Story 5.3).
-      // Since 2026-07-18 the raw power itself is ALSO stored (Owner decision — the
-      // candidate table shows it), superseding the original never-stored choice.
       needs_special_invite: needsSpecialInvite(powerToRaw(text('power'))),
       power: Math.round(powerToRaw(text('power'))),
       period: config.activePeriodId,

@@ -3,9 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
 
 // Ours: the calculators we build and run ourselves. Internal links (same tab) —
-// we never iframe our own pages. Icons are inline Lucide SVGs via the shared
-// <Icon> component (currentColor, 1em), matching the index.astro / Nav.astro
-// convention.
+// we never iframe our own pages.
 const ours = [
   {
     icon: 'calculator',
@@ -31,12 +29,12 @@ const ours = [
 
   `embed` is decided at AUTHOR TIME from the tool's HTTP framing headers, never
   by a runtime probe (a cross-origin frame block can't be reliably detected from
-  the parent — see the "no broken iframe" note below). Verified 2026-06-30:
+  the parent). Verified 2026-06-30:
     • kingshotoptimizer.com → `X-Frame-Options: SAMEORIGIN`  → NOT framable
     • kingshotguide.org      → no XFO/CSP, but header-absence can't rule out JS
-      frame-busting, and AC-3 wants a structural guarantee → link-out by default.
-  Realistic MVP-1 outcome: every curated tool links out. The embed branch below
-  is implemented and ready for any tool that genuinely permits framing.
+      frame-busting → link-out by default.
+  Today every curated tool links out; the embed branch below is ready for any
+  tool that genuinely permits framing.
 */
 const tools = [
   {
@@ -84,7 +82,6 @@ const tools = [
       </p>
     </header>
 
-    {/* ===== Ours: the calculators we run (internal, whole-card links) ===== */}
     <section class="section" aria-labelledby="featured-heading">
       <h2 id="featured-heading" class="section-title">Our calculators</h2>
       <div class="featured-grid">
@@ -102,7 +99,6 @@ const tools = [
       </div>
     </section>
 
-    {/* ===== Honest external-tools note (AC-7: never overclaim) ===== */}
     <p class="hub-note" role="note">
       The tools below are made and maintained by other Kingshot players —
       <strong>not by us</strong>. We link them because they’re genuinely useful, but
@@ -111,14 +107,13 @@ const tools = [
       sanity-check against your own numbers.
     </p>
 
-    {/* ===== Curated external tools ===== */}
     <section class="section" aria-labelledby="community-heading">
       <h2 id="community-heading" class="section-title">Community tools</h2>
       <div class="tool-grid">
         {tools.map((t) =>
           t.embed ? (
             /* Embeddable tool: inline iframe + a guaranteed open-in-new-tab link,
-               so a silently-blocked frame still leaves a working path (AC-5). */
+               so a silently-blocked frame still leaves a working path. */
             <div class="tool-card tool-card--embed">
               <div class="tool-head">
                 <span class="tool-icon" aria-hidden="true"><Icon name={t.icon} /></span>
@@ -145,7 +140,7 @@ const tools = [
               </div>
             </div>
           ) : (
-            /* Link-out tool: the whole card is the external link (UX-DR-20). */
+            /* Link-out tool: the whole card is the external link. */
             <a
               class="tool-card"
               href={t.href}
@@ -184,7 +179,6 @@ const tools = [
     padding: var(--space-6) var(--space-5) var(--space-9);
   }
 
-  /* ===== Header ===== */
   .tools-header {
     margin-bottom: var(--space-4);
   }
@@ -210,8 +204,6 @@ const tools = [
     margin-bottom: var(--space-4);
   }
 
-  /* ===== Our calculators — gold-framed parchment (recipe copied from Home),
-     stacked on mobile and two equal cards side by side from 768px ===== */
   .featured-grid {
     display: grid;
     grid-template-columns: 1fr; /* mobile: stacked, like the curated grid */
@@ -289,7 +281,7 @@ const tools = [
     color: var(--color-primary-hover);
   }
 
-  /* ===== Honest note — calm (accent left-rule), not the danger-red combat block ===== */
+  /* Calm (accent left-rule), not the danger-red combat block. */
   .hub-note {
     margin: var(--space-6) 0 0;
     background: var(--color-surface);
@@ -305,15 +297,14 @@ const tools = [
     color: var(--color-ink);
   }
 
-  /* ===== Curated grid ===== */
   .tool-grid {
     display: grid;
     grid-template-columns: 1fr; /* mobile: single-column stack */
     gap: var(--space-5);
   }
 
-  /* tool-card — quieter token-only recipe (no light-baked literals → flips with
-     the theme automatically, no dark override needed). */
+  /* Quieter token-only recipe: no light-baked literals → flips with the theme
+     automatically, no dark override needed. */
   .tool-card {
     display: flex;
     flex-direction: column;
@@ -394,8 +385,7 @@ const tools = [
     color: var(--color-primary-hover);
   }
 
-  /* ===== Embed frame (embed:true only) — sized, token-framed, responsive.
-     Never zero-height; a token border/surface keeps a light tool clean on the
+  /* Never zero-height; a token border/surface keeps a light tool clean on the
      dark page. */
   .embed-frame {
     border: 1px solid var(--color-border);
@@ -424,7 +414,6 @@ const tools = [
     }
   }
 
-  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
   @media (min-width: 768px) {
     .featured-grid {
       grid-template-columns: 1fr 1fr;
@@ -438,14 +427,12 @@ const tools = [
       font-size: 30px;
     }
     .tool-grid {
-      /* scales 1 → N as tools are added/removed; ready to extend */
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
   }
 
-  /* ===== Dark "Royal Court" — only the featured card bakes light literals
-     (gold gradient/emboss). Remap them; token-only surfaces need nothing.
-     (The Story 1.3/1.4 wash-out guard — copied from index.astro:296–311.) ===== */
+  /* Dark "Royal Court": only the featured card bakes light literals
+     (gold gradient/emboss). Remap them; token-only surfaces need nothing. */
   :global(:root[data-theme="dark"]) .featured-card {
     background: linear-gradient(var(--color-surface), var(--color-bg));
     box-shadow:

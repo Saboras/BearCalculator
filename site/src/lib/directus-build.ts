@@ -1,15 +1,15 @@
 import { createDirectus, staticToken, rest, readItems } from '@directus/sdk';
 
 /*
-  Build-time-only Directus read client (Story 4.3).
+  Build-time-only Directus read client.
 
   SEPARATE from src/lib/directus.ts on purpose. directus.ts is imported by
   client-side scripts (the /leader + /admin session auth) and is bundled into
   browser JS, so a read token referenced there could be inlined into that bundle
   by Vite. This module is imported ONLY by src/data/alliances.ts, which runs
   exclusively at build time (Astro SSG frontmatter), so the token never reaches
-  a client bundle. (AR-18: the build pulls published content with a read-only
-  token; the leader session and the create-only public role are separate seams.)
+  a client bundle. (The build pulls published content with a read-only token;
+  the leader session and the create-only public role are separate seams.)
 
   The token is read from process.env, NOT import.meta.env. In Astro v6 a
   non-PUBLIC_ variable is a Node process var (import.meta.env no longer carries
@@ -31,7 +31,7 @@ const TOKEN_PLACEHOLDER = 'REPLACE_WITH_READ_ONLY_BUILD_TOKEN';
 /*
   True only when a real read token is configured. When false, the Finder builds
   from the committed seed file (src/data/alliances.json) so CI and local builds
-  stay green before the VPS + token exist — the MVP-1 behaviour, unchanged.
+  stay green before the VPS + token exist.
 */
 export function isDirectusConfigured(): boolean {
   return DIRECTUS_TOKEN !== '' && DIRECTUS_TOKEN !== TOKEN_PLACEHOLDER;
@@ -49,7 +49,7 @@ export interface DirectusAllianceRow {
 /*
   The 6 public scalar fields. `official` (M2O -> directus_users) is deliberately
   NOT selected: it is never rendered and would pull a user UUID (PII) into the
-  static HTML. `id` is internal — public addressing is by slug (AR-18).
+  static HTML. `id` is internal — public addressing is by slug.
 */
 const ALLIANCE_FIELDS = ['name', 'slug', 'bear_trap_1', 'bear_trap_2', 'peak', 'farm_alliance'];
 

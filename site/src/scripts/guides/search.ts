@@ -1,10 +1,10 @@
 /*
-  Guide search — client wiring (Story 6.4, AC4). Pure computation over the
-  build-emitted /guides-index.json (fetched lazily on first interaction — a
-  browse-only member never pays for it); NO server search endpoint. Result
-  rows are built with textContent/createElement exclusively — index strings
-  never enter the DOM as HTML. The matcher itself lives in ./match (pure,
-  unit-tested in isolation).
+  Guide search — client wiring. Pure computation over the build-emitted
+  /guides-index.json (fetched lazily on first interaction — a browse-only
+  member never pays for it); NO server search endpoint. Result rows are built
+  with textContent/createElement exclusively — index strings never enter the
+  DOM as HTML. The matcher itself lives in ./match (pure, unit-tested in
+  isolation).
 */
 import { matchGuides, MIN_QUERY_LENGTH, type GuideIndexEntry } from './match';
 

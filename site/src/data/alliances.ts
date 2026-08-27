@@ -2,15 +2,14 @@ import alliancesData from './alliances.json';
 import { fetchAlliancesRaw, isDirectusConfigured, type DirectusAllianceRow } from '../lib/directus-build';
 
 /*
-  The Alliance type lives here, with its data. 7 canonical fields (AD-18); the
-  same flat shape both phases. Times are "HH:MM" UTC times-of-day (no date), peak
-  is a single scalar (never a range), and every time field is nullable (AD-10).
+  The Alliance type lives here, with its data. 7 canonical fields; the same flat
+  shape from both sources. Times are "HH:MM" UTC times-of-day (no date), peak is
+  a single scalar (never a range), and every time field is nullable.
 
-  Source (Story 4.3): the Finder now sources this array from the Directus
-  `alliances` collection at BUILD time (SSG) when a read token is configured;
-  otherwise it falls back to the committed ./alliances.json seed (see the toggle
-  at the bottom). The exported shape is identical either way, so finder.astro,
-  AllianceCard, and the finder client script are unchanged (AR-16 / AR-17).
+  The Finder sources this array from the Directus `alliances` collection at
+  BUILD time (SSG) when a read token is configured; otherwise it falls back to
+  the committed ./alliances.json seed (see the toggle at the bottom). The
+  exported shape is identical either way.
 */
 export interface Alliance {
   name: string;
@@ -23,14 +22,14 @@ export interface Alliance {
 }
 
 /*
-  Build-time validation (AC6). A malformed time, a duplicate slug, or a non-canonical
-  row must fail `npm run build` loudly instead of rendering wrong. A thrown error here
-  fails the build (this module is evaluated during static rendering).
+  Build-time validation. A malformed time, a duplicate slug, or a non-canonical
+  row must fail `npm run build` loudly instead of rendering wrong. A thrown error
+  here fails the build (this module is evaluated during static rendering).
 
-  Story 4.3 keeps this gate ON the Directus-sourced rows: the network read is now a
-  system boundary, so the validator is the boundary guard (mapped rows are fed through
-  it exactly like the seed file). It runs AFTER mapRow(), which normalizes Directus
-  time serialization to HH:MM, so TIME_RE stays strict HH:MM by design.
+  The gate runs ON the Directus-sourced rows too: the network read is a system
+  boundary, so the validator is the boundary guard (mapped rows are fed through
+  it exactly like the seed file). It runs AFTER mapRow(), which normalizes
+  Directus time serialization to HH:MM, so TIME_RE stays strict HH:MM by design.
 */
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/; // kebab-case; "516" (kebab-of-digits) is valid
@@ -69,7 +68,7 @@ function validateAlliances(data: unknown): Alliance[] {
     if (!isStringOrNull(r.farm_alliance)) fail(`${at} "farm_alliance" must be a string or null`);
     if (!isStringOrNull(r.official)) fail(`${at} "official" must be a string or null`);
   });
-  // An empty array is a VALID state (Story 2.3 renders zero gracefully) — never a build error.
+  // An empty array is a VALID state — never a build error.
   return data as Alliance[];
 }
 
@@ -80,7 +79,7 @@ function validateAlliances(data: unknown): Alliance[] {
     truncate to the first 5 chars. Seed-imported rows already read back as HH:MM.
   - `official` is a directus_users M2O (PII) and is not selected by the read — keep it
     null (the Finder never renders it; it only exists to satisfy the canonical shape).
-  - slug/name stay strings; "516" is never number-coerced (AR-18).
+  - slug/name stay strings; "516" is never number-coerced.
 */
 function normalizeTime(v: string | null): string | null {
   return typeof v === 'string' && v.length > 5 ? v.slice(0, 5) : v;
@@ -98,12 +97,12 @@ function mapRow(r: DirectusAllianceRow): Alliance {
 }
 
 /*
-  Source toggle (Story 4.3).
-  - No build token configured → build from the committed seed file. Keeps CI and local
-    builds green before the VPS + token exist (MVP-1 behaviour, byte-for-byte unchanged).
-  - Token configured → source from Directus at build time (SSG, AC1). A fetch error
-    PROPAGATES so `astro build` fails loud; it must never be swallowed into an empty
-    Finder that looks like the legitimate empty-collection zero-state.
+  Source toggle.
+  - No build token configured → build from the committed seed file. Keeps CI and
+    local builds green before the VPS + token exist.
+  - Token configured → source from Directus at build time (SSG). A fetch error
+    PROPAGATES so `astro build` fails loud; it must never be swallowed into an
+    empty Finder that looks like the legitimate empty-collection zero-state.
 */
 async function loadAlliances(): Promise<Alliance[]> {
   if (!isDirectusConfigured()) {

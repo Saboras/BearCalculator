@@ -4,12 +4,11 @@ import { DIRECTUS_URL, assetFetchUrl } from './guides-build';
 import { directusFileId } from './guide-image-refs';
 
 /*
-  Build-time image localization + optimization (Story 6.4 — the off-box half of
-  NFR-14 / AD-13). Guide bodies carry inline <img> references to Directus
-  originals (`/assets/<uuid>`, absolute or relative — the WYSIWYG stores
-  either). Leaving them would (a) put the 1GB Directus box behind every public
-  image (AD-2: public traffic never reaches Directus), (b) break "renders with
-  Directus offline" (NFR-2), and (c) a relative `/assets/…` would simply 404 on
+  Build-time image localization + optimization. Guide bodies carry inline <img>
+  references to Directus originals (`/assets/<uuid>`, absolute or relative — the
+  WYSIWYG stores either). Leaving them would (a) put the 1GB Directus box behind
+  every public image (public traffic never reaches Directus), (b) break "renders
+  with Directus offline", and (c) a relative `/assets/…` would simply 404 on
   the apex origin. So at build: download each referenced original (assets are
   not public — the fetch authenticates via the read token's access_token query
   param, see guides-build.assetFetchUrl), optimize it through the Astro image

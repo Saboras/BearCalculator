@@ -1,24 +1,23 @@
 import sanitizeHtml from 'sanitize-html';
 
 /*
-  Guide body sanitization — the infra README §18.2 forward-guard lands here
-  (Story 6.4). The Directus WYSIWYG stores `guides.body` HTML AS-IS: the code
+  Guide body sanitization — the infra README §18.2 forward-guard lands here.
+  The Directus WYSIWYG stores `guides.body` HTML AS-IS: the code
   source view and customMedia embeds let an Editor (or a compromised Editor
   account) persist arbitrary HTML. This module is the single gate between that
   stored HTML and public pages: EVERY body rendered or excerpted publicly goes
   through sanitizeGuideBody() first. Build-time only — never ships to a client
   bundle.
 
-  Allowlist intent (FR-16 must survive, everything hostile must die):
+  Allowlist intent (legit guide content must survive, everything hostile must die):
   - tables/headings/lists/links: sanitize-html defaults
   - <img>: allowed (guide images; localized by guide-images.ts AFTER this)
   - <iframe>: allowed ONLY for YouTube hosts (embedded video); every other
     iframe src is stripped by allowedIframeHostnames
   - <script>, event handlers, javascript: URLs: dead (defaults)
   - style/class attributes: stripped — the site's readability tokens own
-    typography and contrast (NFR-5), WYSIWYG inline styling cannot override
+    typography and contrast, WYSIWYG inline styling cannot override
   - body <h1> is demoted to <h2>: the page's <h1> is the guide title
-    (UX-DR-22 heading nesting)
   - target="_blank" links get rel="noopener noreferrer" forced
 */
 export function sanitizeGuideBody(body: string | null | undefined): string {

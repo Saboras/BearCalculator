@@ -1,10 +1,10 @@
 import { createDirectus, staticToken, rest, readItems } from '@directus/sdk';
 
 /*
-  Build-time-only Directus read client for the Guides KB (Story 6.4).
+  Build-time-only Directus read client for the Guides KB.
 
   SEPARATE from src/lib/directus.ts on purpose, for the same reason as
-  directus-build.ts (Story 4.3): directus.ts is bundled into browser JS (the
+  directus-build.ts: directus.ts is bundled into browser JS (the
   /leader + /admin session auth), so a read token referenced there could be
   inlined into that bundle by Vite. This module is imported only by build-time
   code (src/data/guides.ts, the guide pages' frontmatter, the search-index
@@ -46,7 +46,7 @@ export function isDirectusConfigured(): boolean {
 
 /*
   Build-time fetch URL for a Directus-stored original asset. Assets are NOT
-  publicly readable (live-measured 6.4: anon and no-files-grant tokens both
+  publicly readable (live-measured: anon and no-files-grant tokens both
   403), so the build authenticates with the same read token via Directus'
   access_token query parameter — Astro's image pipeline fetches with a plain
   GET and cannot send headers. The token appears only in this build-time URL;

@@ -3,16 +3,13 @@ import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
 
 /*
-  /admin — the custom admin shell (Story 3.5), the Structural-Seed "custom Candidates
-  admin shell" path. A no-JS-safe frame that a bundled module fills client-side with the
-  leader session: a role chip + a tab strip whose tabs are PRESENT ONLY for areas the
-  leader can access (absent, not disabled — UX-DR-17). Only Candidates is a custom surface
-  (a placeholder here; the pipeline is Epic 5); Guides/Alliances/Accounts hand off to the
-  Directus Data Studio (AR-5/NFR-18).
+  /admin — the custom admin shell. A no-JS-safe frame that a bundled module fills
+  client-side with the leader session: a role chip + a tab strip whose tabs are
+  PRESENT ONLY for areas the leader can access (absent, not disabled).
 
-  Static-site model (AD-1/AD-2): output:'static', no SSR/API route. All data is fetched in
-  the browser with the httpOnly session cookie — the static HTML bakes ZERO admin data.
-  The gate is UX-only; Directus server-enforces 401/403 regardless (AD-4).
+  Static-site model: output:'static', no SSR/API route. All data is fetched in
+  the browser with the httpOnly session cookie — the static HTML bakes ZERO admin
+  data. The gate is UX-only; Directus server-enforces 401/403 regardless.
 */
 ---
 
@@ -63,14 +60,13 @@ import Icon from '../../components/Icon.astro';
 
 <style is:global>
   .admin {
-    /* DESIGN Layout & Spacing: the candidate table is a wide data surface —
-       desktop content max ~1100–1180px (960 clipped the table on desktops). */
+    /* The candidate table is a wide data surface — desktop content max
+       ~1100–1180px (960 clipped the table on desktops). */
     max-width: 1180px;
     margin: 0 auto;
     padding: var(--space-6) var(--space-4) var(--space-9);
   }
 
-  /* ===== States (loading / error / empty) ===== */
   .admin-state {
     max-width: 520px;
     margin: var(--space-7) auto;
@@ -93,13 +89,11 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-danger);
   }
 
-  /* ===== The shell ===== */
   .shell[hidden] {
     display: none;
   }
 
-  /* Shell header — wordmark + role chips + logout. Mirrors the topbar chrome recipe
-     (light parchment literal; dark variant below is the 1.3/1.4 wash-out guard). */
+  /* Mirrors the topbar chrome recipe (light parchment literal; dark variant below). */
   .shell-head {
     display: flex;
     align-items: center;
@@ -130,7 +124,6 @@ import Icon from '../../components/Icon.astro';
     margin-left: var(--space-1);
   }
 
-  /* Role chip(s) — gold pill (the mockup recipe), theme-aware via tokens. */
   .role-chips {
     display: flex;
     flex-wrap: wrap;
@@ -184,7 +177,7 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-accent);
   }
 
-  /* Tab strip — gold active-underline, absent (not disabled) tabs are simply not built. */
+  /* Absent (not disabled) tabs are simply not built. */
   .tabs {
     display: flex;
     gap: var(--space-1);
@@ -227,7 +220,7 @@ import Icon from '../../components/Icon.astro';
     height: 16px;
   }
 
-  /* Panels — gold-framed parchment card (the UX-DR-8 recipe from leader.astro). */
+  /* Gold-framed parchment card (the recipe from leader.astro). */
   .panels {
     background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
     border: 2px solid var(--color-primary);
@@ -284,7 +277,6 @@ import Icon from '../../components/Icon.astro';
     height: 16px;
   }
 
-  /* ===== Candidates table (Story 5.4) — calm data table (UX-DR-11) ===== */
   .cand-intro {
     color: var(--color-muted);
     font-size: 13.5px;
@@ -305,16 +297,15 @@ import Icon from '../../components/Icon.astro';
   .cand-table-wrap[hidden] {
     display: none;
   }
-  /* Story 5.7: the horizontal scroll moved from .cand-table-wrap to this inner box so the cap-strip
-     above the table stays fixed while a wide table scrolls under it (the strip is a sibling here). */
+  /* The horizontal scroll lives on this inner box (not .cand-table-wrap) so the cap-strip
+     above the table stays fixed while a wide table scrolls under it (the strip is a sibling). */
   .cand-table-scroll {
-    overflow-x: auto; /* wide table scrolls in its own box, never the page body (AC4) */
+    overflow-x: auto; /* wide table scrolls in its own box, never the page body */
     -webkit-overflow-scrolling: touch;
   }
 
-  /* ===== Capacity counters strip (Story 5.7) — the gold-framed "room" above the calm table ===== */
-  /* Planning aids only, NEVER a gate. The strip gets the frame (a "room"); the table interior stays
-     calm (DESIGN Elevation — frame the room, not the chairs). Danger red is RESERVED — never here. */
+  /* Capacity counters are planning aids only, NEVER a gate. The strip gets the frame
+     (a "room"); the table interior stays calm. Danger red is RESERVED — never here. */
   .cap-strip {
     background: linear-gradient(#FBF6EA, #F1E6CC); /* warm parchment; dark override below */
     border: 2px solid var(--color-primary);
@@ -357,7 +348,7 @@ import Icon from '../../components/Icon.astro';
     font-weight: 700;
     margin-top: 5px;
     color: var(--color-ink);
-    font-variant-numeric: tabular-nums; /* every count is tabular (DESIGN Typography) */
+    font-variant-numeric: tabular-nums;
   }
   .cap-cv small {
     font-size: 15px;
@@ -365,14 +356,13 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-muted); /* the "/ cap" denominator + " queued" note */
   }
   .cap-counter--editable .cap-cv {
-    color: var(--color-primary); /* gold: the live-editable special target (AC-2, never a literal 3) */
+    color: var(--color-primary); /* gold: the live-editable special target */
   }
   .cap-strip-note {
     font-size: 12px;
     color: var(--color-muted);
     margin: var(--space-3) 0 0;
   }
-  /* ===== Guides publish list (Story 6.3) — reuses the calm cand-table styling ===== */
   .guide-publish-cell {
     white-space: nowrap; /* the Publish button + its inline error stay on the action column */
   }
@@ -385,15 +375,15 @@ import Icon from '../../components/Icon.astro';
     margin: var(--space-4) 0 0;
   }
 
-  /* Calm note when the active window is scoped-empty (rows exist but none in-window) — review P2. */
+  /* Calm note when the active window is scoped-empty (rows exist but none in-window). */
   .cand-empty-note {
     font-size: 14px;
     color: var(--color-muted);
     margin: var(--space-5) 0 0;
   }
 
-  /* Carry-over badge (Story 5.7) — success family (DESIGN: carry-over confirmation = success green),
-     NOT danger, NOT gold. Mirrors the badge-status--accepted success tint for readable text. */
+  /* Carry-over badge — success family, NOT danger, NOT gold. Mirrors the
+     badge-status--accepted success tint for readable text. */
   .badge-carryover {
     display: inline-block;
     margin-left: var(--space-2);
@@ -413,7 +403,7 @@ import Icon from '../../components/Icon.astro';
     font-family: var(--font-body);
     font-size: 13.5px;
   }
-  /* Uppercase tracked header + 1.5px bottom rule; no per-row frame, no zebra (UX-DR-11). */
+  /* Uppercase tracked header + 1.5px bottom rule; no per-row frame, no zebra. */
   .cand-table thead th {
     text-align: left;
     text-transform: uppercase;
@@ -508,14 +498,14 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-danger);
     background: rgba(216, 53, 42, .14);
   }
-  /* Story 6.3: the third guide publish state — published, but the draft carries newer,
+  /* The third guide publish state — published, but the draft carries newer,
      unpublished edits. Amber attention tint (Draft reuses --applied, Published --transferred). */
   .badge-status--draft-newer {
     color: #9a621b; /* darker amber than the gold token for readable text on a light tint */
     background: rgba(224, 138, 43, .16);
   }
 
-  /* Special-invite chip — compact inline variant of DESIGN badge-special (reserved danger). */
+  /* Compact inline variant of badge-special (reserved danger). */
   .badge-special-chip {
     display: inline-flex;
     align-items: center;
@@ -536,7 +526,7 @@ import Icon from '../../components/Icon.astro';
     height: 12px;
   }
 
-  /* Expandable per-row detail (FR-6 "all their fields"). */
+  /* Expandable per-row detail — shows all of a candidate's fields. */
   .cand-detail[hidden] {
     display: none;
   }
@@ -572,7 +562,6 @@ import Icon from '../../components/Icon.astro';
     }
   }
 
-  /* ===== Curator status-lifecycle controls (Story 5.5) — inside the per-row detail ===== */
   .cand-actions {
     margin-top: var(--space-4);
     padding-top: var(--space-3);
@@ -620,7 +609,7 @@ import Icon from '../../components/Icon.astro';
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
-  /* Gold primary = Accept / Mark Transferred / the chosen path (DESIGN "advance status"). */
+  /* Gold primary = Accept / Mark Transferred / the chosen path. */
   .cand-btn--gold,
   .cand-btn--path-active {
     background: linear-gradient(#EDA44E, #E08A2B);
@@ -642,7 +631,7 @@ import Icon from '../../components/Icon.astro';
     border-color: var(--color-primary);
     color: var(--color-primary-hover);
   }
-  /* Danger outline = Reject (reserved semantic colour, UX-DR-21). */
+  /* Danger outline = Reject (reserved semantic colour). */
   .cand-btn--danger {
     background: transparent;
     border-color: rgba(216, 53, 42, .5);
@@ -665,7 +654,6 @@ import Icon from '../../components/Icon.astro';
     display: none;
   }
 
-  /* ===== Grouping + suggested-alliance controls (Story 5.6) ===== */
   /* Read-only group summary + the edge-computed divergent flag (both visible to all leaders). */
   .cand-group-summary {
     margin: 0 0 var(--space-2);
@@ -767,9 +755,8 @@ import Icon from '../../components/Icon.astro';
     outline-offset: 2px;
   }
 
-  /* ===== Manual delete + window cleanup (Story 5.8) ===== */
-  /* Curator toolbar above the table: batch cleanup (danger) + the reachability toggle. It sits
-     OUTSIDE the gold cap-strip because danger red is reserved-out there (DESIGN Do's-and-Don'ts). */
+  /* Curator toolbar above the table: batch cleanup (danger) + the reachability toggle.
+     It sits OUTSIDE the gold cap-strip because danger red is reserved-out there. */
   .cand-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -804,8 +791,8 @@ import Icon from '../../components/Icon.astro';
     padding-top: var(--space-3);
     border-top: 1px dashed var(--color-border);
   }
-  /* The between-windows cleanup confirmation (mockup .cleared) — a calm dashed card with a
-     success-green carry-over pill (carry-over confirmation = success, never danger). */
+  /* The between-windows cleanup confirmation — a calm dashed card with a success-green
+     carry-over pill (carry-over confirmation = success, never danger). */
   .cand-cleared {
     position: relative;
     border: 2px dashed var(--color-border);
@@ -845,7 +832,7 @@ import Icon from '../../components/Icon.astro';
     font-size: 13px;
     font-weight: 700;
     color: var(--color-ink);
-    font-variant-numeric: tabular-nums; /* tabular counts (DESIGN Typography) */
+    font-variant-numeric: tabular-nums;
     margin: 0 0 var(--space-3);
   }
   .cand-cleared-pill {
@@ -858,7 +845,7 @@ import Icon from '../../components/Icon.astro';
     background: rgba(70, 209, 122, .16);
   }
 
-  /* ===== Dark "Royal Court" — the light-baked parchment/gold literals need dark variants. ===== */
+  /* Dark "Royal Court": the light-baked parchment/gold literals need dark variants. */
   :root[data-theme='dark'] .shell-head,
   :root[data-theme='dark'] .tabs {
     background: linear-gradient(var(--color-surface), var(--color-bg));
@@ -887,7 +874,7 @@ import Icon from '../../components/Icon.astro';
     background: rgba(216, 53, 42, .2);
     border-color: rgba(216, 53, 42, .5);
   }
-  /* Story 6.3 — the light amber tint washes out on the dark card. */
+  /* The light amber tint washes out on the dark card. */
   :root[data-theme='dark'] .badge-status--draft-newer {
     color: #F2A93B;
     background: rgba(242, 169, 59, .16);
@@ -895,7 +882,7 @@ import Icon from '../../components/Icon.astro';
   :root[data-theme='dark'] .cand-detail > td {
     background: rgba(242, 169, 59, .05);
   }
-  /* Curator controls — the light gold gradient washes out on the dark card (btn-gold guard).
+  /* The light gold gradient washes out on the dark card.
      --color-primary-foreground / --color-danger are already theme-aware, so only the
      literal gradients + rgba borders need a dark override. */
   :root[data-theme='dark'] .cand-btn--gold,
@@ -913,7 +900,7 @@ import Icon from '../../components/Icon.astro';
   :root[data-theme='dark'] .cand-btn--danger:hover:not(:disabled) {
     background: rgba(242, 88, 77, .12);
   }
-  /* Story 5.6 — the light danger tints + parchment washes need dark overrides. */
+  /* The light danger tints + parchment washes need dark overrides. */
   :root[data-theme='dark'] .cand-flag--divergent,
   :root[data-theme='dark'] .cand-flag-chip {
     color: var(--color-danger);
@@ -926,7 +913,7 @@ import Icon from '../../components/Icon.astro';
   :root[data-theme='dark'] .cand-select {
     background: var(--color-surface);
   }
-  /* Story 5.7 — the light parchment/white literals + the teal chip tint need dark variants
+  /* The light parchment/white literals + the teal chip tint need dark variants
      (--color-accent already swaps teal → royal-blue; --color-primary/--color-muted are theme-aware). */
   :root[data-theme='dark'] .cap-strip {
     background: linear-gradient(var(--color-surface), var(--color-bg));
@@ -939,13 +926,13 @@ import Icon from '../../components/Icon.astro';
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
   }
-  /* Story 5.8 — the success-green carry-over pill washes out on the dark card. */
+  /* The success-green carry-over pill washes out on the dark card. */
   :root[data-theme='dark'] .cand-cleared-pill {
     color: var(--color-success);
     background: rgba(95, 227, 148, .14);
   }
 
-  /* ===== Mobile — the shell is usable on the bottom-bar layout too. ===== */
+  /* Mobile: the shell is usable on the bottom-bar layout too. */
   @media (max-width: 767.98px) {
     .shell-head {
       padding: var(--space-3) var(--space-4);
@@ -960,10 +947,11 @@ import Icon from '../../components/Icon.astro';
 
 <script>
   /*
-    /admin client logic — a bundled module (not is:inline: it imports the SDK helpers).
-    Resolves the session + access client-side, then builds the role chip and the tab strip
-    (tabs are BUILT from accessible areas → inaccessible ones are absent, not disabled).
-    Nothing security-relevant is enforced here; Directus returns 401/403 regardless (AD-4).
+    Bundled module (not is:inline: it imports the SDK helpers). Resolves the
+    session + access client-side, then builds the role chip and the tab strip
+    (tabs are BUILT from accessible areas → inaccessible ones are absent, not
+    disabled). Nothing security-relevant is enforced here; Directus returns
+    401/403 regardless.
   */
   import {
     getCurrentUser,
@@ -1005,12 +993,10 @@ import Icon from '../../components/Icon.astro';
     ownerOnly?: boolean;
   }
 
-  // The four conceptual admin areas. Candidates (Transfer) and — since Story 6.3 — the
-  // Guides publish list are custom surfaces (panelBody branches on `key`); the rest hand
-  // off to the Data Studio. Guides AUTHORING stays in the Studio (AD-3): the custom panel
-  // is only the minimal publish surface (the Option-B "Owner-blessed helper", Sabo
-  // 2026-07-16 — a recorded deviation from the one-custom-surface letter of AR-5).
-  // Accounts is Owner-only.
+  // The four conceptual admin areas. Candidates (Transfer) and the Guides publish
+  // list are custom surfaces (panelBody branches on `key`); the rest hand off to
+  // the Data Studio. Guides AUTHORING stays in the Studio: the custom panel is
+  // only the minimal publish surface. Accounts is Owner-only.
   const AREAS: AreaDef[] = [
     { key: 'candidates', area: 'Transfer', label: 'Candidates', icon: 'clipboard' },
     { key: 'guides', area: 'Guides', label: 'Guides', icon: 'book-open' },
@@ -1113,7 +1099,7 @@ import Icon from '../../components/Icon.astro';
     }
     if (area.key === 'guides') {
       // Trusted CONSTANTS only. Guide ROWS are built with textContent in renderGuidesTable —
-      // draft body HTML is NEVER rendered here (the 6.4 public reader owns sanitize+render).
+      // draft body HTML is NEVER rendered here (the public reader owns sanitize+render).
       return `<h2>Guides</h2>
 <p class="cand-intro">Published changes reach the public site after ~1–3 min.</p>
 <div class="cand-state" id="guides-loading" role="status"><p class="muted">Loading guides…</p></div>
@@ -1123,7 +1109,7 @@ import Icon from '../../components/Icon.astro';
 <p class="guides-studio-note"><a href="${DATA_STUDIO_URL}" target="_blank" rel="noopener noreferrer">Write drafts in the Data Studio</a></p>`;
     }
     if (area.key === 'alliances') {
-      // Read-only overview (Owner request 2026-07-28) — editing stays in the Studio (AD-3).
+      // Read-only overview — editing stays in the Studio.
       return `<h2>Alliances</h2>
 <div class="cand-state" id="alli-loading" role="status"><p class="muted">Loading alliances…</p></div>
 <div class="cand-state" id="alli-error" hidden><p class="admin-msg" role="alert">Couldn’t load the alliances. Please try again.</p><button type="button" class="btn-gold btn-narrow" id="alli-retry">Retry</button></div>
@@ -1197,44 +1183,45 @@ import Icon from '../../components/Icon.astro';
 
     selectTab(0, tabs, panels); // default to the first accessible tab (Candidates if present)
     if (areas[0]?.key === 'candidates') maybeLoadCandidates(); // lazy-load if Candidates is initial
-    if (areas[0]?.key === 'guides') maybeLoadGuides(); // a Guides-only leader lands here (Story 6.3)
+    if (areas[0]?.key === 'guides') maybeLoadGuides(); // a Guides-only leader lands here
     if (areas[0]?.key === 'alliances') maybeLoadAlliancesPanel(); // an Officials-only leader lands here
     if (areas[0]?.key === 'directus_users') maybeLoadAccountsPanel();
   }
 
-  // ===== Candidates panel (Story 5.4) — lazy-loaded, read-only calm table =====
-  // Runtime session-authenticated read; a Viewer sees ALL fields (whole-collection read).
-  // All candidate data enters the DOM via textContent/createElement (XSS: untrusted PII).
-  // Story 5.5: a Curator (Transfer·Work) or the Owner also gets per-row status/path controls.
+  // Candidates panel: runtime session-authenticated read; a Viewer sees ALL fields
+  // (whole-collection read). All candidate data enters the DOM via
+  // textContent/createElement (XSS: untrusted PII). A Curator (Transfer·Work) or
+  // the Owner also gets per-row status/path controls.
   let canWriteCandidates = false; // set in boot() from the resolved Transfer mode / Owner
-  // Story 5.6: the fetched rows are held module-wide so grouping/suggested writes can mutate
+  // The fetched rows are held module-wide so grouping/suggested writes can mutate
   // them in place and trigger a table-wide recompute (the divergent flag + accents are a
   // membership-wide derivation, not a single-row one). openDetails preserves which rows are
   // expanded across a full re-render, so a Curator's working row stays open after a write.
   let candidateRows: Candidate[] = [];
   const openDetails = new Set<number>();
   let alliancesCache: AllianceOption[] | null = null; // the suggested-alliance picker source (lazy)
-  // Story 5.8: the reachability toggle. 5.7's active-window scoping hides prior-window still-Applied
-  // rows (period ≠ active, not Accepted → not a carry-over), making them un-actionable for delete /
-  // cleanup. When on, the table renders the un-scoped set so a Curator can reach + clear them. Off by
-  // default → the calm active-window view (5.7) stays the default (never permanently broadens scope).
+  // The reachability toggle. Active-window scoping hides prior-window still-Applied
+  // rows (period ≠ active, not Accepted → not a carry-over), making them un-actionable for
+  // delete / cleanup. When on, the table renders the un-scoped set so a Curator can reach +
+  // clear them. Off by default → the calm active-window view stays the default.
   let showClosedWindow = false;
-  // Story 5.8: the between-windows cleanup confirmation (the mockup .cleared card). Set to the number
-  // of rows the last cleanup removed; the "carried forward" count is recomputed LIVE at render (never
+  // The between-windows cleanup confirmation card. Set to the number of rows the last
+  // cleanup removed; the "carried forward" count is recomputed LIVE at render (never
   // stale). null = no notice. Cleared on a fresh load / a later per-row delete / dismiss.
   let cleanupNotice: { cleared: number } | null = null;
-  // Story 5.7: the single active transfer window (caps for the counter denominators + the id for
-  // active-window scoping / carry-over derivation). Fetched once alongside candidates. null = no
-  // active window OR a transient caps-read failure — the two are told apart by capsReadError so the
-  // strip degrades calmly (denominators "—", counts kept) instead of freezing at n/0 (Task 6).
+  // The single active transfer window (caps for the counter denominators + the id for
+  // active-window scoping / carry-over derivation). Fetched once alongside candidates. null =
+  // no active window OR a transient caps-read failure — the two are told apart by
+  // capsReadError so the strip degrades calmly (denominators "—", counts kept) instead of
+  // freezing at n/0.
   let activePeriod: TransferPeriod | null = null;
   let capsReadError = false;
   // Apply-window labels for the grouped candidate table (id → name/active/starts_on).
   // A read failure degrades to "Window <id>" labels — never blocks the list.
   let periodsById = new Map<number, { name: string | null; active: boolean; starts_on: string | null }>();
-  // Story 5.6 (review P3): one guard for ALL candidate writes (5.5 per-row + 5.6 table-wide).
-  // A 5.6 write rebuilds the whole tbody, so writes must serialize — otherwise a rerender could
-  // detach another row's in-flight write (silent failure) or a rebuilt panel be re-clicked mid-write.
+  // One guard for ALL candidate writes (per-row + table-wide). A grouping write rebuilds
+  // the whole tbody, so writes must serialize — otherwise a rerender could detach another
+  // row's in-flight write (silent failure) or a rebuilt panel be re-clicked mid-write.
   let writeInFlight = false;
   const STATUS_MOD: Record<string, string> = {
     Applied: 'applied',
@@ -1292,8 +1279,8 @@ import Icon from '../../components/Icon.astro';
   }
 
   // Divergent group = a group with ≥2 distinct non-null suggested alliances, derived at the
-  // edge over the single fetch (AR-6; no transfer_groups read needed — group id + suggested
-  // id are both on the candidate rows). Inert until Story 5.6 populates groups/suggestions.
+  // edge over the single fetch (no transfer_groups read needed — group id + suggested
+  // id are both on the candidate rows).
   function computeDivergentGroups(rows: Candidate[]): Set<number> {
     const byGroup = new Map<number, Set<number>>();
     for (const r of rows) {
@@ -1308,14 +1295,13 @@ import Icon from '../../components/Icon.astro';
     return out;
   }
 
-  // ===== Active-window scoping + capacity counters (Story 5.7) — pure edge computations =====
   // Everything the cap-strip shows is derived from the single getCandidates fetch + the active
-  // period's LIVE caps — no stored counter, no `carry` field, recomputed every render (AR-6/AD-4).
-  // Kept pure so they are unit-testable in isolation.
+  // period's LIVE caps — no stored counter, no `carry` field, recomputed every render.
+  // Kept pure so it is unit-testable in isolation.
 
   // The active-window set: a candidate is in-window iff it belongs to the active period OR is
-  // Accepted. An Accepted row from a PRIOR window is a carry-over that still occupies a slot, so it
-  // must not silently drop out of the next window's counts (AD-17). One status per row, so
+  // Accepted. An Accepted row from a PRIOR window is a carry-over that still occupies a slot, so
+  // it must not silently drop out of the next window's counts. One status per row, so
   // "Accepted AND not Transferred" reduces to status === 'Accepted' and each row appears once (no
   // manual OR-branch dedupe needed). period == null (no active window / caps-read failure) →
   // degrade to ALL rows so the table never goes blank.
@@ -1325,7 +1311,7 @@ import Icon from '../../components/Icon.astro';
   }
 
   // Carry-over = an Accepted candidate stamped with a period that is no longer the active one. The
-  // period stamp is immutable (AD-17 — never re-stamped), so this is a safe derivation, never a write.
+  // period stamp is immutable (never re-stamped), so this is a safe derivation, never a write.
   function isCarryOver(r: Candidate, period: TransferPeriod | null): boolean {
     return period != null && r.status === 'Accepted' && r.period !== period.id;
   }
@@ -1348,24 +1334,24 @@ import Icon from '../../components/Icon.astro';
   }
 
   // Bucket the ACTIVE-WINDOW set by planned_path (carried Accepted rows included, so they keep
-  // counting toward the caps they occupy — AD-17). Caps come LIVE off the active period row, never a
-  // literal (AC-2 — the special target is never a hardcoded 3); null when no active window / the caps
-  // read failed → the card renders a "—" denominator (Task 6), never n/0.
+  // counting toward the caps they occupy). Caps come LIVE off the active period row, never a
+  // literal (the special target is never a hardcoded 3); null when no active window / the caps
+  // read failed → the card renders a "—" denominator, never n/0.
   function computeCounters(windowRows: Candidate[], period: TransferPeriod | null): CapCounters {
     let invitePlanned = 0;
     let specialPlanned = 0;
     let randomAsk = 0;
     let acceptedNoPath = 0;
     for (const r of windowRows) {
-      // A Rejected candidate frees its slot — it is no longer planned, so it counts toward no bucket
-      // (review 5.7 decision, Sabo 2026-07-14). Accepted + Transferred keep counting (a Transferred
-      // row consumed the slot). Reachable via Accept-as-<path> → Reject (5.5 leaves planned_path stale).
+      // A Rejected candidate frees its slot — it is no longer planned, so it counts toward no
+      // bucket. Accepted + Transferred keep counting (a Transferred row consumed the slot).
+      // Reachable via Accept-as-<path> → Reject (which leaves planned_path stale).
       if (r.status === 'Rejected') continue;
       if (r.planned_path === 'Invite') invitePlanned++;
       else if (r.planned_path === 'Special') specialPlanned++;
       else if (r.planned_path === 'Random-ask') randomAsk++;
-      // A raw-API-only occupied slot: Accepted but no planned_path (the UI Accept forces a path, so
-      // this is normally absent). Surfaced only when N>0 so planning is not silently blind (OQ-3).
+      // A raw-API-only occupied slot: Accepted but no planned_path (the UI Accept forces a path,
+      // so this is normally absent). Surfaced only when N>0 so planning is not silently blind.
       if (r.status === 'Accepted' && !r.planned_path) acceptedNoPath++;
     }
     return {
@@ -1379,8 +1365,8 @@ import Icon from '../../components/Icon.astro';
   }
 
   // A calm white counter card: label + "value / cap". `cap` null → a "—" denominator (unknown /
-  // caps-read failure). `editable` tints the value gold — the live-editable special target (AC-2).
-  // Over-target counts (e.g. 36 / 35) render plainly, no red, no alarm — never an error (OQ-4).
+  // caps-read failure). `editable` tints the value gold — the live-editable special target.
+  // Over-target counts (e.g. 36 / 35) render plainly, no red, no alarm — never an error.
   function counterCard(label: string, value: number, cap: number | null, editable: boolean): HTMLElement {
     const card = document.createElement('div');
     card.className = editable ? 'cap-counter cap-counter--editable' : 'cap-counter';
@@ -1397,10 +1383,9 @@ import Icon from '../../components/Icon.astro';
     return card;
   }
 
-  // A bare list-count card, no capacity denominator: the total-applicants card (Owner request
-  // 2026-08-25 — the list size was invisible until planned paths bucketed it) and the Random-ask
-  // card (AR-19 removed the random counter, the 20 random slots are out of scope — OQ-5;
-  // `random_cap` stays stored-but-unshown config).
+  // A bare list-count card, no capacity denominator: the total-applicants card (the list size
+  // was invisible until planned paths bucketed it) and the Random-ask card (the 20 random
+  // slots are out of scope; `random_cap` stays stored-but-unshown config).
   function listCard(label: string, value: number, suffix: string | null): HTMLElement {
     const card = document.createElement('div');
     card.className = 'cap-counter';
@@ -1419,8 +1404,8 @@ import Icon from '../../components/Icon.astro';
     return card;
   }
 
-  // Success-tinted "Carry-over" badge (DESIGN: carry-over confirmation = success green, NOT danger,
-  // NOT gold). Surfaced next to the name; the row is sorted to the top of the scoped list (AC-5).
+  // Success-tinted "Carry-over" badge (carry-over confirmation = success green, NOT danger,
+  // NOT gold). Surfaced next to the name; the row is sorted to the top of the scoped list.
   function carryOverBadge(): HTMLElement {
     const b = document.createElement('span');
     b.className = 'badge-carryover';
@@ -1428,10 +1413,10 @@ import Icon from '../../components/Icon.astro';
     return b;
   }
 
-  // The gold-framed capacity strip (Task 3): a "room" that frames three calm counter cards + the
-  // teal planning-aid chip. Read surface for BOTH roles (Viewer read-only, Curator in Work mode) —
-  // never gated. Rebuilt on every render so the counters recompute after each write (Task 5). role=
-  // status keeps the a11y floor minimal (it recomputes after writes; the shell already uses it).
+  // The gold-framed capacity strip: a "room" that frames the calm counter cards. Read surface
+  // for BOTH roles (Viewer read-only, Curator in Work mode) — never gated. Rebuilt on every
+  // render so the counters recompute after each write. role=status keeps the a11y floor
+  // minimal (it recomputes after writes; the shell already uses it).
   function buildCapStrip(rows: Candidate[], period: TransferPeriod | null): HTMLElement {
     const windowRows = activeWindowRows(rows, period);
     const c = computeCounters(windowRows, period);
@@ -1448,7 +1433,7 @@ import Icon from '../../components/Icon.astro';
     const grid = document.createElement('div');
     grid.className = 'cap-counters';
     // Total FIRST: the active-window list size (Rejected rows included — they are still in the
-    // list). Window-scoped like every counter here, even while the 5.8 reachability toggle
+    // list). Window-scoped like every counter here, even while the reachability toggle
     // temporarily broadens the TABLE to closed-window rows.
     grid.append(listCard('Applicants', windowRows.length, null));
     grid.append(counterCard('Invite-planned', c.invitePlanned, c.invitedCap, false));
@@ -1456,7 +1441,7 @@ import Icon from '../../components/Icon.astro';
     grid.append(listCard('Random-ask', c.randomAsk, ' queued'));
     strip.append(grid);
 
-    // A muted "Accepted · no path: N" line, only when N>0 (OQ-3) — surfaces an occupied slot that
+    // A muted "Accepted · no path: N" line, only when N>0 — surfaces an occupied slot that
     // sits in no planned_path bucket so planning is not silently blind. Never a gate.
     if (c.acceptedNoPath > 0) {
       const note = document.createElement('p');
@@ -1479,12 +1464,11 @@ import Icon from '../../components/Icon.astro';
     return strip;
   }
 
-  // ===== Grouping + suggested-alliance (Story 5.6) — Work-mode only =====
-  // Grouping links friends via candidates.group (M2O → transfer_groups); the suggested
-  // alliance is written on candidates.suggested_alliance (candidate-level, or a group-level
-  // ONE-TRANSACTION fan-out via updateCandidates). transfer_groups carries no suggested
-  // column and the divergent flag is edge-computed, never stored (AR-6/AR-10). Every write
-  // sends ONLY { group } / { suggested_alliance } — never `period`/public-core/desired (AD-8).
+  // Grouping (Work-mode only) links friends via candidates.group (M2O → transfer_groups); the
+  // suggested alliance is written on candidates.suggested_alliance (candidate-level, or a
+  // group-level ONE-TRANSACTION fan-out via updateCandidates). transfer_groups carries no
+  // suggested column and the divergent flag is edge-computed, never stored. Every write
+  // sends ONLY { group } / { suggested_alliance } — never `period`/public-core/desired.
 
   const groupMembers = (rows: Candidate[], gid: number): Candidate[] =>
     rows.filter((r) => r.group === gid);
@@ -1519,7 +1503,7 @@ import Icon from '../../components/Icon.astro';
   // already belongs to one; otherwise mint a new transfer_groups row, then batch-stamp
   // candidates.group. Local rows are mutated so the table-wide re-render reflects it.
   async function linkGroup(r: Candidate, selectedIds: number[]): Promise<void> {
-    if (selectedIds.length === 0) return; // review P2: need ≥1 other — never mint a group of one
+    if (selectedIds.length === 0) return; // need ≥1 other — never mint a group of one
     const memberIds = [r.id, ...selectedIds];
     let gid: number | null = r.group;
     if (gid == null) {
@@ -1539,9 +1523,9 @@ import Icon from '../../components/Icon.astro';
       const c = candidateRows.find((x) => x.id === id);
       return c != null && c.group !== gid;
     });
-    // Review P4/D1: capture the source groups moved members are LEAVING (before the local
-    // mutation) so we can dissolve any that drop below 2 — otherwise linking across groups
-    // strands a lone remainder with a gold accent (the "no group of one" invariant, elsewhere
+    // Capture the source groups moved members are LEAVING (before the local mutation) so
+    // we can dissolve any that drop below 2 — otherwise linking across groups strands a
+    // lone remainder with a gold accent (the "no group of one" invariant, elsewhere
     // enforced by unlinkFromGroup, must hold here too).
     const sourceGids = new Set<number>();
     for (const id of toSet) {
@@ -1585,7 +1569,7 @@ import Icon from '../../components/Icon.astro';
   }
 
   // Write a suggested alliance to one candidate (candidate-level) or fan it out to a whole
-  // group in ONE transaction (AC3). allianceId null clears it. Local rows are mutated with the
+  // group in ONE transaction. allianceId null clears it. Local rows are mutated with the
   // expanded {id,name} so the Suggested cell re-renders correctly.
   async function setSuggested(ids: number[], allianceId: number | null): Promise<void> {
     const expanded = allianceId == null ? null : allianceOptionFor(allianceId);
@@ -1607,11 +1591,10 @@ import Icon from '../../components/Icon.astro';
     showCandState('table');
   }
 
-  // ===== Manual delete + window cleanup (Story 5.8) — Work-mode only =====
-  // Delete is a session-cookie DELETE (204). Removing the row from candidateRows + a rerender drops
-  // it from the capacity counters (a pure edge recompute — AC-1 "stops counting") and prunes its
-  // openDetails id for free. period is NEVER written (AD-17). The server 403s a Viewer's delete
-  // (grant absent) — AC-4; the UI also hides the control (canWriteCandidates).
+  // Manual delete + window cleanup (Work-mode only). Delete is a session-cookie DELETE (204).
+  // Removing the row from candidateRows + a rerender drops it from the capacity counters (a
+  // pure edge recompute) and prunes its openDetails id for free. period is NEVER written. The
+  // server 403s a Viewer's delete (grant absent); the UI also hides the control.
 
   // Dissolve any of the given groups that dropped below 2 members after a delete (a lone member is
   // not a group). Mirrors unlinkFromGroup's tail; on_delete SET NULL un-links, never deletes.
@@ -1628,8 +1611,8 @@ import Icon from '../../components/Icon.astro';
     }
   }
 
-  // Delete one candidate (any status, any window). Removes it from the in-memory source of truth,
-  // prunes its expansion id, and dissolves its group if the delete leaves a singleton (Task 4).
+  // Delete one candidate (any status, any window). Removes it from the in-memory source of
+  // truth, prunes its expansion id, and dissolves its group if the delete leaves a singleton.
   async function deleteCandidateRow(r: Candidate): Promise<void> {
     const gid = r.group;
     cleanupNotice = null; // a fresh destructive action supersedes a stale cleanup confirmation
@@ -1639,9 +1622,9 @@ import Icon from '../../components/Icon.astro';
     if (gid != null) await dissolveIfUndersized(new Set([gid]));
   }
 
-  // The between-windows cleanup (AC-2): delete EVERY terminal row (Transferred / Rejected), across
-  // all windows (OQ-3 — terminal rows never carry over, so window-scoping the delete adds nothing).
-  // Accepted rows are NEVER selected (AD-17) — they carry forward automatically. Returns the number
+  // The between-windows cleanup: delete EVERY terminal row (Transferred / Rejected), across
+  // all windows (terminal rows never carry over, so window-scoping the delete adds nothing).
+  // Accepted rows are NEVER selected — they carry forward automatically. Returns the number
   // of rows cleared (0 → nothing to do). Dissolves any group left below 2 by the batch.
   async function runCleanup(): Promise<number> {
     const terminal = candidateRows.filter(
@@ -1659,14 +1642,14 @@ import Icon from '../../components/Icon.astro';
     return ids.length;
   }
 
-  // The Curator toolbar above the table (Story 5.8): the batch "clear transferred/rejected" action +
-  // the "show closed-window applicants" reachability toggle. Gated on canWriteCandidates (a Viewer
-  // never sees it). Rebuilt every render so the terminal count + toggle state stay live.
+  // The Curator toolbar above the table: the batch "clear transferred/rejected" action +
+  // the "show closed-window applicants" reachability toggle. Gated on canWriteCandidates (a
+  // Viewer never sees it). Rebuilt every render so the terminal count + toggle state stay live.
   function buildCandToolbar(rows: Candidate[]): HTMLElement {
     const bar = document.createElement('div');
     bar.className = 'cand-toolbar';
 
-    // --- Window cleanup: clear ALL terminal rows (Transferred / Rejected), any window (OQ-3).
+    // Window cleanup: clear ALL terminal rows (Transferred / Rejected), any window.
     const terminalCount = rows.filter(
       (r) => r.status === 'Transferred' || r.status === 'Rejected',
     ).length;
@@ -1688,7 +1671,7 @@ import Icon from '../../components/Icon.astro';
       const trigger = candButton(`Clear transferred/rejected (${terminalCount})`, 'danger');
 
       // The guarded batch: serialize via writeInFlight, delete the terminal rows, then rerender.
-      // On success set the .cleared confirmation (AC-3); 401/403 → session lapsed → /leader.
+      // On success set the .cleared confirmation; 401/403 → session lapsed → /leader.
       const doCleanup = () => {
         if (writeInFlight) return;
         writeInFlight = true;
@@ -1741,7 +1724,7 @@ import Icon from '../../components/Icon.astro';
     cleanup.append(cleanupMsg);
     bar.append(cleanup);
 
-    // --- Reachability toggle: reveal prior-window (closed) applicants that 5.7 scopes out (Task 6).
+    // Reachability toggle: reveal prior-window (closed) applicants that the scoping hides.
     const tog = document.createElement('label');
     tog.className = 'cand-toggle';
     const cb = document.createElement('input');
@@ -1749,8 +1732,8 @@ import Icon from '../../components/Icon.astro';
     cb.checked = showClosedWindow;
     cb.addEventListener('change', () => {
       // A rerender while another candidate write is in flight would detach that write's
-      // error UI (its msg/controls nodes) → silent failure (the L1155 hazard). Ignore the
-      // flip until the write settles; revert the visual state so it doesn't lie.
+      // error UI (its msg/controls nodes) → silent failure. Ignore the flip until the
+      // write settles; revert the visual state so it doesn't lie.
       if (writeInFlight) {
         cb.checked = showClosedWindow;
         return;
@@ -1766,10 +1749,9 @@ import Icon from '../../components/Icon.astro';
     return bar;
   }
 
-  // The between-windows cleanup confirmation (Story 5.8, AC-3) — the mockup .cleared card: a calm
-  // dashed-border card with a success-green carry-over pill. "cleared" is the last cleanup's count;
-  // "carried forward" is recomputed LIVE (Accepted rows, which cleanup never touches — AD-17) so it
-  // never goes stale. Dismissable.
+  // The between-windows cleanup confirmation: a calm dashed-border card with a success-green
+  // carry-over pill. "cleared" is the last cleanup's count; "carried forward" is recomputed
+  // LIVE (Accepted rows, which cleanup never touches) so it never goes stale. Dismissable.
   function buildClearedNotice(): HTMLElement {
     const carried = candidateRows.filter((r) => r.status === 'Accepted').length;
     const card = document.createElement('div');
@@ -1781,7 +1763,7 @@ import Icon from '../../components/Icon.astro';
     dismiss.setAttribute('aria-label', 'Dismiss');
     dismiss.textContent = '×';
     dismiss.addEventListener('click', () => {
-      // Don't rerender mid-write — it would detach an in-flight write's error UI (L1155 hazard).
+      // Don't rerender mid-write — it would detach an in-flight write's error UI.
       if (writeInFlight) return;
       cleanupNotice = null;
       rerenderCandidates();
@@ -1808,11 +1790,11 @@ import Icon from '../../components/Icon.astro';
     return card;
   }
 
-  // ===== Curator status-lifecycle controls (Story 5.5) — Work-mode only =====
-  // The legal transition graph is CLIENT-GUIDED only (AR-9/AD-7): no Directus Flow/hook
-  // encodes it. The server enforces only WHO may write (Curator 200 / Viewer 403). Every
-  // payload carries ONLY { status } / { planned_path } — never `period` (a re-stamp is
-  // silent carry-over corruption, AD-17), never the public-core / desired_alliance fields.
+  // Curator status-lifecycle controls (Work-mode only). The legal transition graph is
+  // CLIENT-GUIDED only: no Directus Flow/hook encodes it. The server enforces only WHO may
+  // write (Curator 200 / Viewer 403). Every payload carries ONLY { status } / { planned_path }
+  // — never `period` (a re-stamp is silent carry-over corruption), never the public-core /
+  // desired_alliance fields.
 
   // planned_path: [stored enum value, display label]. Value 'Special' shows as 'Special invite'.
   const PLANNED_PATHS: [string, string][] = [
@@ -1839,7 +1821,7 @@ import Icon from '../../components/Icon.astro';
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `cand-btn cand-btn--${variant}`;
-    b.textContent = label; // trusted constant labels (plain verbs, UX-DR-21)
+    b.textContent = label; // trusted constant labels (plain verbs)
     return b;
   }
 
@@ -1877,9 +1859,9 @@ import Icon from '../../components/Icon.astro';
     return b;
   }
 
-  // Suggested-alliance control (Story 5.6). Candidate-level for a lone row; for a grouped row
-  // the scope choice (this candidate vs whole group) honours FR-8 and drives the divergence
-  // resolution ("Set for whole group" is the atomic fan-out that clears the flag).
+  // Suggested-alliance control. Candidate-level for a lone row; for a grouped row the scope
+  // choice (this candidate vs whole group) drives the divergence resolution ("Set for whole
+  // group" is the atomic fan-out that clears the flag).
   function buildSuggestSection(r: Candidate, runTable: (a: () => Promise<void>) => void): HTMLElement {
     const container = document.createElement('div');
     container.className = 'cand-suggest-section';
@@ -1928,9 +1910,9 @@ import Icon from '../../components/Icon.astro';
     return container;
   }
 
-  // Group-linking control (Story 5.6). Grouped → Unlink; ungrouped → a "Link group…" toggle
-  // revealing a checklist of the other candidates. Membership is shown read-only in the detail
-  // summary above, so this block is just the actions.
+  // Group-linking control. Grouped → Unlink; ungrouped → a "Link group…" toggle revealing a
+  // checklist of the other candidates. Membership is shown read-only in the detail summary
+  // above, so this block is just the actions.
   function buildGroupSection(r: Candidate, runTable: (a: () => Promise<void>) => void): HTMLElement {
     const sec = document.createElement('div');
     sec.className = 'cand-action-row';
@@ -2001,8 +1983,8 @@ import Icon from '../../components/Icon.astro';
     return container;
   }
 
-  // Build the action controls for one candidate row. Status/path writes (5.5) re-render the row
-  // in place via `onDone`; grouping/suggested writes (5.6) re-render the whole table (the
+  // Build the action controls for one candidate row. Status/path writes re-render the row
+  // in place via `onDone`; grouping/suggested writes re-render the whole table (the
   // divergent flag + accents are a membership-wide derivation), preserving expanded rows.
   function buildActions(r: Candidate, onDone: () => void): HTMLElement {
     const box = document.createElement('div');
@@ -2017,8 +1999,8 @@ import Icon from '../../components/Icon.astro';
     msg.setAttribute('role', 'alert');
     msg.hidden = true;
 
-    // Status/path writes (5.5) — per-row in-place refresh. Shares the module-level writeInFlight
-    // guard with the 5.6 table-wide writes so no two candidate writes overlap (review P3).
+    // Status/path writes — per-row in-place refresh. Shares the module-level writeInFlight
+    // guard with the table-wide writes so no two candidate writes overlap.
     const run = (patch: CandidatePatch) => {
       if (writeInFlight) return; // guard the double-click window + cross-row concurrency
       writeInFlight = true;
@@ -2026,7 +2008,7 @@ import Icon from '../../components/Icon.astro';
         writeInFlight = false;
       });
     };
-    // Grouping/suggested writes (5.6) — table-wide recompute (divergence is membership-wide).
+    // Grouping/suggested writes — table-wide recompute (divergence is membership-wide).
     const runTable = (action: () => Promise<void>) => {
       if (writeInFlight) return;
       writeInFlight = true;
@@ -2034,14 +2016,14 @@ import Icon from '../../components/Icon.astro';
         | HTMLButtonElement
         | HTMLSelectElement
       )[];
-      // Review P2: snapshot each control's disabled state so the error path restores it EXACTLY.
+      // Snapshot each control's disabled state so the error path restores it EXACTLY.
       // A blanket re-enable would revive the disabled-by-design active path button (no listener →
       // a dead enabled button) and the 0-checked "Link selected" confirm (→ a group of one).
       const prevDisabled = controls.map((c) => c.disabled);
       controls.forEach((c) => (c.disabled = true));
       msg.hidden = true;
       msg.textContent = '';
-      // Review P1: recover a failed/empty alliance warm before the rerender rebuilds the pickers.
+      // Recover a failed/empty alliance warm before the rerender rebuilds the pickers.
       (async () => {
         if (!alliancesCache) await ensureAlliances();
         await action();
@@ -2061,7 +2043,6 @@ import Icon from '../../components/Icon.astro';
         });
     };
 
-    // --- Status lifecycle (Story 5.5) ---
     const actions = allowedActions(r.status);
     if (actions.length === 0) {
       const note = document.createElement('p');
@@ -2081,7 +2062,7 @@ import Icon from '../../components/Icon.astro';
       btnRow.className = 'cand-action-row';
       if (actions.includes('transfer')) {
         // Accepted → Transferred, and Applied → Transferred (the Random exception). Status
-        // ONLY — no entry route to record (AR-19).
+        // ONLY — no entry route to record.
         const b = candButton('Mark Transferred', 'gold');
         b.addEventListener('click', () => run({ status: 'Transferred' }));
         btnRow.append(b);
@@ -2094,14 +2075,13 @@ import Icon from '../../components/Icon.astro';
       box.append(btnRow);
     }
 
-    // --- Grouping + suggested alliance (Story 5.6) — orthogonal to status, always available ---
     box.append(buildSuggestSection(r, runTable));
     box.append(buildGroupSection(r, runTable));
 
-    // --- Delete (Story 5.8) — any status, any time (FR-10). A two-step inline confirm guards the
-    // one-click irreversible destroy (hard delete; the daily backup is the only recovery). No modal
-    // (KISS — none in the component library). Routes through the table-wide runTable (a delete shifts
-    // the counters + scope), which rerenders on success and drops the row.
+    // Delete — any status, any time. A two-step inline confirm guards the one-click
+    // irreversible destroy (hard delete; the daily backup is the only recovery). No modal
+    // (none in the component library). Routes through the table-wide runTable (a delete
+    // shifts the counters + scope), which rerenders on success and drops the row.
     const del = document.createElement('div');
     del.className = 'cand-action-row cand-action-row--delete';
     const delBtn = candButton('Delete', 'danger');
@@ -2162,32 +2142,32 @@ import Icon from '../../components/Icon.astro';
     if (!wrap) return;
     wrap.textContent = '';
 
-    // Story 5.7: the gold-framed capacity strip sits ABOVE the table, OUTSIDE the table's own
-    // horizontal-scroll box (below) so a wide table scrolls under a fixed-width strip. Rebuilt every
-    // render → counters recompute after each write for free (read-after-write, Task 5).
+    // The gold-framed capacity strip sits ABOVE the table, OUTSIDE the table's own
+    // horizontal-scroll box (below) so a wide table scrolls under a fixed-width strip. Rebuilt
+    // every render → counters recompute after each write for free (read-after-write).
     wrap.append(buildCapStrip(rows, activePeriod));
 
-    // Story 5.8: the Curator cleanup + reachability toolbar sits above the table (OUTSIDE the gold
-    // cap-strip — danger red is reserved-out there). A Viewer never sees it. Built every render so
-    // the terminal count + toggle state stay live. The .cleared confirmation shows after a cleanup.
+    // The Curator cleanup + reachability toolbar sits above the table (OUTSIDE the gold
+    // cap-strip — danger red is reserved-out there). A Viewer never sees it. Built every render
+    // so the terminal count + toggle state stay live. The confirmation shows after a cleanup.
     if (canWriteCandidates) wrap.append(buildCandToolbar(rows));
     if (cleanupNotice) wrap.append(buildClearedNotice());
 
-    // Divergent flag + group membership derive over the FULL rows (a group can span in/out of the
-    // active window); only the tbody iterates the scoped+sorted subset (AC-4 active-window scoping,
-    // AC-5 carry-over-first). period == null degrades activeWindowRows to all rows (no blank table).
+    // Divergent flag + group membership derive over the FULL rows (a group can span in/out of
+    // the active window); only the tbody iterates the scoped+sorted subset. period == null
+    // degrades activeWindowRows to all rows (no blank table).
     const divergent = computeDivergentGroups(rows);
-    // Story 5.8: the reachability toggle broadens the scope to ALL rows (prior-window applicants
-    // included) so a Curator can reach + clear stranded leftovers; off → the 5.7 active-window set.
+    // The reachability toggle broadens the scope to ALL rows (prior-window applicants
+    // included) so a Curator can reach + clear stranded leftovers; off → the active-window set.
     const scoped = showClosedWindow ? rows : activeWindowRows(rows, activePeriod);
     const rendered = sortForWindow(scoped, activePeriod);
-    // Prune expansion ids that scoped out of the rendered set so stale ids don't accumulate
-    // (deferred-work L558/L218). Iterate a copy — openDetails is mutated in the loop.
+    // Prune expansion ids that scoped out of the rendered set so stale ids don't accumulate.
+    // Iterate a copy — openDetails is mutated in the loop.
     const renderedIds = new Set(rendered.map((r) => r.id));
     for (const id of Array.from(openDetails)) if (!renderedIds.has(id)) openDetails.delete(id);
 
-    // Story 5.7 (review P2): the active window can be empty while candidateRows is not (a fresh window
-    // with no new applications + no carry-overs). loadCandidates' empty state keys off candidateRows,
+    // The active window can be empty while candidateRows is not (a fresh window with no new
+    // applications + no carry-overs). loadCandidates' empty state keys off candidateRows,
     // so surface a calm in-window note here instead of a bare header-only table.
     if (rendered.length === 0) {
       const note = document.createElement('p');
@@ -2200,7 +2180,7 @@ import Icon from '../../components/Icon.astro';
     }
 
     const scroll = document.createElement('div');
-    scroll.className = 'cand-table-scroll'; // the horizontal-scroll box (AC4, 5.4) — wraps the table only
+    scroll.className = 'cand-table-scroll'; // the horizontal-scroll box — wraps the table only
 
     const table = document.createElement('table');
     table.className = 'cand-table';
@@ -2221,10 +2201,10 @@ import Icon from '../../components/Icon.astro';
 
     const tbody = document.createElement('tbody');
 
-    // Group rows by APPLY window (Owner request 2026-07-18): active window first, then
-    // closed windows newest-first, no-window rows last. Carry-overs stay under the window
-    // they applied in (their badge + the counters keep the active-window semantics).
-    // With a single window on screen the headers are skipped — the plain table stays.
+    // Group rows by APPLY window: active window first, then closed windows newest-first,
+    // no-window rows last. Carry-overs stay under the window they applied in (their badge +
+    // the counters keep the active-window semantics). With a single window on screen the
+    // headers are skipped — the plain table stays.
     const groupOrder: (number | null)[] = [];
     const groupsByPeriod = new Map<number | null, Candidate[]>();
     for (const r of rendered) {
@@ -2290,11 +2270,11 @@ import Icon from '../../components/Icon.astro';
       toggle.setAttribute('aria-label', `Show details for ${r.character_name}`);
       toggle.textContent = '▸';
       if (isOpen) toggle.classList.add('cand-expand--open');
-      // [tag]Name — the applicant's current home-kingdom alliance tag (Owner request 2026-07-28)
+      // [tag]Name — the applicant's current home-kingdom alliance tag
       const homeTag = (r.current_alliance_tag ?? '').trim();
       nameCell.append(toggle, document.createTextNode(' ' + (homeTag ? `[${homeTag}]` : '') + dash(r.character_name)));
       if (r.needs_special_invite) nameCell.append(specialBadge());
-      if (isCarryOver(r, activePeriod)) nameCell.append(carryOverBadge()); // AC-5: derived, sorted first
+      if (isCarryOver(r, activePeriod)) nameCell.append(carryOverBadge());
       tr.append(nameCell);
 
       tr.append(td(dash(r.player_id), 'num'));
@@ -2314,7 +2294,7 @@ import Icon from '../../components/Icon.astro';
       tr.append(pathCell);
       tbody.append(tr);
 
-      // Detail row — the remaining stored fields (FR-6 "all their fields"), read-only
+      // Detail row — all the remaining stored fields, read-only
       const dtr = document.createElement('tr');
       dtr.className = 'cand-detail';
       dtr.id = detailId;
@@ -2322,8 +2302,8 @@ import Icon from '../../components/Icon.astro';
       const dtd = document.createElement('td');
       dtd.colSpan = cols.length;
 
-      // Divergent-group flag (Story 5.6) — visible to ALL leaders, edge-computed (AR-6), the
-      // "N" recomputed on every render. Persists until one suggestion is chosen for the group.
+      // Divergent-group flag — visible to ALL leaders, edge-computed, the "N" recomputed
+      // on every render. Persists until one suggestion is chosen for the group.
       if (isDivergent) {
         const n = distinctSuggestionCount(rows, r.group as number);
         const flag = document.createElement('p');
@@ -2368,14 +2348,12 @@ import Icon from '../../components/Icon.astro';
       }
       dtd.append(dl);
 
-      // Curator status-lifecycle controls (Story 5.5) — only when the leader can write
-      // (Owner or Transfer·Work). A Viewer sees the read-only detail exactly as in 5.4.
-      // Story 5.7: a status/path write recomputes the WHOLE table (like the 5.6 group writes), not
-      // just this row — a status change shifts the capacity counters and can move the row's
-      // active-window scope (marking a carry-over Transferred scopes it out), so the strip + scope +
-      // sort must recompute. rerenderCandidates rebuilds from the mutated rows and preserves expanded
-      // rows via openDetails; focus-after-rerender stays the accepted 5.6 DF3 tradeoff (the
-      // table-wide recompute is the chosen model — no refetch, the load-once cache blocks it anyway).
+      // Curator status-lifecycle controls — only when the leader can write (Owner or
+      // Transfer·Work); a Viewer sees the read-only detail. A status/path write recomputes
+      // the WHOLE table, not just this row — a status change shifts the capacity counters
+      // and can move the row's active-window scope (marking a carry-over Transferred scopes
+      // it out), so the strip + scope + sort must recompute. rerenderCandidates rebuilds
+      // from the mutated rows and preserves expanded rows via openDetails.
       const actionsHost = document.createElement('div');
       if (canWriteCandidates) {
         actionsHost.append(buildActions(r, rerenderCandidates));
@@ -2409,14 +2387,13 @@ import Icon from '../../components/Icon.astro';
     showCandState('loading');
     try {
       const rows = await getCandidates();
-      candidateRows = rows ?? []; // held module-wide so 5.6/5.7 writes can recompute the table
-      cleanupNotice = null; // a fresh load supersedes any prior cleanup confirmation (Story 5.8)
-      // Story 5.7: fetch the active window's caps alongside the candidates (one fetch per shell load,
-      // AD-4). A transient failure here must NOT fail the whole list or cache zeroed caps — that
-      // would freeze every denominator at n/0 for the session (Task 6, mirroring the 5.6
-      // ensureAlliances no-cache-on-failure lesson). Degrade to null so counts still show with a "—"
-      // denominator + a calm note; a 401/403 rethrows to the outer catch → /leader (a granted leader
-      // never 403s here → the session lapsed).
+      candidateRows = rows ?? []; // held module-wide so writes can recompute the table
+      cleanupNotice = null; // a fresh load supersedes any prior cleanup confirmation
+      // Fetch the active window's caps alongside the candidates (one fetch per shell load).
+      // A transient failure here must NOT fail the whole list or cache zeroed caps — that
+      // would freeze every denominator at n/0 for the session. Degrade to null so counts
+      // still show with a "—" denominator + a calm note; a 401/403 rethrows to the outer
+      // catch → /leader (a granted leader never 403s here → the session lapsed).
       activePeriod = null;
       capsReadError = false;
       try {
@@ -2456,12 +2433,12 @@ import Icon from '../../components/Icon.astro';
     loadCandidates();
   }
 
-  // ===== Guides panel (Story 6.3) — the Senior/Owner publish surface =====
-  // Publish = copy a guide_drafts row VERBATIM into `guides` (create-or-update by slug) via
-  // publishGuide(). The server enforces WHO (an Editor/Viewer gets a real 403 on `guides` —
-  // the Option-2 collection-boundary gate); this panel only guides UX (AD-4). Authoring
-  // stays in the Data Studio (AD-3) — no WYSIWYG, no editing, no body preview here. All
-  // draft data enters the DOM via textContent; body HTML is NEVER rendered in the shell.
+  // Guides panel — the Senior/Owner publish surface. Publish = copy a guide_drafts row
+  // VERBATIM into `guides` (create-or-update by slug) via publishGuide(). The server
+  // enforces WHO (an Editor/Viewer gets a real 403 on `guides` — the collection-boundary
+  // gate); this panel only guides UX. Authoring stays in the Data Studio — no WYSIWYG, no
+  // editing, no body preview here. All draft data enters the DOM via textContent; body
+  // HTML is NEVER rendered in the shell.
   let canPublishGuides = false; // set in boot(): Owner OR a `guides` write grant (Guides·Work)
   let guideDrafts: GuideDraft[] = [];
   let publishedGuides: PublishedGuide[] = [];
@@ -2482,7 +2459,7 @@ import Icon from '../../components/Icon.astro';
   }
 
   // The derived per-draft publish state — a pure edge computation over the two in-memory
-  // lists, never stored (AD-4): no `guides` row with the draft's slug → the draft is
+  // lists, never stored: no `guides` row with the draft's slug → the draft is
   // unpublished; a row exists and is at least as new as the draft → published; the draft
   // is newer → published with unpublished edits pending re-publish. Timestamps are
   // ISO-8601 UTC; a never-updated row falls back to its creation stamp. Ties (the copy is
@@ -2527,8 +2504,7 @@ import Icon from '../../components/Icon.astro';
     guidesFetching = true;
     showGuidesState('loading');
     try {
-      // Both reads are wired since 6.1 (guides-viewer/-senior hold guide_drafts + guides
-      // read). The published list carries only slug + timestamps — never content.
+      // The published list carries only slug + timestamps — never content.
       const [drafts, published] = await Promise.all([getGuideDrafts(), getPublishedGuides()]);
       guideDrafts = drafts ?? [];
       publishedGuides = published ?? [];
@@ -2538,7 +2514,7 @@ import Icon from '../../components/Icon.astro';
         renderGuidesTable();
         showGuidesState('table');
       }
-      guidesLoaded = true; // success — don't auto-refetch on tab re-activation (load-once, mirror 5.4)
+      guidesLoaded = true; // success — don't auto-refetch on tab re-activation (load-once)
     } catch (err) {
       if (authRejected(err)) {
         window.location.replace('/leader'); // session lapsed (a granted leader never 403s here)
@@ -2563,8 +2539,8 @@ import Icon from '../../components/Icon.astro';
     msg.hidden = true;
     const btn = candButton(state === 'draft-only' ? 'Publish' : 'Re-publish', 'gold');
     if (state === 'published') {
-      // Published and up to date — a re-publish would be a redundant no-op copy (the 5.5
-      // review-P1 lesson: disable the no-op control instead of letting it flash the row).
+      // Published and up to date — a re-publish would be a redundant no-op copy, so the
+      // control is disabled instead of letting it flash the row.
       btn.disabled = true;
       btn.title = 'Published and up to date — edit the draft to re-publish';
     }
@@ -2574,7 +2550,7 @@ import Icon from '../../components/Icon.astro';
   }
 
   async function doPublish(draft: GuideDraft, btn: HTMLButtonElement, msg: HTMLElement) {
-    if (writeInFlight || btn.disabled) return; // one module-wide write guard (5.6 review P3)
+    if (writeInFlight || btn.disabled) return; // one module-wide write guard
     writeInFlight = true;
     const prevLabel = btn.textContent;
     btn.disabled = true;
@@ -2582,9 +2558,9 @@ import Icon from '../../components/Icon.astro';
     msg.hidden = true;
     msg.textContent = '';
     try {
-      // Re-read the draft at click time (review P1): the panel list is load-once, and an
-      // Editor may have saved newer content in the Studio since — the copy must publish
-      // the CURRENT draft, never the cached one. Also keeps the row's Updated cell honest.
+      // Re-read the draft at click time: the panel list is load-once, and an Editor may
+      // have saved newer content in the Studio since — the copy must publish the CURRENT
+      // draft, never the cached one. Also keeps the row's Updated cell honest.
       const fresh = await getGuideDraft(draft.id);
       const idx = guideDrafts.findIndex((d) => d.id === draft.id);
       if (idx !== -1) guideDrafts[idx] = fresh;
@@ -2603,9 +2579,9 @@ import Icon from '../../components/Icon.astro';
           date_updated: saved.date_updated ?? null,
         });
       } else {
-        // Create succeeded but the echo was stripped (review P2) — never invent an id
-        // (a fake update target would break the next re-publish); drop load-once and
-        // re-sync both lists from the server instead.
+        // Create succeeded but the echo was stripped — never invent an id (a fake
+        // update target would break the next re-publish); drop load-once and re-sync
+        // both lists from the server instead.
         guidesLoaded = false;
         loadGuides();
         return;
@@ -2616,7 +2592,7 @@ import Icon from '../../components/Icon.astro';
         window.location.replace('/leader');
         return;
       }
-      msg.hidden = false; // reveal the role="alert" region BEFORE writing text (5.5 review P2)
+      msg.hidden = false; // reveal the role="alert" region BEFORE writing text
       msg.textContent = 'Couldn’t publish. Please try again.';
       btn.disabled = false;
       btn.textContent = prevLabel;
@@ -2668,7 +2644,7 @@ import Icon from '../../components/Icon.astro';
     wrap.append(scroll);
   }
 
-  // ===== Alliances panel — read-only overview (Owner request 2026-07-28) =====
+  // Alliances panel — read-only overview.
   let alliLoaded = false;
   let alliFetching = false;
   function showAlliState(state: 'loading' | 'error' | 'empty' | 'table') {
@@ -2724,7 +2700,7 @@ import Icon from '../../components/Icon.astro';
     loadAlliancesPanel();
   }
 
-  // ===== Accounts panel (Owner-only) — read-only roster =====
+  // Accounts panel (Owner-only) — read-only roster.
   let acctLoaded = false;
   let acctFetching = false;
   function showAcctState(state: 'loading' | 'error' | 'table') {
@@ -2843,14 +2819,14 @@ import Icon from '../../components/Icon.astro';
     }
 
     renderChips(accessible, isOwner);
-    // Story 5.5: gate the per-row status/path controls on write capability. Owner (admin
-    // bypass) or a Curator whose Transfer area resolved to 'Work' (holds the update grant).
+    // Gate the per-row status/path controls on write capability. Owner (admin bypass) or
+    // a Curator whose Transfer area resolved to 'Work' (holds the update grant).
     canWriteCandidates = isOwner || accessible.some((a) => a.key === 'candidates' && a.mode === 'Work');
-    // Story 6.3: gate the per-row Publish controls the same way — Owner, or a Senior whose
-    // Guides area resolved to 'Work' (holds the 6.3 `guides` create/update grants). A
-    // leader whose union carries a `guides` READ (guides-viewer) sees the list with no
-    // controls; a pure guides-editor holds NO `guides` grant at all, so the tab itself is
-    // absent (the 3.5 area keying) — their surface is the Studio. Server 403s regardless.
+    // Gate the per-row Publish controls the same way — Owner, or a Senior whose Guides
+    // area resolved to 'Work' (holds the `guides` create/update grants). A leader whose
+    // union carries a `guides` READ sees the list with no controls; a pure guides-editor
+    // holds NO `guides` grant at all, so the tab itself is absent — their surface is the
+    // Studio. Server 403s regardless.
     canPublishGuides = isOwner || accessible.some((a) => a.key === 'guides' && a.mode === 'Work');
 
     if (accessible.length === 0) {

@@ -1,11 +1,8 @@
 /*
-  Alliance Finder — client-side timezone conversion + best-fit ranking (DOM wiring).
-
-  AD-1/AD-2 say public content renders at build time with no runtime backend fetch.
-  Timezone is per-visitor (unknowable at build), so ALL alliance data is embedded in
-  the static HTML (data-* on each card) and we convert + rank it here in the browser
-  — pure computation over data already in the page, NOT a network fetch. Same shape
-  as the Bear Trap calculator (client JS, no network).
+  Public content renders at build time with no runtime backend fetch. Timezone is
+  per-visitor (unknowable at build), so ALL alliance data is embedded in the static
+  HTML (data-* on each card) and converted + ranked here in the browser — pure
+  computation over data already in the page, NOT a network fetch.
 
   The server renders honest UTC values labelled "· UTC"; this script rewrites them to
   the visitor's local time on load. The pure ranking maths lives in ./ranking.ts; this
@@ -28,14 +25,11 @@ import {
 } from './ranking';
 
 const STORAGE_KEY = 'finder-tz';
-// Personal peak windows (Story 2.5): the visitor's own declared local active
-// times. PEAK_KEY mirrors STORAGE_KEY's persistence; HHMM_RE re-validates a
-// hand-edited/corrupt stored value so it can never brick the page.
+// HHMM_RE re-validates a hand-edited/corrupt stored value so it can never brick the page.
 const PEAK_KEY = 'finder-peak';
 const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 // Declared windows currently in effect. Empty → the page ranks against the 20:30
-// evening centre exactly as before (AC3). Seeded from storage on load, kept in
-// sync by refreshWindows() on every add/remove/edit.
+// evening centre. Seeded from storage on load, kept in sync by refreshWindows().
 let activeWindows: PeakWin[] = [];
 
 function storedTz(): string | null {
@@ -45,10 +39,10 @@ function storeTz(tz: string): void {
   try { localStorage.setItem(STORAGE_KEY, tz); } catch { /* private mode — no-op */ }
 }
 
-// Peak-window persistence (AC5) — mirrors storedTz/storeTz: try/catch so private
-// mode never throws. Serialized as "HH:MM-HH:MM,HH:MM-HH:MM". On read, every part
-// is re-validated (regex + start<end) and any malformed/stale window is dropped
-// silently, so a hand-edited or corrupt value can never break the page.
+// Mirrors storedTz/storeTz: try/catch so private mode never throws. Serialized as
+// "HH:MM-HH:MM,HH:MM-HH:MM". On read, every part is re-validated (regex + start<end)
+// and any malformed/stale window is dropped silently, so a hand-edited or corrupt
+// value can never break the page.
 function storedPeak(): { startStr: string; endStr: string }[] {
   let raw: string | null = null;
   try { raw = localStorage.getItem(PEAK_KEY); } catch { return []; }
@@ -56,7 +50,7 @@ function storedPeak(): { startStr: string; endStr: string }[] {
   const out: { startStr: string; endStr: string }[] = [];
   for (const part of raw.split(',')) {
     const seg = part.split('-');
-    if (seg.length !== 2) continue; // drop a hand-corrupted multi-dash part (AC5)
+    if (seg.length !== 2) continue; // drop a hand-corrupted multi-dash part
     const [s, e] = seg;
     if (!HHMM_RE.test(s || '') || !HHMM_RE.test(e || '')) continue;
     if (localHours(s) >= localHours(e)) continue;
@@ -110,9 +104,9 @@ function render(tz: string): void {
   const detectedEl = document.getElementById('tz-detected');
   if (detectedEl) detectedEl.textContent = storedTz() ? 'your choice' : 'auto-detected';
 
-  // Never-push framing (AC6): when the visitor's own windows drive ranking, say
-  // so ("your active times"); empty → the original evening framing. Stays
-  // recommendation-voiced — no "we'll place you" / "matched" language.
+  // When the visitor's own windows drive ranking, say so ("your active times");
+  // empty → the original evening framing. Stays recommendation-voiced — no "we'll
+  // place you" / "matched" language.
   const lead = document.getElementById('finder-lead');
   if (lead) {
     lead.textContent = activeWindows.length
@@ -124,12 +118,12 @@ function render(tz: string): void {
   const scored = cards.map((c) => ({ card: c, ...scoreTraps(c.bears, c.peak, tz, activeWindows) }));
   // best-fit first: bucket asc, then more traps fitting your windows, then smaller
   // distance / more buffer; Array.sort is stable for ties. (fits is 0 on the empty
-  // path, so that term drops out and the legacy evening sort is unchanged — AC3.)
+  // path, so that term drops out and the evening sort is unchanged.)
   scored.sort((a, b) => RANK[a.bucket] - RANK[b.bucket] || b.fits - a.fits || a.dist - b.dist);
 
-  // No-good-match (AC2): nothing fits squarely when no card buckets great/good
-  // (all stretch, incl. unfittable {stretch, Infinity}). Re-evaluated every render
-  // because a different timezone moves cards in/out of the squarely-fits set.
+  // Nothing fits squarely when no card buckets great/good (all stretch, incl.
+  // unfittable {stretch, Infinity}). Re-evaluated every render because a different
+  // timezone moves cards in/out of the squarely-fits set.
   const hasGoodFit = scored.some((s) => s.bucket === 'great' || s.bucket === 'good');
   const noGoodMatch = cards.length > 0 && !hasGoodFit;
   const banner = document.getElementById('empty-banner');
@@ -138,8 +132,8 @@ function render(tz: string): void {
   const list = document.getElementById('result-list');
   scored.forEach((s, i) => {
     applyToCard(s.card, tz, s.bucket);
-    // Gate the Best-fit ribbon (AC2): only crown rank-1 when a Great/Good fit
-    // exists — never crown a Stretch/unfittable top card; the banner replaces it.
+    // Only crown rank-1 when a Great/Good fit exists — never crown a
+    // Stretch/unfittable top card; the banner replaces it.
     s.card.el.classList.toggle('rank-1', i === 0 && hasGoodFit);
     if (list) list.appendChild(s.card.el); // moving an existing node re-orders the DOM
   });
@@ -151,7 +145,6 @@ function render(tz: string): void {
   }
 }
 
-// --- timezone control wiring ---
 const select = document.getElementById('tz-select') as HTMLSelectElement | null;
 const selectWrap = document.getElementById('tz-select-wrap');
 const changeBtn = document.getElementById('tz-change');
@@ -173,7 +166,6 @@ function openPicker(): void {
   if (select) select.focus();
 }
 
-// --- peak-window helpers (Story 2.5) -------------------------------------
 const peakWindowsEl = document.getElementById('peak-windows');
 
 function peakRows(): HTMLElement[] {
@@ -185,7 +177,7 @@ function peakRows(): HTMLElement[] {
 // Parse one row's two native time inputs (each is "" or a browser-validated
 // "HH:MM"). A row is active only when BOTH are filled and start < end; a
 // half-filled or start≥end row yields a plain inline message and is NOT scored.
-// An untouched (both-empty) row is silent — not an error (AC4).
+// An untouched (both-empty) row is silent — not an error.
 function parsePeakRow(row: HTMLElement): { win: PeakWin | null; serial: string | null; error: string | null } {
   const startStr = (row.querySelector<HTMLInputElement>('[data-peak-start]')?.value || '').trim();
   const endStr = (row.querySelector<HTMLInputElement>('[data-peak-end]')?.value || '').trim();
@@ -226,7 +218,7 @@ function recompute(): void {
 }
 
 // The first row is never removable (clearing its inputs is how you return to the
-// empty-windows / 20:30 behavior, AC3); every later row carries the remove "x".
+// empty-windows / 20:30 behavior); every later row carries the remove "x".
 function syncRemoveButtons(): void {
   peakRows().forEach((row, i) => {
     const btn = row.querySelector<HTMLElement>('[data-peak-remove]');
@@ -249,9 +241,9 @@ function addPeakRow(startStr = '', endStr = ''): void {
   syncRemoveButtons();
 }
 
-// Rebuild rows from the validated stored set (AC5) and seed activeWindows. A
-// corrupt value was already dropped by storedPeak(); refreshWindows() then
-// re-persists the cleaned set. Render-free — the caller renders once after.
+// Rebuild rows from the validated stored set and seed activeWindows. A corrupt
+// value was already dropped by storedPeak(); refreshWindows() then re-persists the
+// cleaned set. Render-free — the caller renders once after.
 function restorePeakWindows(): void {
   const saved = storedPeak();
   const first = peakRows()[0];
@@ -266,7 +258,7 @@ function restorePeakWindows(): void {
   refreshWindows();
 }
 
-// Timezone resolution order (Task 3):
+// Timezone resolution order:
 //   1. a valid stored override wins and survives reload;
 //   2. else drop a stale/invalid stored value, then auto-detect;
 //   3. else (detect throws or returns empty) fall back to the MANUAL pick — open
@@ -283,13 +275,13 @@ if (isValidTz(stored)) {
   }
   const detected = detectTz();
   if (detected && isValidTz(detected)) currentTz = detected;
-  else detectFailed = true; // currentTz stays 'UTC'
+  else detectFailed = true;
 }
 try {
   ensureOption(currentTz);
   // Seed declared windows before the first render so the initial ranking already
-  // reflects them (AC5). Inside the try so a throw here still hits the finally and
-  // never freezes the page behind the skeleton (the Story 2.3 freeze-guard lesson).
+  // reflects them. Inside the try so a throw here still hits the finally and never
+  // freezes the page behind the skeleton.
   restorePeakWindows();
   if (detectFailed) {
     // Honest UTC, unranked, with the manual picker open — picking runs render().
@@ -300,11 +292,11 @@ try {
     render(currentTz);
   }
 } finally {
-  // Clear the loading skeleton (AC1) — in `finally` so a throw anywhere in the
-  // resolve (toLocal/offsetLabel on an edge runtime, etc.) can never leave the page
-  // frozen behind skeletons, which is strictly worse than the no-JS path. On the
-  // happy path this runs after render() so the visitor never sees the UTC→local
-  // flip; on the detect-failed path it reveals the honest UTC cards.
+  // Clear the loading skeleton — in `finally` so a throw anywhere in the resolve
+  // (toLocal/offsetLabel on an edge runtime, etc.) can never leave the page frozen
+  // behind skeletons, which is strictly worse than the no-JS path. On the happy path
+  // this runs after render() so the visitor never sees the UTC→local flip; on the
+  // detect-failed path it reveals the honest UTC cards.
   document.documentElement.removeAttribute('data-finder-resolving');
 }
 
@@ -326,7 +318,6 @@ if (select) {
   });
 }
 
-// --- peak-window control wiring (Story 2.5) ---
 const peakAddBtn = document.getElementById('peak-add');
 if (peakAddBtn) {
   peakAddBtn.addEventListener('click', () => {
@@ -335,13 +326,12 @@ if (peakAddBtn) {
   });
 }
 if (peakWindowsEl) {
-  // Re-validate + re-rank on every edit to a window time (AC2/AC4).
   peakWindowsEl.addEventListener('input', (e) => {
     const t = e.target as HTMLElement | null;
     if (t && t.matches('[data-peak-start], [data-peak-end]')) recompute();
   });
-  // Remove control — event-delegated because rows are added dynamically. Never
-  // removes the last row (the first row is the always-present empty baseline).
+  // Event-delegated because rows are added dynamically. Never removes the last row
+  // (the first row is the always-present empty baseline).
   peakWindowsEl.addEventListener('click', (e) => {
     const t = e.target as HTMLElement | null;
     const btn = t ? t.closest('[data-peak-remove]') : null;

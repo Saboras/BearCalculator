@@ -8,18 +8,18 @@ import {
 import { sanitizeGuideBody } from '../lib/sanitize-guide';
 
 /*
-  Build-time Guides data layer (Story 6.4). Runs exclusively in Astro SSG
-  frontmatter / endpoints via top-level await.
+  Build-time Guides data layer. Runs exclusively in Astro SSG frontmatter /
+  endpoints via top-level await.
 
   - Source toggle: no build token → the KB builds EMPTY (deliberately no seed
     file — committed guide content would rot; the pages render calm empty
-    states, AC6/NFR-2) with a console.warn. Token configured → live Directus
-    read; a fetch error PROPAGATES so `astro build` fails loud (never ship a
-    silently-empty KB that looks like the legitimate zero-guides state).
+    states) with a console.warn. Token configured → live Directus read; a fetch
+    error PROPAGATES so `astro build` fails loud (never ship a silently-empty
+    KB that looks like the legitimate zero-guides state).
   - Boundary validation: the network read is a system boundary — malformed rows
     fail the build loudly instead of rendering wrong. An empty array is VALID.
   - Sanitization: `body` is sanitized HERE, once, centrally — no consumer of
-    this module ever sees raw WYSIWYG HTML (the §18.2 MUST). Image
+    this module ever sees raw WYSIWYG HTML (infra README §18.2). Image
     localization happens later, per page, in guide-images.ts.
 */
 

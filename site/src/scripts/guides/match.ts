@@ -1,10 +1,8 @@
 /*
-  Pure search matcher (Story 6.4) — separated from the DOM wiring so it is
-  unit-testable in isolation (the scripts/finder/ranking.ts pattern).
-  Case-insensitive substring match over title + category + excerpt; a
-  hand-rolled filter is deliberate — at tens-of-guides scale a search library
-  would be a dependency for nothing (the AR-18 contract binds the artifact
-  path + one-build-step, not a library).
+  Pure search matcher — separated from the DOM wiring so it is unit-testable in
+  isolation. Case-insensitive substring match over title + category + excerpt;
+  a hand-rolled filter is deliberate — at tens-of-guides scale a search library
+  would be a dependency for nothing.
 */
 export interface GuideIndexEntry {
   title: string;

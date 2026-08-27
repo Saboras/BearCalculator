@@ -1,12 +1,9 @@
 ---
 /*
-  /guides — the public knowledge-base root (Story 6.4, ⭐ Q1 Option B):
-  category overview cards (each linking its /guides/<category-slug> page),
-  the client-side search (AC4 — reads the build-emitted /guides-index.json),
-  and the "More guides" section for category-less rows (M2O SET NULL — never
-  dropped). Everything is SSG from the build-time read; no runtime Directus
-  fetch (AD-1/AD-2). With zero guides (or an unconfigured build) the page
-  renders its calm empty state — never a blank page (UX-DR-19/NFR-2).
+  /guides — the public knowledge-base root. Everything is SSG from the
+  build-time read; no runtime Directus fetch. Category-less rows (M2O SET NULL)
+  land in "More guides" — never dropped. With zero guides (or an unconfigured
+  build) the page renders its calm empty state — never a blank page.
 */
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icon.astro';
@@ -101,7 +98,6 @@ const cats = categories.map((c) => ({ ...c, count: guidesInCategory(c.slug).leng
     margin: var(--space-3) 0 0;
   }
 
-  /* ===== Search ===== */
   .kb-search {
     margin: var(--space-6) 0 0;
   }
@@ -165,7 +161,6 @@ const cats = categories.map((c) => ({ ...c, count: guidesInCategory(c.slug).leng
     margin-left: var(--space-2);
   }
 
-  /* ===== Category cards ===== */
   .cat-list {
     list-style: none;
     margin: var(--space-7) 0 0;
@@ -203,7 +198,6 @@ const cats = categories.map((c) => ({ ...c, count: guidesInCategory(c.slug).leng
     font-size: 14px;
   }
 
-  /* ===== Uncategorized + zero state ===== */
   .kb-more {
     margin-top: var(--space-7);
   }

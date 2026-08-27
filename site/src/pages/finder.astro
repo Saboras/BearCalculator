@@ -17,7 +17,7 @@ const allianceCount = alliances.length;
       show a brief skeleton during the client-side UTC→local resolve; the finder
       script clears it right after render(). No JS → flag never set → the rule
       never matches → real (honest UTC) cards show immediately, never a frozen
-      shimmer. (AC1; no-JS safety.)
+      shimmer.
     */}
     <script is:inline>document.documentElement.dataset.finderResolving = '';</script>
 
@@ -37,12 +37,11 @@ const allianceCount = alliances.length;
 
     <section class="results" aria-label="Alliance recommendations">
       {/*
-        Zero / empty-dataset state (AC4). An empty alliances.json is a valid build
-        state — render plainly and still route to Apply (never dead-end). The
-        generic Apply button carries NO data-slug/name (no alliance to pre-fill);
-        the contract is Story 2.4, so it keeps the /join placeholder. The result
-        <ol> stays in the DOM but renders empty, so the client script's element
-        lookups still resolve safely.
+        An empty alliances.json is a valid build state — render plainly and still
+        route to Apply (never dead-end). The generic Apply button carries NO
+        data-slug/name (no alliance to pre-fill). The result <ol> stays in the
+        DOM but renders empty, so the client script's element lookups still
+        resolve safely.
       */}
       {allianceCount === 0 ? (
         <div class="zero-state">
@@ -66,7 +65,7 @@ const allianceCount = alliances.length;
       )}
 
       {/*
-        No-good-match banner (AC2) — hidden until the client render() finds no
+        No-good-match banner — hidden until the client render() finds no
         Great/Good fit for this timezone, then revealed ABOVE the still-rendered,
         still-appliable Stretch cards. Re-evaluated on every render (tz change).
       */}
@@ -102,7 +101,6 @@ const allianceCount = alliances.length;
     padding: var(--space-7) var(--space-5) var(--space-9);
   }
 
-  /* ===== Heading + ribbon (recipe mirrors Home) ===== */
   .finder-head {
     position: relative;
     text-align: center;
@@ -123,7 +121,7 @@ const allianceCount = alliances.length;
     background: var(--color-primary);
     transform: translateY(-50%);
     box-shadow: 0 2px 4px rgba(44, 38, 34, .2);
-    display: none; /* desktop-only ornament; shown at 768px (see breakpoint) */
+    display: none; /* desktop-only ornament; shown at 768px */
   }
   .ribbon::before {
     left: -66px;
@@ -158,7 +156,6 @@ const allianceCount = alliances.length;
     margin: 0;
   }
 
-  /* ===== Reassurance (AC5 — above results; repeated near Apply via prefill note) ===== */
   .reassure {
     display: flex;
     align-items: center;
@@ -172,7 +169,6 @@ const allianceCount = alliances.length;
     display: inline-flex;
   }
 
-  /* ===== Section head ===== */
   .section-head {
     display: flex;
     align-items: baseline;
@@ -191,7 +187,6 @@ const allianceCount = alliances.length;
     font-weight: 600;
   }
 
-  /* ===== Result list ===== */
   .result-list {
     list-style: none;
     margin: 0;
@@ -201,9 +196,9 @@ const allianceCount = alliances.length;
     gap: var(--space-5);
   }
 
-  /* ===== Zero-state Apply foot (shares the gold button + note layout with the
-     card, but the card is a separate component — Rule of Three says duplicate
-     these two tiny rules rather than extract at the 2nd use). ===== */
+  /* Shares the gold button + note layout with the card, but the card is a separate
+     component — Rule of Three says duplicate these two tiny rules rather than
+     extract at the 2nd use. */
   .ac-foot {
     display: flex;
     align-items: center;
@@ -216,8 +211,7 @@ const allianceCount = alliances.length;
     color: var(--color-muted);
   }
 
-  /* ===== No-good-match empty banner (AC2) — soft signal (dashed gold), never an
-     error. Revealed client-side above the still-appliable Stretch cards. ===== */
+  /* No-good-match banner: a soft signal (dashed gold), never an error. */
   .empty-banner {
     display: flex;
     align-items: flex-start;
@@ -255,7 +249,6 @@ const allianceCount = alliances.length;
     margin: 0;
   }
 
-  /* ===== Zero / empty-dataset state (AC4) — plain, still routes to Apply ===== */
   .zero-state {
     display: flex;
     flex-direction: column;
@@ -288,7 +281,6 @@ const allianceCount = alliances.length;
     margin-top: var(--space-2);
   }
 
-  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
   @media (min-width: 768px) {
     .ribbon::before,
     .ribbon::after {
@@ -296,7 +288,6 @@ const allianceCount = alliances.length;
     }
   }
 
-  /* ===== Mobile: full-width prefill note under the stacked Apply button ===== */
   @media (max-width: 767.98px) {
     .prefill-note {
       width: 100%;
@@ -304,8 +295,7 @@ const allianceCount = alliances.length;
     }
   }
 
-  /* ===== Dark "Royal Court" — the baked light gradients need dark variants
-     (the Story 1.3/1.4 wash-out guard). ===== */
+  /* Dark "Royal Court": the baked light gradients need dark variants. */
   :global(:root[data-theme="dark"]) .ribbon-band {
     background: linear-gradient(#F2A93B, #E0962A);
     text-shadow: none;

@@ -1,10 +1,10 @@
 ---
 /*
-  App shell navigation (Story 1.3). One component, three surfaces driven by a
-  single `tabs` array: a sticky desktop top bar, a compact mobile header strip,
-  and an always-visible mobile bottom tab bar. CSS shows the right surfaces per
-  breakpoint (single breakpoint at 768px, mobile-first). Active state is computed
-  server-side from Astro.url.pathname — no client JS (multi-page static site).
+  One component, three surfaces driven by a single `tabs` array: a sticky
+  desktop top bar, a compact mobile header strip, and an always-visible mobile
+  bottom tab bar. CSS shows the right surfaces per breakpoint (single breakpoint
+  at 768px, mobile-first). Active state is computed server-side from
+  Astro.url.pathname — no client JS (multi-page static site).
 */
 import ThemeToggle from './ThemeToggle.astro';
 import Icon from './Icon.astro';
@@ -13,9 +13,9 @@ const tabs = [
   { label: 'Home', short: 'Home', href: '/', icon: 'house' },
   { label: 'Tools', short: 'Tools', href: '/tools', icon: 'wrench' },
   { label: 'Alliance Finder', short: 'Finder', href: '/finder', icon: 'compass' },
-  // `also`: guide DETAIL pages live under /guide/<slug> (Story 6.4 — a separate
-  // URL family so guide slugs can never collide with category slugs); the
-  // Guides tab must light up for them too.
+  // `also`: guide DETAIL pages live under /guide/<slug> (a separate URL family
+  // so guide slugs can never collide with category slugs); the Guides tab must
+  // light up for them too.
   { label: 'Guides', short: 'Guides', href: '/guides', icon: 'book-open', also: '/guide' },
 ];
 const joinHref = '/join';
@@ -72,7 +72,7 @@ const isTabActive = (t: { href: string; also?: string }) =>
   </div>
 </header>
 
-{/* Mobile bottom tab bar — four tabs only; Join is an in-page button, not a tab (AC2) */}
+{/* Mobile bottom tab bar — four tabs only; Join is an in-page button, not a tab */}
 <nav class="nav-mobile-tabbar" aria-label="Mobile">
   {tabs.map((t) => (
     <a
@@ -87,7 +87,6 @@ const isTabActive = (t: { href: string; also?: string }) =>
 </nav>
 
 <style>
-  /* ===== Shared brand wordmark ===== */
   .brand {
     font-family: var(--font-display);
     color: var(--color-primary);
@@ -103,7 +102,6 @@ const isTabActive = (t: { href: string; also?: string }) =>
     color: var(--color-ink);
   }
 
-  /* ===== Shared icon button (mobile header leader-login shield) ===== */
   /* Support link — labeled so nobody lands on Ko-fi unwarned (desktop only;
      mobile relies on the explanatory footer button). Never gold. */
   .coffee-link {
@@ -141,12 +139,10 @@ const isTabActive = (t: { href: string; also?: string }) =>
     color: var(--color-primary-hover);
   }
 
-  /* ===== Desktop top bar: hidden by default (mobile-first) ===== */
   .topbar {
     display: none;
   }
 
-  /* ===== Mobile header strip (default) ===== */
   .m-header {
     display: flex;
     align-items: center;
@@ -165,7 +161,6 @@ const isTabActive = (t: { href: string; also?: string }) =>
     gap: var(--space-2);
   }
 
-  /* ===== Mobile bottom tab bar (default) — always visible, fixed ===== */
   .nav-mobile-tabbar {
     position: fixed;
     left: 0;
@@ -203,7 +198,6 @@ const isTabActive = (t: { href: string; also?: string }) =>
     filter: drop-shadow(0 1px 1px rgba(224, 138, 43, .4));
   }
 
-  /* ===== Desktop enhancement (single breakpoint) ===== */
   @media (min-width: 768px) {
     .m-header,
     .nav-mobile-tabbar {
@@ -282,11 +276,10 @@ const isTabActive = (t: { href: string; also?: string }) =>
     }
   }
 
-  /* ===== Dark "Royal Court" chrome =====
-     The chrome gradients are light-parchment literals (verbatim from the DESIGN
-     recipes) with no dark variant, but the text tokens (--color-ink/--color-muted)
-     flip to light in dark mode — without these overrides the shell is light-on-light
-     and unreadable. Remap each surface to the dark panel/canvas tokens. */
+  /* Dark "Royal Court" chrome: the chrome gradients are light-parchment literals
+     with no dark variant, but the text tokens (--color-ink/--color-muted) flip to
+     light in dark mode — without these overrides the shell is light-on-light and
+     unreadable. Remap each surface to the dark panel/canvas tokens. */
   :global(:root[data-theme="dark"]) .topbar,
   :global(:root[data-theme="dark"]) .m-header {
     background: linear-gradient(var(--color-surface), var(--color-bg));

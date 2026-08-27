@@ -1,16 +1,13 @@
 /*
-  Alliance Finder — pure timezone-conversion + best-fit ranking logic.
-
   No DOM, no localStorage: every function here is a pure transform over plain data
   (strings, numbers, PeakWin[]), so the subtle ranking maths — circular evening
   distance, ±30-min event containment, inside-window buffer scoring — is isolated
   and unit-testable. The DOM/session wiring that calls this lives in ./index.ts.
 */
 
-// --- Fit window (LOCAL hours). Tunable product default (story Open Q #2):
-//     prime evening centres on ~20:30. A symmetric *circular* distance from the
-//     centre handles midnight wrap intrinsically — 00:30 local is ~4h from
-//     20:30, not 20h — so no manual day arithmetic is needed. ---
+// Fit window (LOCAL hours): prime evening centres on ~20:30. A symmetric *circular*
+// distance from the centre handles midnight wrap intrinsically — 00:30 local is ~4h
+// from 20:30, not 20h — so no manual day arithmetic is needed.
 const EVENING_CENTER = 20.5;   // ~20:30
 const GREAT_MAX_DIST = 2.5;    // within ±2.5h → 18:00–23:00 core  → Great
 const GOOD_MAX_DIST = 4.5;     // next ±2h → 16:00–18:00 & 23:00–01:00 → Good
@@ -57,7 +54,6 @@ function distFromEvening(hours: number): number {
   const raw = Math.abs(hours - EVENING_CENTER);
   return Math.min(raw, 24 - raw); // circular, 0..12
 }
-// --- Windows-aware fit (Story 2.5) -------------------------------------------
 // A Bear Trap is a ~30-min event the player wants lead time for, so a real "Great"
 // fit means being active across the whole event, not just the instant:
 //   Great   — [t-30min, t+30min] sits fully INSIDE a declared window
@@ -65,10 +61,8 @@ function distFromEvening(hours: number): number {
 //             (you catch the trap, but with no prep / it runs past your window)
 //   Stretch — t is outside every window (you are not online)
 // Declared windows REPLACE the evening centre; empty windows → the distFromEvening
-// path below, byte-for-byte unchanged (AC3). Containment is checked directly (no
-// edge-distance bucketing), so the old non-circular near-midnight asymmetry no
-// longer affects ranking. Residual v1 edge: a pad crossing midnight (trap within
-// 30 min of 00:00) can't match a late window — overnight is entered as two rows.
+// path below, byte-for-byte unchanged. Residual edge: a pad crossing midnight (trap
+// within 30 min of 00:00) can't match a late window — overnight is entered as two rows.
 const EVENT_PAD = 0.5; // 30-min lead-in + 30-min event duration around the trap
 
 function windowBucket(hours: number, windows: PeakWin[]): Bucket {
@@ -96,7 +90,7 @@ function windowScore(hours: number, windows: PeakWin[]): number {
   return best;
 }
 // One fit per local hour: windows when present (containment bucket + buffer-ranked
-// score), else the unchanged evening centre. Returns bucket + a sort metric.
+// score), else the unchanged evening centre.
 function fitOf(hours: number, windows: PeakWin[]): { bucket: Bucket; dist: number } {
   if (windows.length === 0) {
     const d = distFromEvening(hours);
@@ -128,7 +122,7 @@ export function bearTimesHTML(times: string[]): string {
 // `dist` orders the rest: on the windows path, Σ inside-buffer over ONLY the traps
 // that fit (each ≤ 0; more negative = better-buffered / more centred). Outside traps
 // are NOT summed, so a trap you can't attend never pulls the ranking. On the empty
-// path, the closest distance to the evening centre (byte-for-byte the legacy sort, AC3).
+// path, the closest distance to the evening centre.
 export function scoreTraps(
   bears: string[], peak: string | null, tz: string, windows: PeakWin[],
 ): { bucket: Bucket; fits: number; dist: number } {
@@ -146,8 +140,7 @@ export function scoreTraps(
   }
   // Peak booster — DEFERRED on the windows path: alliance `peak` is null today and is
   // NOT a Bear Trap, so it must not lift the windows bucket or count as a fit. The
-  // legacy evening path keeps its original Good→Great-only promotion so AC3 stays
-  // byte-for-byte unchanged.
+  // evening path keeps its original Good→Great-only promotion unchanged.
   if (peak && !useWindows) {
     const f = fitOf(localHours(toLocal(peak, tz)), windows);
     if (bucket === 'good' && f.bucket === 'great') bucket = 'great';

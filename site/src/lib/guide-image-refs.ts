@@ -1,7 +1,7 @@
 /*
-  Pure Directus-asset reference logic (Story 6.4) — separated from
-  guide-images.ts so it is unit-testable in plain Node (guide-images imports
-  astro:assets, which only exists inside an Astro build).
+  Pure Directus-asset reference logic — separated from guide-images.ts so it is
+  unit-testable in plain Node (guide-images imports astro:assets, which only
+  exists inside an Astro build).
 */
 const UUID_RE = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
 
@@ -11,7 +11,7 @@ const UUID_RE = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-
   HOSTNAME against directusUrl — not by exact origin, so a protocol/port/case
   variant of the configured URL (the WYSIWYG stores whatever origin the Studio
   session used) still localizes instead of silently shipping a Directus URL in
-  public HTML (AD-2). One host = one Directus at this deployment's scale.
+  public HTML. One host = one Directus at this deployment's scale.
   Tolerates trailing "/<filename>" and query strings. Genuinely foreign hosts
   return null (hotlinks pass through untouched).
 */

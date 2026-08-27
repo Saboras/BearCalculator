@@ -1,14 +1,14 @@
 import { createDirectus, rest, createItem } from '@directus/sdk';
 
 /*
-  Unauthenticated, create-only Directus client for the public transfer form (Story 5.2).
+  Unauthenticated, create-only Directus client for the public transfer form.
 
   A THIRD, deliberately-separate client seam:
     - directus.ts        → leader session (authentication('session'), credentials:'include')
     - directus-build.ts  → build-time read (static token, server-only, never bundled)
     - directus-public.ts → public create-only (NO credentials, NO token)   ← this
 
-  The public POST uses the create-only unauthenticated Directus role (AD-12): it may
+  The public POST uses the create-only unauthenticated Directus role: it may
   create a candidates row and read nothing. So this client carries NO authentication
   and NO credentials — an anonymous cross-origin POST to PUBLIC_DIRECTUS_URL. It is
   bundled into browser JS, which is fine: it holds no secret (the URL is PUBLIC_ by
@@ -29,14 +29,14 @@ export interface CandidatePayload {
   others_transferring: string;
   day4_fcfs: boolean;
   needs_special_invite: boolean;
-  power: number; // raw units — /join collects millions and sends ×1,000,000 (Owner decision 2026-07-18)
+  power: number; // raw units — /join collects millions and sends ×1,000,000
   current_alliance_tag?: string; // no brackets — display renders [tag]Name
   what_you_seek?: string;
   players_to_avoid?: string;
   desired_alliance?: number;
   period: number;
-  // `status` is intentionally omitted — the schema defaults it to 'Applied' (AC1).
-  // suggested_alliance / group / planned_path are Curator-only (AD-8 / AD-9) — never sent.
+  // `status` is intentionally omitted — the schema defaults it to 'Applied'.
+  // suggested_alliance / group / planned_path are Curator-only — never sent.
 }
 
 /*

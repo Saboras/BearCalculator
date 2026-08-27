@@ -1,5 +1,20 @@
 ## Conventions
 
+### Kommentare — unerwünscht, außer sie tragen etwas Wichtiges
+
+Kommentare im Code sind standardmäßig unerwünscht. Erlaubt sind nur:
+
+- **Funktionale Kommentare** (Direktiven wie `/// <reference>`, `@ts-expect-error`, Lizenz-Header)
+- **Wirklich WICHTIGE Mitteilungen**: nicht-offensichtliche Constraints, Sicherheits-Begründungen, Workarounds, Invarianten, Herleitungen magischer Zahlen (z. B. Testwerte, Spielformeln)
+
+Alles andere fliegt raus:
+
+- WHAT-Kommentare, die nur wiederholen, was der Code sagt
+- Deko-/Sektions-Banner (`/* ===== … ===== */`, `<!-- ==== -->`, `// ---- x ----`)
+- Referenzen auf Prozess-Artefakte: Story X.Y, AC/AD/AR/NFR/UX-DR/FR/OQ, "review P1", Task-Nummern, Owner-Requests mit Datum. Bei gemischten Kommentaren bleibt der Constraint, die Referenz fliegt.
+
+Dokumentation gehört in die .md-Dateien (README, DESIGN.md, infra/…), nicht in den Code. (Vollständig bereinigt am 2026-08-25.)
+
 
 
 ## Known issues

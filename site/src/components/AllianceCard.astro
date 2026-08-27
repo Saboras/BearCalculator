@@ -245,11 +245,11 @@ const bearTimes = [a.bear_trap_1, a.bear_trap_2].filter((t): t is string => t !=
     color: var(--color-muted);
   }
 
-  /* ===== Loading skeleton (AC1) — JS-gated, no-JS-safe. finder.astro's is:inline
-     marker sets :root[data-finder-resolving]; this hides the honest-but-about-to-
-     change UTC/Stretch card content and shows placeholder bars until the finder
-     script converts to local time and clears the flag. No marker (JS off) → these
-     rules never match → real cards show immediately. ===== */
+  /* Loading skeleton — JS-gated, no-JS-safe. finder.astro's is:inline marker sets
+     :root[data-finder-resolving]; this hides the honest-but-about-to-change
+     UTC/Stretch card content and shows placeholder bars until the finder script
+     converts to local time and clears the flag. No marker (JS off) → these rules
+     never match → real cards show immediately. */
   .ac-skeleton {
     display: none;
   }
@@ -301,9 +301,9 @@ const bearTimes = [a.bear_trap_1, a.bear_trap_2].filter((t): t is string => t !=
     }
   }
 
-  /* ===== Dark "Royal Court" — the baked light gradients/embosses need dark
-     variants (the Story 1.3/1.4 wash-out guard). The badge tints use color-mix on
-     tokens, so they flip on their own and are not repeated here. ===== */
+  /* Dark "Royal Court": the baked light gradients/embosses need dark variants.
+     The badge tints use color-mix on tokens, so they flip on their own and are
+     not repeated here. */
   :global(:root[data-theme="dark"]) .alliance-card.rank-1::after {
     background: linear-gradient(#F2A93B, #E0962A);
     text-shadow: none;

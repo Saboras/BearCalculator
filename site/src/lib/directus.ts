@@ -14,15 +14,13 @@ import {
 } from '@directus/sdk';
 
 /*
-  Directus client — leader session auth for the /leader gate (Story 3.2).
-
   Session-cookie mode is deliberate and security-load-bearing:
   `login({ mode: 'session' })` makes Directus set the httpOnly `directus_session_token`
   cookie and returns NO token in the body. `credentials: 'include'` on both composables
   is what sends/receives that cookie cross-subdomain (apex site ↔ admin subdomain).
   The credential therefore lives only in a browser-managed httpOnly cookie, never in JS
-  or localStorage — the XSS defense required by AR-18 / NFR-D. Never switch to
-  `mode: 'json'` (that returns access_token in the body → would have to be stored).
+  or localStorage. Never switch to `mode: 'json'` (that returns access_token in the
+  body → would have to be stored).
 */
 // `||` not `??`: an empty PUBLIC_DIRECTUS_URL ('') must also fall back to the placeholder —
 // otherwise createDirectus('') resolves the API against the page origin (the apex site).
@@ -30,8 +28,7 @@ const DIRECTUS_URL =
   import.meta.env.PUBLIC_DIRECTUS_URL || 'https://admin.kingdom1516.example';
 
 // The Directus Data Studio (the ready-made CMS admin) is served at /admin on the
-// Directus origin — a DIFFERENT origin from the site's own apex /admin shell. The
-// admin-shell's Guides/Alliances/Accounts tabs hand off here (AR-5 / NFR-18).
+// Directus origin — a DIFFERENT origin from the site's own apex /admin shell.
 export const DATA_STUDIO_URL = `${DIRECTUS_URL}/admin`;
 
 const client = createDirectus(DIRECTUS_URL)
@@ -59,12 +56,8 @@ export async function isAuthenticated(): Promise<boolean> {
   }
 }
 
-/*
-  --- Admin-shell reads (Story 3.5) ---
-  Both are client-side, session-cookie authenticated. The shell derives the role
-  chip + which tabs to show from these; the real authorization is still
-  server-enforced by Directus (AD-4) — these reads only drive the UX gate.
-*/
+// The shell derives the role chip + which tabs to show from the two reads below; the
+// real authorization is server-enforced by Directus — these only drive the UX gate.
 
 // Per-collection access for the current user. Directus REST `GET /permissions/me`
 // returns an object keyed by collection → action → { access: 'none'|'partial'|'full' }
@@ -77,13 +70,13 @@ export function getMyPermissions() {
 }
 
 // Owner (Administrator) detection. Owner = the built-in Administrator whose policy
-// carries `admin_access: true` (the universal-override flag, AD-9/AR-11). Verified
-// against directus 12.0.2: `admin_access` is NOT a field on `directus_users` — it lives
-// on the aggregated *policies*, reachable either directly on the user (`policies`) or via
+// carries `admin_access: true` (the universal-override flag). Verified against
+// directus 12.0.2: `admin_access` is NOT a field on `directus_users` — it lives on the
+// aggregated *policies*, reachable either directly on the user (`policies`) or via
 // the role (`role.policies`). The Administrator returns
 // `role.policies[].policy.admin_access === true`; a leader (or role-less user) returns
 // none. `app_access` is deliberately NOT used as the Owner signal — Editors/Seniors/
-// Officials also carry it (3.4 review). Reads defensively; returns false on any error.
+// Officials also carry it. Reads defensively; returns false on any error.
 export async function getAdminAccess(): Promise<boolean> {
   type PolicyLink = { policy?: { admin_access?: boolean } | null } | null;
   try {
@@ -104,23 +97,18 @@ export async function getAdminAccess(): Promise<boolean> {
 }
 
 /*
-  --- Candidate list read (Story 5.4) ---
-  The transfer candidate list — the FIRST feature that reads authenticated candidate
-  PII and renders it. Runtime, client-side, session-cookie authenticated (AD-2/AR-4):
-  candidate data is NEVER baked into static HTML. The `transfer-viewer` policy carries a
-  free whole-collection read on `candidates` (fields:["*"], no filter — the only free
-  shape on Core; a field subset or row filter is 🔒 403 RESOURCE_RESTRICTED), so a Viewer
-  sees ALL fields of ALL rows (transparency-by-design). A leader without the grant / the
-  Public get 403 server-side (AD-4/NFR-9) — the absent tab is only cosmetic.
+  Candidate PII is read at runtime over the session cookie — NEVER baked into static
+  HTML. The `transfer-viewer` policy carries a free whole-collection read on
+  `candidates` (fields:["*"], no filter — the only free shape on Core; a field subset
+  or row filter is 403 RESOURCE_RESTRICTED), so a Viewer sees ALL fields of ALL rows;
+  a leader without the grant / the Public get 403 server-side — the absent tab is only
+  cosmetic.
 
-  desired_alliance / suggested_alliance are M2O → alliances; we deep-expand {id, name}
-  (Option B, Sabo 2026-07-09) so names resolve LIVE at runtime with no rebuild — this
-  needs the free whole-collection `alliances` read on the same policy. id is kept for the
-  divergent-group edge computation; the list QUERY expands only id+name, so the candidate
-  list never SURFACES `official`. Note the whole-collection grant itself (forced by Core — a
-  field subset is 🔒) does let a Viewer READ the `official` FK directly via the API, but that
-  is only an opaque directus_users id — no user PII without a `directus_users` read grant,
-  which Viewers do not have.
+  desired_alliance / suggested_alliance are M2O → alliances, deep-expanded {id, name}
+  so names resolve LIVE at runtime with no rebuild. The whole-collection grant does let
+  a Viewer read the `official` FK via the API, but that is only an opaque
+  directus_users id — no user PII without a `directus_users` read grant, which Viewers
+  do not have.
 */
 export interface CandidateAlliance {
   id: number;
@@ -154,27 +142,21 @@ export function getCandidates() {
   return client.request(
     readItems('candidates', {
       fields: ['*', { desired_alliance: ['id', 'name'] }, { suggested_alliance: ['id', 'name'] }],
-      limit: -1, // the working list is bounded (~58/window); no pagination/infinite scroll (AC4)
-      sort: ['-id'], // newest first; active-window scoping + carry-over ordering is Story 5.7
+      limit: -1, // the working list is bounded (~58/window); no pagination
+      sort: ['-id'],
     })
   ) as Promise<Candidate[]>;
 }
 
 /*
-  --- Active transfer period read (Story 5.7) ---
   The single active window's caps, read at RUNTIME on the SAME session client as
-  getCandidates (httpOnly cookie, credentials:'include'). The 5.7 counter denominators
-  (invited_cap / special_cap) + the active-window scoping + the carry-over derivation all
-  key off this row's id and its live caps — never a stored counter, never build-baked.
-
-  The runtime read grant ALREADY exists: `transfer_period read ["*"]` is wired for
-  transfer-viewer (Story 5.4) and transfer-curator (Story 5.5), so no new grant. Do NOT
-  reuse the build-time reader in transfer-build.ts — that one authenticates with the static
-  DIRECTUS_TOKEN for SSG baking; this is the live, cookie-authenticated shell read.
+  getCandidates. Do NOT reuse the build-time reader in transfer-build.ts — that one
+  authenticates with the static DIRECTUS_TOKEN for SSG baking; this is the live,
+  cookie-authenticated shell read.
 
   Returns null when no window is active (0 rows) so the shell can degrade calmly ("No
-  active transfer window") instead of throwing — a null denominator is a UX state here, not
-  a build failure (the build-time throw in transfer-build.ts is not appropriate at runtime).
+  active transfer window") instead of throwing — a null denominator is a UX state
+  here, not a build failure.
 */
 export interface TransferPeriod {
   id: number;
@@ -198,8 +180,6 @@ export async function getActivePeriod(): Promise<TransferPeriod | null> {
   return rows[0] ?? null;
 }
 
-// All windows (id → name/active/starts_on) — the candidate table groups rows by apply
-// window and orders the groups chronologically by starts_on (id as fallback).
 export function getPeriods() {
   return client.request(
     readItems('transfer_period', { fields: ['id', 'name', 'active', 'starts_on'], limit: -1, sort: ['-id'] })
@@ -207,22 +187,13 @@ export function getPeriods() {
 }
 
 /*
-  --- Curator candidate write (Story 5.5) ---
-  The FIRST Curator WRITE from the admin shell: advance status (Applied → Accepted →
-  Transferred / Rejected, plus the Random exception Applied → Transferred) and set
-  planned_path on Accept. Same session client, same httpOnly cookie (credentials:'include')
-  — the write authenticates automatically. The list stays LIVE: after a write the shell
-  re-renders the row in place, no rebuild.
-
-  ⚠️ Enforcement reality (Option 3, Core tier): the `transfer-curator` update grant is a
-  FREE whole-collection `fields:["*"]` (a field-subset/row-filter/validation is 🔒 403
-  RESOURCE_RESTRICTED). So the SERVER enforces only WHO may write (Curator: 200; Viewer:
-  403 — deny-by-default); the transition ORDER is UI-guided only (AR-9/AD-7 — no Directus
-  Flow/hook). The field boundary is convention, NOT server-enforced: callers MUST send only
-  { status } and/or { planned_path } — NEVER `period` (a re-stamp is silent carry-over
-  corruption, AD-17), never the public-core / desired_alliance fields (AD-8/AD-9).
-  Returns the echoed row (the Curator holds the read grant) — used only to confirm success;
-  the caller applies the patch it sent to its local row.
+  ⚠️ Enforcement reality (Core tier): the `transfer-curator` update grant is a FREE
+  whole-collection `fields:["*"]` (a field-subset/row-filter/validation is 403
+  RESOURCE_RESTRICTED). The SERVER enforces only WHO may write (Curator: 200; Viewer:
+  403); the transition ORDER is UI-guided only. The field boundary is convention, NOT
+  server-enforced: callers MUST send only { status } and/or { planned_path } — NEVER
+  `period` (a re-stamp is silent carry-over corruption), never the public-core /
+  desired_alliance fields.
 */
 export type CandidatePatch = {
   status?: string;
@@ -236,32 +207,22 @@ export function updateCandidate(id: number, patch: CandidatePatch) {
 }
 
 /*
-  --- Curator grouping + suggested-alliance writes (Story 5.6) ---
-  The remaining two Curator row actions: LINK a friend-group and set a SUGGESTED alliance
-  (a recommendation, never a placement — AD-8). Same session client, same httpOnly cookie.
+  updateCandidates() is the ATOMIC group-level fan-out: one PATCH /items/candidates
+  with { keys, data } sets every member's suggested_alliance to the SAME value in a
+  single server-side transaction — NOT a loop of N single-row PATCHes (which could
+  half-fan-out and leave a group flagged forever).
 
-  updateCandidates() is the ATOMIC group-level fan-out (AC3): one PATCH /items/candidates
-  with { keys, data } sets every member's suggested_alliance to the SAME value in a single
-  server-side transaction — NOT a loop of N single-row PATCHes (which could half-fan-out and
-  leave a group flagged forever). Member ids come from the in-memory rows (rows.filter(group
-  === gid)); no transfer_groups read is needed for the fan-out or the divergent flag.
-
-  Grouping membership lives on candidates.group (M2O → transfer_groups). "Set at group level"
-  writes each member's candidates.suggested_alliance; transfer_groups carries NO suggested
-  column (AR-10). The divergent flag is edge-computed, never stored (AR-6).
-
-  ⚠️ Same Option-3 discipline as 5.5: callers send ONLY { suggested_alliance } and/or
-  { group } — never `period`, never the public-core / desired_alliance fields. The
-  whole-collection Curator update grant (Story 5.5) already authorizes these fields; the
-  field boundary is UI convention, not server-enforced on Core.
+  ⚠️ Same discipline as updateCandidate: callers send ONLY { suggested_alliance }
+  and/or { group } — never `period`, never the public-core / desired_alliance fields;
+  the field boundary is UI convention, not server-enforced on Core.
 */
 export function updateCandidates(ids: number[], patch: CandidatePatch) {
   return client.request(updateItems('candidates', ids, patch)) as Promise<Candidate[]>;
 }
 
-// Mint a new (empty) transfer group. name stays null — groups are labelled by their
-// membership (no name input in 5.6). The Curator holds transfer_groups READ, so the create
-// echoes the new row incl. its id — the linking flow needs that id to stamp candidates.group.
+// name stays null — groups are labelled by their membership. The Curator holds
+// transfer_groups READ, so the create echoes the new row incl. its id — the linking
+// flow needs that id to stamp candidates.group.
 export function createGroup() {
   return client.request(createItem('transfer_groups', { name: null })) as Promise<{ id: number }>;
 }
@@ -273,30 +234,22 @@ export function deleteGroup(id: number) {
 }
 
 /*
-  --- Curator candidate delete (Story 5.8) ---
-  Manual delete of any candidate (any status, any time — a player who went elsewhere is
-  removed) + the between-windows cleanup that clears terminal (Transferred/Rejected) rows.
-  Same session client, same httpOnly cookie (credentials:'include') — the DELETE
-  authenticates automatically. Directus returns 204 No Content (nothing to echo), so no read
-  grant is needed for the delete itself (the Curator holds `candidates` read from 5.5 anyway).
-
-  ⚠️ Enforcement (Option 3, Core tier): the `transfer-curator` policy carries a FREE
-  whole-collection `candidates` delete grant. `delete` has no field/row/validation axis, so
-  the free whole-collection shape is the ONLY shape — there is no Option-1-vs-Option-3 tension
-  here (unlike the update grant). The SERVER enforces WHO may delete (Curator 204 / Viewer 403
-  / anon 403 / Owner admin-bypass 204); that server 403 IS AC-4's "denied server-side" — the
-  UI also hides the control, but the gate is the grant's absence for non-Curators (AD-4/AD-5).
-  Candidates is a schema LEAF (nothing references a candidates row — transfer_groups has no
-  back-reference; membership lives only on candidates.group), so a hard delete leaves no FK
-  orphan. A delete that drops a transfer group below 2 members is dissolved in the shell.
+  ⚠️ Enforcement (Core tier): the `transfer-curator` policy carries a FREE
+  whole-collection `candidates` delete grant — `delete` has no field/row/validation
+  axis, so this is the only shape. The SERVER enforces WHO may delete (Curator 204 /
+  Viewer 403 / anon 403 / Owner admin-bypass 204); the UI also hides the control, but
+  the gate is the grant's absence. Candidates is a schema LEAF (nothing references a
+  candidates row; membership lives only on candidates.group), so a hard delete leaves
+  no FK orphan. A delete that drops a transfer group below 2 members is dissolved in
+  the shell.
 */
 export function deleteCandidate(id: number) {
   return client.request(deleteItem('candidates', id));
 }
 
-// The between-windows cleanup batch (AC-2): delete every terminal row in ONE transaction
-// (mirrors the 5.6 updateCandidates atomic fan-out — not an N-loop that could half-delete).
-// Callers pass ONLY Transferred/Rejected ids; Accepted rows are never included (AD-17).
+// The between-windows cleanup batch: delete every terminal row in ONE transaction —
+// not an N-loop that could half-delete. Callers pass ONLY Transferred/Rejected ids;
+// Accepted rows are never included.
 export function deleteCandidates(ids: number[]) {
   return client.request(deleteItems('candidates', ids));
 }
@@ -306,21 +259,14 @@ export interface AllianceOption {
   name: string | null;
 }
 
-// The suggested-alliance picker source. The Curator already holds a free whole-collection
-// `alliances` read (Story 5.5), so no new grant is needed. id is the M2O write value; name
-// renders in the picker + the Suggested cell.
 export function getAlliances() {
   return client.request(
     readItems('alliances', { fields: ['id', 'name'], limit: -1, sort: ['name'] })
   ) as Promise<AllianceOption[]>;
 }
 
-/*
-  --- Read-only admin panels (Owner request 2026-07-28) ---
-  The Alliances/Accounts tabs render a calm overview table instead of a bare
-  Studio hand-off. Presentation only — editing stays in the Data Studio (AD-3).
-  No `official` expansion here: non-admin readers hold no directus_users grant.
-*/
+// Presentation only — editing stays in the Data Studio. No `official` expansion:
+// non-admin readers hold no directus_users grant.
 export interface AllianceOverview {
   id: number;
   name: string;
@@ -360,31 +306,26 @@ export function getAccountsOverview() {
 }
 
 /*
-  --- Guides publish action (Story 6.3) ---
-  The Senior/Owner publish half of the Option-2 gate: "publish" = materialize a `guides`
-  row (the public-build source) from a `guide_drafts` row (the Editor working copy), the
-  two collections joined ONLY by the immutable slug — no relation, no status field. Same
-  session client, same httpOnly cookie. The reads are wired since 6.1 (guides-viewer /
-  guides-senior); the writes are the 6.3 `guides-senior` grants (guides create/update +
-  guide_drafts update), whole-collection ["*"] — the only free Core shape.
+  "Publish" = materialize a `guides` row (the public-build source) from a
+  `guide_drafts` row (the Editor working copy), the two collections joined ONLY by the
+  immutable slug — no relation, no status field.
 
-  ⚠️ Enforcement reality (AD-4): the server enforces only WHO may write `guides` — a
-  Senior gets 200, an Editor/Viewer a real 403 (the collection-boundary gate). WHAT gets
-  copied is this helper's discipline: publishGuide() copies title/slug/body/category/
-  creator_credit VERBATIM from the draft, sends `slug` only on CREATE (the row is found by
-  slug on update — the publish path can never drift a published URL), and never sends the
-  system date fields. Copying in code (not by hand in the Studio) is what guarantees
-  guide_drafts.slug == guides.slug — the "no link-rot / preview URL == public URL"
-  invariant (AR-18). `body` is copied AS-IS; sanitization is the 6.4 public reader's MUST
-  (infra README §18.2) — the admin shell never renders body HTML.
+  ⚠️ The server enforces only WHO may write `guides` (a Senior gets 200, an
+  Editor/Viewer a real 403). WHAT gets copied is this helper's discipline:
+  publishGuide() copies title/slug/body/category/creator_credit VERBATIM from the
+  draft, sends `slug` only on CREATE (the row is found by slug on update — the publish
+  path can never drift a published URL), and never sends the system date fields.
+  Copying in code is what guarantees guide_drafts.slug == guides.slug (preview URL ==
+  public URL, no link-rot). `body` is copied AS-IS; sanitization is the public
+  reader's job — the admin shell never renders body HTML.
 */
 export interface GuideCategory {
   id: number;
   name: string | null;
 }
 // List shape — deliberately WITHOUT body: the panel never renders body HTML, and the
-// publish path re-reads the draft fresh at click time (review P1), so the load-once
-// list needn't ship every draft's HTML to every leader.
+// publish path re-reads the draft fresh at click time, so the load-once list needn't
+// ship every draft's HTML to every leader.
 export interface GuideDraft {
   id: number;
   title: string;
@@ -411,14 +352,14 @@ export function getGuideDrafts() {
     readItems('guide_drafts', {
       fields: ['id', 'title', 'slug', { category: ['id', 'name'] }, 'creator_credit', 'date_created', 'date_updated'],
       limit: -1, // a kingdom KB is small (tens of guides); no pagination
-      sort: ['-id'], // newest first (mirrors the candidate list)
+      sort: ['-id'],
     })
   ) as Promise<GuideDraft[]>;
 }
 
-// Fresh single-draft read for the publish path (review P1): the panel list is load-once,
-// but the copy must never publish a stale body — an Editor may have saved in the Studio
-// after the Senior's panel loaded. Fetched at click time, body included.
+// Fresh single-draft read for the publish path: the panel list is load-once, but the
+// copy must never publish a stale body — an Editor may have saved in the Studio after
+// the Senior's panel loaded. Fetched at click time, body included.
 export function getGuideDraft(id: number) {
   return client.request(
     readItem('guide_drafts', id, {

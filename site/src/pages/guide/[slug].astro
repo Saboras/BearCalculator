@@ -1,20 +1,19 @@
 ---
 /*
-  /guide/<slug> — the public guide reader (Story 6.4, ⭐ Q1 Option B). One
-  static page per `guides` row; the slug is the immutable public address
-  (AR-18 — preview URL == public URL, category changes can never break it,
-  hence the category-independent /guide/ family).
+  /guide/<slug> — the public guide reader. One static page per `guides` row;
+  the slug is the immutable public address (preview URL == public URL, category
+  changes can never break it, hence the category-independent /guide/ family).
 
-  The body seam is the story's crux: `guide.body` arrives SANITIZED from the
-  data layer (the §18.2 MUST — scripts/handlers/foreign iframes are already
-  dead), then localizeGuideImages() downloads + optimizes every referenced
-  Directus original and rewrites it to a local hashed asset — the rendered
-  page carries ZERO Directus URLs (AD-2) and renders with Directus offline
-  (NFR-2). set:html is safe HERE and only here, on that pipeline's output.
+  The body seam: `guide.body` arrives SANITIZED from the data layer
+  (scripts/handlers/foreign iframes are already dead), then
+  localizeGuideImages() downloads + optimizes every referenced Directus
+  original and rewrites it to a local hashed asset — the rendered page carries
+  ZERO Directus URLs and renders with Directus offline. set:html is safe HERE
+  and only here, on that pipeline's output.
 
   Markup stays plain and semantic (real headings — the body's h1 is demoted to
   h2 by the sanitizer, the page h1 is the title —, real tables, real links):
-  that is the whole i18n mechanism (NFR-6/AD-14, browser auto-translate).
+  that is the whole i18n mechanism (browser auto-translate).
 */
 import Layout from '../../layouts/Layout.astro';
 import { guides, type Guide } from '../../data/guides';
@@ -102,9 +101,9 @@ const day = guide.updated ? guide.updated.slice(0, 10) : null;
   }
 
   /*
-    WYSIWYG body typography: information text is Inter/ink at high contrast
-    (NFR-5); headings inherit the display font from global.css. All selectors
-    are :global() because the content comes from set:html (no Astro scoping).
+    WYSIWYG body typography: information text is Inter/ink at high contrast;
+    headings inherit the display font from global.css. All selectors are
+    :global() because the content comes from set:html (no Astro scoping).
   */
   .guide-body {
     margin-top: var(--space-6);
@@ -125,7 +124,7 @@ const day = guide.updated ? guide.updated.slice(0, 10) : null;
     border: 0;
     border-radius: var(--radius-sm);
   }
-  /* Wide tables scroll inside their own box, never the page (NFR-13). */
+  /* Wide tables scroll inside their own box, never the page. */
   .guide-body :global(table) {
     display: block;
     overflow-x: auto;

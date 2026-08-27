@@ -3,15 +3,9 @@ import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 
 /*
-  /leader — the header shield's destination (Story 3.2). A no-JS-safe login card
-  that a bundled module upgrades into either the login flow or a minimal signed-in
-  landing. Structural twin of /join: a real page, a bundled module <script> (not
-  is:inline — no render-timing dependency), no-JS-safe default markup, and the
-  gold-framed parchment card idiom with Royal-Court dark variants.
-
-  Scope line: /leader is login-only. A confirmed session hands off to the tabbed
-  admin shell at /admin (Story 3.5) — this page never renders admin data or tabs.
-  (/admin sends unauthenticated visitors back here; opposite conditions, no loop.)
+  /leader is login-only. A confirmed session hands off to the tabbed admin shell
+  at /admin — this page never renders admin data or tabs. (/admin sends
+  unauthenticated visitors back here; opposite conditions, no loop.)
 */
 ---
 
@@ -25,8 +19,8 @@ import Icon from '../components/Icon.astro';
 
     <section class="leader-card">
       {/*
-        Login form — visible by default (no-JS-safe). The bundled module hides it
-        and reveals the signed-in panel when a leader session is already active.
+        Visible by default (no-JS-safe); the bundled module hides it and reveals
+        the signed-in panel when a leader session is already active.
         method="post" (no action) so an accidental no-JS submit never puts the
         password in the URL/history; the real login is JS-driven (see .js-note).
       */}
@@ -60,9 +54,9 @@ import Icon from '../components/Icon.astro';
       </form>
 
       {/*
-        Signed-in state — hidden until the module confirms an active session. A
-        signed-in leader is redirected into the admin shell (/admin, Story 3.5);
-        this is a brief hand-off message, not a landing (logout lives in the shell).
+        Hidden until the module confirms an active session. A signed-in leader is
+        redirected into the admin shell; this is a brief hand-off message, not a
+        landing (logout lives in the shell).
       */}
       <div class="signed-in" id="signed-in" hidden>
         <p class="signed-line">
@@ -78,8 +72,7 @@ import Icon from '../components/Icon.astro';
   /*
     Leader-only recipes. Copies the gold-button / parchment-card idiom from
     join.astro (Rule of Three met, but each surface diverges, so KISS keeps it
-    copied per the join.astro Open-Q5 default). Every light-baked gradient/emboss
-    gets a dark variant (the Story 1.3/1.4 wash-out guard).
+    copied). Every light-baked gradient/emboss gets a dark variant.
   */
   .leader {
     max-width: 480px;
@@ -87,7 +80,6 @@ import Icon from '../components/Icon.astro';
     padding: var(--space-7) var(--space-5) var(--space-9);
   }
 
-  /* ===== Heading + ribbon (recipe mirrors Home / Finder / Join) ===== */
   .leader-head {
     position: relative;
     text-align: center;
@@ -142,7 +134,6 @@ import Icon from '../components/Icon.astro';
     margin: 0;
   }
 
-  /* ===== Login card — gold-framed parchment (mirrors the Join / Finder cards) ===== */
   .leader-card {
     margin-top: var(--space-6);
     background: linear-gradient(180deg, #FDF9EF, #F8EFD8);
@@ -155,7 +146,6 @@ import Icon from '../components/Icon.astro';
       inset 0 0 22px rgba(224, 138, 43, .06);
   }
 
-  /* ===== Form fields ===== */
   .field {
     margin-bottom: var(--space-4);
   }
@@ -183,7 +173,6 @@ import Icon from '../components/Icon.astro';
     border-color: var(--color-primary);
   }
 
-  /* ===== Inline, plain-language error (no raw Directus envelope ever) ===== */
   .form-error {
     margin: 0 0 var(--space-4);
     padding: var(--space-3) var(--space-4);
@@ -205,7 +194,6 @@ import Icon from '../components/Icon.astro';
     display: none;
   }
 
-  /* ===== Signed-in landing (placeholder — real admin shell is Story 3.5) ===== */
   .signed-in[hidden] {
     display: none;
   }
@@ -228,7 +216,6 @@ import Icon from '../components/Icon.astro';
     color: var(--color-primary-hover);
   }
 
-  /* ===== Gold button (recipe copied from Join) ===== */
   .btn-gold {
     display: inline-flex;
     align-items: center;
@@ -264,7 +251,6 @@ import Icon from '../components/Icon.astro';
     cursor: progress;
   }
 
-  /* ===== Desktop enhancement (single 768px breakpoint, mirrors the shell) ===== */
   @media (min-width: 768px) {
     .ribbon::before,
     .ribbon::after {
@@ -272,8 +258,7 @@ import Icon from '../components/Icon.astro';
     }
   }
 
-  /* ===== Dark "Royal Court" — every light-baked gradient/emboss needs a dark
-     variant (the Story 1.3/1.4 wash-out guard). ===== */
+  /* Dark "Royal Court": every light-baked gradient/emboss needs a dark variant. */
   :global(:root[data-theme="dark"]) .ribbon-band {
     background: linear-gradient(#F2A93B, #E0962A);
     text-shadow: none;
@@ -300,12 +285,11 @@ import Icon from '../components/Icon.astro';
 
 <script>
   /*
-    /leader client logic — a bundled module (not is:inline: no render-timing
-    dependency, and it imports the Directus SDK helpers). Two-layer gate: this is
-    only the UX gate (reveal admin UI after a successful getCurrentUser); the real
-    security is Directus's server-enforced 401/403 (AD-4). The session credential
-    is the browser-managed httpOnly cookie — nothing is read from / written to
-    localStorage here.
+    Bundled module (not is:inline: no render-timing dependency, and it imports
+    the Directus SDK helpers). Two-layer gate: this is only the UX gate (reveal
+    admin UI after a successful getCurrentUser); the real security is Directus's
+    server-enforced 401/403. The session credential is the browser-managed
+    httpOnly cookie — nothing is read from / written to localStorage here.
   */
   import { login, getCurrentUser } from '../lib/directus';
 
@@ -378,8 +362,8 @@ import Icon from '../components/Icon.astro';
         await login(email, password);
       } catch (err) {
         // Only a genuine 401/403 is a credential problem. A network / CORS / URL-mismatch
-        // failure must not masquerade as a wrong password — that would misdirect launch
-        // debugging (the Open-Q1 PUBLIC_DIRECTUS_URL/CORS risk). Never surface the raw envelope.
+        // failure must not masquerade as a wrong password — that would misdirect
+        // debugging. Never surface the raw envelope.
         showError(authRejected(err)
           ? 'Wrong email or password.'
           : 'Couldn’t reach the server. Please try again.');
