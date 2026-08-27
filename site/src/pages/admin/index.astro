@@ -457,6 +457,14 @@ import Icon from '../../components/Icon.astro';
     font-weight: 600;
     white-space: nowrap;
   }
+  .cand-name-text {
+    display: inline-block;
+    max-width: 18ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
   .cand-expand {
     background: transparent;
     border: 0;
@@ -515,9 +523,8 @@ import Icon from '../../components/Icon.astro';
   .badge-special-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
     margin-left: var(--space-2);
-    padding: 1px 7px;
+    padding: 2px 4px;
     font-size: 11px;
     font-weight: 700;
     color: var(--color-danger);
@@ -1280,7 +1287,9 @@ import Icon from '../../components/Icon.astro';
     const b = document.createElement('span');
     b.className = 'badge-special-chip';
     b.innerHTML = svg('triangle-alert'); // trusted constant SVG
-    b.append(document.createTextNode('Special invitation')); // verbatim jargon
+    b.title = 'Special invitation'; // verbatim jargon
+    b.setAttribute('role', 'img');
+    b.setAttribute('aria-label', 'Special invitation');
     return b;
   }
 
@@ -2278,7 +2287,11 @@ import Icon from '../../components/Icon.astro';
       if (isOpen) toggle.classList.add('cand-expand--open');
       // [tag]Name — the applicant's current home-kingdom alliance tag
       const homeTag = (r.current_alliance_tag ?? '').trim();
-      nameCell.append(toggle, document.createTextNode(' ' + (homeTag ? `[${homeTag}]` : '') + dash(r.character_name)));
+      const nameText = document.createElement('span');
+      nameText.className = 'cand-name-text';
+      nameText.textContent = (homeTag ? `[${homeTag}]` : '') + dash(r.character_name);
+      nameText.title = nameText.textContent; // ellipsized names stay readable on hover
+      nameCell.append(toggle, nameText);
       if (r.needs_special_invite) nameCell.append(specialBadge());
       if (isCarryOver(r, activePeriod)) nameCell.append(carryOverBadge());
       tr.append(nameCell);
