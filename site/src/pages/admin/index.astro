@@ -437,6 +437,12 @@ import Icon from '../../components/Icon.astro';
     border-bottom: 1.5px solid var(--color-border);
     white-space: nowrap;
   }
+  .cand-row {
+    cursor: pointer;
+  }
+  .cand-row:hover {
+    background: rgba(224, 138, 43, .05);
+  }
   .cand-row td:first-child {
     border-left: 3px solid transparent; /* left-rail accent slot */
   }
@@ -2185,7 +2191,7 @@ import Icon from '../../components/Icon.astro';
     const table = document.createElement('table');
     table.className = 'cand-table';
 
-    const cols = ['Name', 'Player ID', 'Kingdom', 'Power', 'Timezone', 'Desired', 'Suggested', 'Status', 'Planned path'];
+    const cols = ['Name', 'Player ID', 'Kingdom', 'Power', 'Timezone', 'Desired', 'Suggested', 'Status', 'Planned path', 'Applied on'];
     const numCol = new Set([1, 2, 3]); // Player ID, Kingdom, Power → tabular, right-aligned
     const thead = document.createElement('thead');
     const htr = document.createElement('tr');
@@ -2292,6 +2298,7 @@ import Icon from '../../components/Icon.astro';
 
       const pathCell = td(dash(r.planned_path));
       tr.append(pathCell);
+      tr.append(td(isoDay(r.date_created)));
       tbody.append(tr);
 
       // Detail row — all the remaining stored fields, read-only
@@ -2363,7 +2370,10 @@ import Icon from '../../components/Icon.astro';
       dtr.append(dtd);
       tbody.append(dtr);
 
-      toggle.addEventListener('click', () => {
+      // Listener on the ROW, not the caret — the whole row is the click target; the
+      // caret's own clicks bubble here, so one handler covers mouse and keyboard.
+      tr.addEventListener('click', () => {
+        if (window.getSelection()?.toString()) return; // selecting/copying cell text must not toggle
         const open = dtr.hidden;
         dtr.hidden = !open;
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');

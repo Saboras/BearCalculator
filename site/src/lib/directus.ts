@@ -136,6 +136,7 @@ export interface Candidate {
   suggested_alliance: CandidateAlliance | null;
   group: number | null;
   period: number | null;
+  date_created: string | null; // null on rows from before the field existed
 }
 
 export function getCandidates() {
